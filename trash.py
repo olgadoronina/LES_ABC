@@ -1,7 +1,6 @@
 import scipy.ndimage as ndimage
 
-Other
-filters
+# Other filters
 for example
     for key, value in HIT.items():
         LES[key] = ndimage.gaussian_filter(value, sigma=3)

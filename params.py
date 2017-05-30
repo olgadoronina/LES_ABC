@@ -1,7 +1,7 @@
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
-plt.style.use(['seaborn-paper', 'mystyle'])
+# plt.style.use(['seaborn-paper', 'mystyle'])
 
 # Case parameters
 Nx = [256, 256, 256]  # grid dimensions
