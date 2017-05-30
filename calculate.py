@@ -31,6 +31,10 @@ def strain_tensor(field):
 
 
 def strain_mod(strain):
+    """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
+    :param strain: dictionary of strain tensor
+    :return:       array of |S| in each point of domain
+    """
     S_mod_sqr = 0
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
@@ -40,6 +44,11 @@ def strain_mod(strain):
 
 
 def scalar_product(array1, array2):
+    """Calculate product of two tensors as S_ijT_ij = sum(S_11T_11+S_12T_12+...)
+    :param array1: dictionary of first tensor
+    :param array2: dictionary of second tensor
+    :return:       array of product in each point of domain
+    """
     res = 0
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
@@ -47,6 +56,11 @@ def scalar_product(array1, array2):
     return res
 
 def Reynolds_stresses(field, Smag = None):
+    """Calculate Reynolds stresses using DNS data
+    :param field: dictionary of filtered data for u_i and u_iu_j
+    :param Smag: flag to substruct 1/3*tau_kk*delta_ij
+    :return:     dictionary of Reynolds stresses tensor
+    """
     tau = dict()
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
@@ -61,6 +75,11 @@ def Reynolds_stresses(field, Smag = None):
 
 
 def Smagorinsky_constant_from_DNS(field, S_ij):
+    """Calculate Smagorinsky constant using DNS data and dissipation rate
+    :param field: dictionary of filtered data
+    :param S_ij: dictionary of strain tensor
+    :return:     scalar Smagorinsky constant
+    """
     tau = Reynolds_stresses(field)
     eps = -np.mean(scalar_product(tau, S_ij))
     denominator = np.mean(LES_delta**2*strain_mod(S_ij)**3)
@@ -70,6 +89,13 @@ def Smagorinsky_constant_from_DNS(field, S_ij):
 
 
 def Smagorinsky_constant_dynamic(LES, TEST, S_LES, S_TEST):
+    """ Calculate Smagorinsky constant using Dynamic Smagorinsky model
+    :param LES: dictionary of filtered data on LES filter scale
+    :param TEST: dictionary of filtered data on TEST filter scale
+    :param S_LES: dictionary of strain tensor on LES filter scale
+    :param S_TEST: dictionary of strain tensor on TEST filter scale
+    :return: scalar Smagorinsky constant
+    """
     print("\nL_ij")
     L = dict()
     for i in ['u', 'v', 'w']:
