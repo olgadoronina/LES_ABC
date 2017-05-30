@@ -1,12 +1,11 @@
 import numpy.fft as fft
-
 from utils import *
-
+from time import time
 
 def tophat_kernel(k, limit):
-    """Create 3D array of Tophat filter.
+    """Create 3D array of Tophat filter3d.
         k - array of wave numbers;
-        limit - size of the filter."""
+        limit - size of the filter3d."""
     a = np.zeros((len(k[0]), len(k[1]), len(k[2])), dtype=np.float32)
     for indx, kx in enumerate(k[0]):
         for indy, ky in enumerate(k[1]):
@@ -38,8 +37,6 @@ def filter3d(data, scale_k, filename=None):
     end = time()
     timer(start, end, 'Time for FFT')
 
-    data.clear()
-
     # Filtering
     start = time()
     kernel = tophat_kernel(k, scale_k)
@@ -68,5 +65,15 @@ def filter3d(data, scale_k, filename=None):
         print('\nWrite file in ./data/' + filename + '.npz')
         file = './data/' + filename + '.npz'
         np.savez(file, **result)
+
+    return result
+
+def filter3d_array(array, scale_k):
+
+    fft_array = fft.fftn(array)
+    k = [fft.fftfreq(Nx[0], dx[0]), fft.fftfreq(Nx[1], dx[1]), fft.fftfreq(Nx[2], dx[2])]
+    kernel = tophat_kernel(k, scale_k)
+    fft_filtered = np.multiply(fft_array, kernel)
+    result = fft.ifftn(fft_filtered).real
 
     return result

@@ -17,3 +17,4 @@ def read_data():
     for key, value in data.items():
         data[key] = np.swapaxes(value, 0, 2)
     return data
+

@@ -5,8 +5,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.style.use(['seaborn-paper', 'mystyle'])
-
 
 def imagesc(Arrays, map_bounds, name=None):
     cmap = plt.cm.jet  # define the colormap
@@ -24,7 +22,7 @@ def imagesc(Arrays, map_bounds, name=None):
             im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
             ax.set_title(titles[k])
             k += 1
-        cbar_ax = fig.add_axes([0.85, 0.17, 0.015, 0.66])  # ([0.85, 0.15, 0.05, 0.7])
+        cbar_ax = fig.add_axes([0.85, 0.17 , 0.015, 0.66])  # ([0.85, 0.15, 0.05, 0.7])
         fig.subplots_adjust(right=0.8)
         # fig.tight_layout()
         fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
@@ -58,7 +56,32 @@ def histogram(field, bins, pdf=None, label=None, log=False):
         plt.yscale('log', nonposy='clip')
     plt.xlabel(label)
     plt.ylabel('pdf(' + label + ')')
-    plt.axis(xmin=-5, xmax=4, ymin=1e-5)  # xmax=4xmax = np.max(field)
+    plt.axis(xmin=np.min(field), xmax=np.max(field))  # xmax=4xmax = np.max(field)
     plt.show()
 
     # return h, edges
+
+def T_TEST(T_TEST):
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(10, 4))
+    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
+    ax1.hist(T_TEST['uu'].flatten(), bins=100, normed=1, alpha=0.4)
+    ax2.hist(T_TEST['uv'].flatten(), bins=100, normed=1, alpha=0.4)
+    ax3.hist(T_TEST['uw'].flatten(), bins=100, normed=1, alpha=0.4)
+
+    for ind, ax in enumerate([ax1, ax2, ax3]):
+        ax.set_xlabel(titles[ind])
+    ax1.axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+    ax1.set_ylabel('pdf')
+    ax3.set_yscale('log', nonposy='clip')
+    fig.tight_layout()
+    # plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+    plt.show()
+
+def TS(TS):
+    plt.figure(figsize=(5, 5))
+    plt.hist(TS.flatten(), bins=500, normed=1, alpha=0.4)
+    plt.yscale('log', nonposy='clip')
+    plt.xlabel(r'$T_{ij}S^T_{ij}$')
+    plt.ylabel(r'pdf($T_{ij}S^T_{ij}$)')
+    plt.axis(xmin=-5, xmax=4, ymin=1e-5)
+    plt.show()
