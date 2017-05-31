@@ -55,7 +55,8 @@ def scalar_product(array1, array2):
             res += np.multiply(array1[i + j], array2[i + j])
     return res
 
-def Reynolds_stresses(field, Smag = None):
+
+def Reynolds_stresses_from_DNS(field, Smag = None):
     """Calculate Reynolds stresses using DNS data
     :param field: dictionary of filtered data for u_i and u_iu_j
     :param Smag: flag to substruct 1/3*tau_kk*delta_ij
@@ -74,13 +75,23 @@ def Reynolds_stresses(field, Smag = None):
     return tau
 
 
+def Reynolds_stresses_from_Cs(field, C_s):
+    S = strain_tensor(field)
+    S_mod = strain_mod(S)
+    tau = dict()
+    for i in ['u', 'v', 'w']:
+        for j in ['u', 'v', 'w']:
+            tau[i+j] = -2*(C_s*TEST_delta)**2*np.multiply(S_mod, S[i + j])
+    return tau
+
+
 def Smagorinsky_constant_from_DNS(field, S_ij):
     """Calculate Smagorinsky constant using DNS data and dissipation rate
     :param field: dictionary of filtered data
     :param S_ij: dictionary of strain tensor
     :return:     scalar Smagorinsky constant
     """
-    tau = Reynolds_stresses(field)
+    tau = Reynolds_stresses_from_DNS(field)
     eps = -np.mean(scalar_product(tau, S_ij))
     denominator = np.mean(LES_delta**2*strain_mod(S_ij)**3)
     C_s = sqrt(eps/denominator)
@@ -129,3 +140,4 @@ def Smagorinsky_constant_dynamic(LES, TEST, S_LES, S_TEST):
     C_s = sqrt(C_s_sqr)
     print('C_s from Dynamic model:', C_s)
     return C_s
+

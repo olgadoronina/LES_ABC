@@ -1,7 +1,7 @@
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
-# plt.style.use(['seaborn-paper', 'mystyle'])
+plt.style.use(['seaborn-paper', 'mystyle'])
 
 # Case parameters
 Nx = [256, 256, 256]  # grid dimensions
@@ -14,3 +14,4 @@ TEST_scale = 5
 
 LES_delta = 2*pi/LES_scale
 TEST_delta = 2*pi/TEST_scale
+

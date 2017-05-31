@@ -85,3 +85,44 @@ def TS(TS):
     plt.ylabel(r'pdf($T_{ij}S^T_{ij}$)')
     plt.axis(xmin=-5, xmax=4, ymin=1e-5)
     plt.show()
+
+def tau_tau_sp(tau, tau_sp):
+    fig, axarr = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 8))
+    titles = [r'$\tau_{11}$', r'$\tau_{12}$', r'$\tau_{13}$']
+
+    axarr[0, 0].hist(tau['uu'].flatten(), bins=50, normed=1, alpha=0.4)
+    axarr[0, 0].set_xlim(xmin=-1.1, xmax=1.1)
+    axarr[0, 0].set_ylim(ymin=1e-5)
+    axarr[0, 0].set_yscale('log', nonposy='clip')
+    axarr[0, 0].set_ylabel(r'pdf of initial')
+    axarr[0, 1].hist(tau['uv'].flatten(), bins=50, normed=1, alpha=0.4)
+    axarr[0, 2].hist(tau['uw'].flatten(), bins=50, normed=1, alpha=0.4)
+    axarr[1, 0].hist(tau_sp['uu'].flatten(), bins=20, normed=1, alpha=0.4)
+    axarr[1, 0].set_ylabel('pdf of sparse')
+    axarr[1, 1].hist(tau_sp['uv'].flatten(), bins=20, normed=1, alpha=0.4)
+    axarr[1, 2].hist(tau_sp['uw'].flatten(), bins=20, normed=1, alpha=0.4)
+
+    for ind, ax in enumerate([axarr[1, 0], axarr[1, 1], axarr[1, 2]]):
+        ax.set_xlabel(titles[ind])
+
+    fig.tight_layout()
+    plt.setp([a.get_xticklabels() for a in axarr[0, :]], visible=False)
+    plt.setp([a.get_yticklabels() for a in axarr[:, 1]], visible=False)
+    plt.show()
+
+
+def tau_sp(tau_sp):
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
+    titles = [r'$\tau_{11}$', r'$\tau_{12}$', r'$\tau_{13}$']
+    ax1.hist(tau_sp['uu'].flatten(), bins=50, normed=1, alpha=0.4)
+    ax2.hist(tau_sp['uv'].flatten(), bins=50, normed=1, alpha=0.4)
+    ax3.hist(tau_sp['uw'].flatten(), bins=50, normed=1, alpha=0.4)
+
+    for ind, ax in enumerate([ax1, ax2, ax3]):
+        ax.set_xlabel(titles[ind])
+    ax1.axis(xmin=-0.3, xmax=0.3, ymin=1e-2)
+    ax1.set_ylabel('pdf')
+    ax3.set_yscale('log', nonposy='clip')
+    fig.tight_layout()
+    # plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+    plt.show()
