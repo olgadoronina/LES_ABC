@@ -9,9 +9,9 @@ def timer(start, end, label):
 
 def read_data():
     data = dict()
-    data['u'] = np.reshape(np.fromfile('./data/HIT_u.bin', dtype=np.float32), tuple(Nx))
-    data['v'] = np.reshape(np.fromfile('./data/HIT_v.bin', dtype=np.float32), tuple(Nx))
-    data['w'] = np.reshape(np.fromfile('./data/HIT_w.bin', dtype=np.float32), tuple(Nx))
+    data['u'] = np.reshape(np.fromfile(datafile_u, dtype=np.float32), tuple(N_points))
+    data['v'] = np.reshape(np.fromfile(datafile_v, dtype=np.float32), tuple(N_points))
+    data['w'] = np.reshape(np.fromfile(datafile_w, dtype=np.float32), tuple(N_points))
 
     # to put x index in first place
     for key, value in data.items():
@@ -33,3 +33,7 @@ def sparse_dict(data, M):
         sparse[key] = sparse_array(value, M)
     return sparse
 
+def pdf_from_array(array, bins, range):
+    pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
+    x = (edges[1:] + edges[:-1])/2
+    return x, pdf

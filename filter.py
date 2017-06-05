@@ -33,7 +33,7 @@ def filter3d(data, scale_k, filename=None):
     FFT = dict()
     for key, value in data.items():
         FFT[key] = fft.fftn(value)
-    k = [fft.fftfreq(Nx[0], dx[0]), fft.fftfreq(Nx[1], dx[1]), fft.fftfreq(Nx[2], dx[2])]
+    k = [fft.fftfreq(N_points[0], dx[0]), fft.fftfreq(N_points[1], dx[1]), fft.fftfreq(N_points[2], dx[2])]
     end = time()
     timer(start, end, 'Time for FFT')
 
@@ -71,7 +71,7 @@ def filter3d(data, scale_k, filename=None):
 def filter3d_array(array, scale_k):
 
     fft_array = fft.fftn(array)
-    k = [fft.fftfreq(Nx[0], dx[0]), fft.fftfreq(Nx[1], dx[1]), fft.fftfreq(Nx[2], dx[2])]
+    k = [fft.fftfreq(N_points[0], dx[0]), fft.fftfreq(N_points[1], dx[1]), fft.fftfreq(N_points[2], dx[2])]
     kernel = tophat_kernel(k, scale_k)
     fft_filtered = np.multiply(fft_array, kernel)
     result = fft.ifftn(fft_filtered).real

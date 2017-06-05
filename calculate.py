@@ -75,17 +75,17 @@ def Reynolds_stresses_from_DNS(field, Smag = None):
     return tau
 
 
-def Reynolds_stresses_from_Cs(field, C_s):
+def Reynolds_stresses_from_Cs(field, C_s, delta):
     S = strain_tensor(field)
     S_mod = strain_mod(S)
     tau = dict()
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
-            tau[i+j] = -2*(C_s*TEST_delta)**2*np.multiply(S_mod, S[i + j])
+            tau[i+j] = -2*(C_s*delta)**2*np.multiply(S_mod, S[i + j])
     return tau
 
 
-def Smagorinsky_constant_from_DNS(field, S_ij):
+def Smagorinsky_constant_from_DNS(field, S_ij, delta):
     """Calculate Smagorinsky constant using DNS data and dissipation rate
     :param field: dictionary of filtered data
     :param S_ij: dictionary of strain tensor
@@ -93,7 +93,7 @@ def Smagorinsky_constant_from_DNS(field, S_ij):
     """
     tau = Reynolds_stresses_from_DNS(field)
     eps = -np.mean(scalar_product(tau, S_ij))
-    denominator = np.mean(LES_delta**2*strain_mod(S_ij)**3)
+    denominator = np.mean(delta**2*strain_mod(S_ij)**3)
     C_s = sqrt(eps/denominator)
     print('C_s from DNS: ', C_s)
     return C_s

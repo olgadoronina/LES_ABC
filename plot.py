@@ -1,9 +1,10 @@
 import gc
 from math import *
-
+import utils
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats.kde import gaussian_kde
 
 
 def imagesc(Arrays, map_bounds, name=None):
@@ -74,7 +75,6 @@ def T_TEST(T_TEST):
     ax1.set_ylabel('pdf')
     ax3.set_yscale('log', nonposy='clip')
     fig.tight_layout()
-    # plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
     plt.show()
 
 def TS(TS):
@@ -88,7 +88,7 @@ def TS(TS):
 
 def tau_tau_sp(tau, tau_sp):
     fig, axarr = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 8))
-    titles = [r'$\tau_{11}$', r'$\tau_{12}$', r'$\tau_{13}$']
+    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
 
     axarr[0, 0].hist(tau['uu'].flatten(), bins=50, normed=1, alpha=0.4)
     axarr[0, 0].set_xlim(xmin=-1.1, xmax=1.1)
@@ -112,17 +112,42 @@ def tau_tau_sp(tau, tau_sp):
 
 
 def tau_sp(tau_sp):
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
-    titles = [r'$\tau_{11}$', r'$\tau_{12}$', r'$\tau_{13}$']
-    ax1.hist(tau_sp['uu'].flatten(), bins=50, normed=1, alpha=0.4)
-    ax2.hist(tau_sp['uv'].flatten(), bins=50, normed=1, alpha=0.4)
-    ax3.hist(tau_sp['uw'].flatten(), bins=50, normed=1, alpha=0.4)
+    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
+    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
+    for ind, i in enumerate(['uu','vu','wu']):
+        data = tau_sp[i].flatten()
+        kde = gaussian_kde(data)
+        dist_space = np.linspace(min(data), max(data), 100)
+        axarr[ind].hist(tau_sp[i].flatten(), bins=50, normed=1, alpha=0.4)
+        axarr[ind].plot(dist_space, kde(dist_space), 'r', linewidth=2)
+        axarr[ind].set_xlabel(titles[ind])
 
-    for ind, ax in enumerate([ax1, ax2, ax3]):
-        ax.set_xlabel(titles[ind])
-    ax1.axis(xmin=-0.3, xmax=0.3, ymin=1e-2)
-    ax1.set_ylabel('pdf')
-    ax3.set_yscale('log', nonposy='clip')
+    axarr[0].axis(xmin=-0.3, xmax=0.3, ymin=1e-2)
+    axarr[0].set_ylabel('pdf')
+    axarr[0].set_yscale('log', nonposy='clip')
     fig.tight_layout()
-    # plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
     plt.show()
+
+def tau_compare(tau_true, tau_modeled):
+    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
+    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
+    for ind, i in enumerate(['uu','vu','wu']):
+        data1, data2 = tau_true[i].flatten(), tau_modeled[i].flatten()
+        x, y = utils.pdf_from_array(data1, 100, [-1.1, 1.1])
+        axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
+        x, y = utils.pdf_from_array(data2, 100, [-1.1, 1.1])
+        axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled')
+        axarr[ind].set_xlabel(titles[ind])
+
+    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+    axarr[0].set_ylabel('pdf')
+    axarr[0].set_yscale('log', nonposy='clip')
+    fig.tight_layout()
+    plt.legend(loc=0)
+    plt.show()
+
+
+
+
+
+
