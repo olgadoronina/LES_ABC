@@ -25,6 +25,7 @@ def strain_tensor(field):
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
             S[i + j] = 0.5 * (A[i + j] + A[j + i])
+            # print('S_' + i + j, np.mean(S[i+j]))
             if np.isnan(np.sum(S[i + j])):
                 print('S_' + i + j + ': nan is detected ')
     return S
@@ -41,6 +42,15 @@ def strain_mod(strain):
             S_mod_sqr += 2*np.multiply(strain[i + j], strain[i + j])
     S_mod = np.sqrt(S_mod_sqr)
     return S_mod
+
+def strain_mod_strain_ij(field):
+    S_mod_S_ij = dict()
+    S = strain_tensor(field)
+    S_mod = strain_mod(S)
+    for i in ['u', 'v', 'w']:
+        for j in ['u', 'v', 'w']:
+            S_mod_S_ij[i + j] = np.multiply(S_mod, S[i + j])
+    return S_mod_S_ij
 
 
 def scalar_product(array1, array2):
@@ -75,13 +85,14 @@ def Reynolds_stresses_from_DNS(field, Smag = None):
     return tau
 
 
-def Reynolds_stresses_from_Cs(field, C_s, delta):
-    S = strain_tensor(field)
-    S_mod = strain_mod(S)
+def Reynolds_stresses_from_Cs(field, C_s, delta, S_mod_S_ij=None):
+    if not S_mod_S_ij:
+        print('calc S')
+        S_mod_S_ij = strain_mod_strain_ij(field)
     tau = dict()
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
-            tau[i+j] = -2*(C_s*delta)**2*np.multiply(S_mod, S[i + j])
+            tau[i+j] = -2*(C_s*delta)**2*S_mod_S_ij[i+j]
     return tau
 
 
@@ -93,6 +104,7 @@ def Smagorinsky_constant_from_DNS(field, S_ij, delta):
     """
     tau = Reynolds_stresses_from_DNS(field)
     eps = -np.mean(scalar_product(tau, S_ij))
+    print('epstrue', eps)
     denominator = np.mean(delta**2*strain_mod(S_ij)**3)
     C_s = sqrt(eps/denominator)
     print('C_s from DNS: ', C_s)

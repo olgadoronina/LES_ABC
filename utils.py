@@ -37,3 +37,4 @@ def pdf_from_array(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     x = (edges[1:] + edges[:-1])/2
     return x, pdf
+
