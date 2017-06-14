@@ -1,7 +1,6 @@
-from params import *
 import plot
 import filter
-
+from params import *
 
 def field_gradient(field):
     """Calculate tensor of gradients of given field.

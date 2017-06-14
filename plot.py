@@ -1,13 +1,7 @@
-import gc
-from math import *
-import utils
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.stats.kde import gaussian_kde
+import calculate
+from params import *
 
-
-def imagesc(Arrays, map_bounds, name=None):
+def imagesc(Arrays, map_bounds, name=None, titles=None):
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
     cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
@@ -15,17 +9,19 @@ def imagesc(Arrays, map_bounds, name=None):
 
     # fig = plt.figure()
     axis = [0, 2 * pi, 0, 2 * pi]
-    titles = ['DNS data', 'LES filter', 'Test filter']
+    if not titles:
+        titles = ['DNS data', 'LES filter', 'Test filter']
     if len(Arrays) > 1:
-        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), figsize=(12, 4))
+        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(15, 4))
         k = 0
         for ax in axes.flat:
             im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
             ax.set_title(titles[k])
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
             k += 1
-        cbar_ax = fig.add_axes([0.85, 0.17 , 0.015, 0.66])  # ([0.85, 0.15, 0.05, 0.7])
-        fig.subplots_adjust(right=0.8)
-        # fig.tight_layout()
+        cbar_ax = fig.add_axes([0.87, 0.10, 0.017, 0.80])  # ([0.85, 0.15, 0.05, 0.68])
+        fig.subplots_adjust(right=0.85)
         fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
     else:
         fig = plt.figure(figsize=(12, 10))
@@ -59,11 +55,11 @@ def histogram(field, bins, pdf=None, label=None, log=False):
     plt.ylabel('pdf(' + label + ')')
     plt.axis(xmin=np.min(field), xmax=np.max(field))  # xmax=4xmax = np.max(field)
     plt.show()
+    gc.collect()
 
-    # return h, edges
 
 def T_TEST(T_TEST):
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(10, 4))
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(10, 5))
     titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
     ax1.hist(T_TEST['uu'].flatten(), bins=100, normed=1, alpha=0.4)
     ax2.hist(T_TEST['uv'].flatten(), bins=100, normed=1, alpha=0.4)
@@ -76,6 +72,8 @@ def T_TEST(T_TEST):
     ax3.set_yscale('log', nonposy='clip')
     fig.tight_layout()
     plt.show()
+    del ax1, ax2, ax3, fig
+    gc.collect()
 
 def TS(TS):
     plt.figure(figsize=(5, 5))
@@ -85,6 +83,7 @@ def TS(TS):
     plt.ylabel(r'pdf($T_{ij}S^T_{ij}$)')
     plt.axis(xmin=-5, xmax=4, ymin=1e-5)
     plt.show()
+    gc.collect()
 
 def tau_tau_sp(tau, tau_sp):
     fig, axarr = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 8))
@@ -109,29 +108,32 @@ def tau_tau_sp(tau, tau_sp):
     plt.setp([a.get_xticklabels() for a in axarr[0, :]], visible=False)
     plt.setp([a.get_yticklabels() for a in axarr[:, 1]], visible=False)
     plt.show()
+    del fig, axarr
+    gc.collect()
 
-
-def tau_sp(tau_sp):
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
-    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
-    for ind, i in enumerate(['uu','vu','wu']):
+def tau_sp(tau_sp, name=None):
+    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
+    titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
+    for ind, i in enumerate(['uu', 'uv', 'uw']):
         data = tau_sp[i].flatten()
-        kde = gaussian_kde(data)
-        dist_space = np.linspace(min(data), max(data), 100)
-        axarr[ind].hist(tau_sp[i].flatten(), bins=50, normed=1, alpha=0.4)
-        axarr[ind].plot(dist_space, kde(dist_space), 'r', linewidth=2)
+        x, y = utils.pdf_from_array(data, 100, [-1.1, 1.1])
+        axarr[ind].plot(x, y, 'r', linewidth=2)
         axarr[ind].set_xlabel(titles[ind])
-
-    axarr[0].axis(xmin=-0.3, xmax=0.3, ymin=1e-2)
+    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
     axarr[0].set_ylabel('pdf')
     axarr[0].set_yscale('log', nonposy='clip')
-    fig.tight_layout()
+    # fig.tight_layout()
+    fig1 = plt.gcf()
     plt.show()
+    if name:
+        fig1.savefig(name + '.eps')
+    del fig, fig1, axarr
+    gc.collect()
 
 def tau_compare(tau_true, tau_modeled):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
-    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
-    for ind, i in enumerate(['uu','vu','wu']):
+    titles = titles=[r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
+    for ind, i in enumerate(['uu', 'uv', 'uw']):
         data1, data2 = tau_true[i].flatten(), tau_modeled[i].flatten()
         x, y = utils.pdf_from_array(data1, 100, [-1.1, 1.1])
         axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
@@ -145,9 +147,51 @@ def tau_compare(tau_true, tau_modeled):
     fig.tight_layout()
     plt.legend(loc=0)
     plt.show()
+    del fig, axarr
+    gc.collect()
 
+def tau_abc(pdf_true, Cs_abc, test_field, S_mod_S_ij):
+    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(18, 6))
+    titles = [r'$\widehat{T}_{11}$', r'$\widehat{T}_{12}$', r'$\widehat{T}_{13}$']
 
+    x = np.linspace(domain[0], domain[1], bins)
+    plots = []
+    labels = []
+    for ind, i in enumerate(['uu', 'uv', 'uv']):
+        line = axarr[ind].plot(x, pdf_true[i], linewidth=3, label='true pdf')
+        if ind == 0:
+            plots.append(line)
+            labels.append('true pdf')
+        axarr[ind].set_xlabel(titles[ind])
 
+    for C_s in Cs_abc:
+        tau = calculate.Reynolds_stresses_from_Cs(test_field, C_s, TEST_delta, S_mod_S_ij)
+        for ind, i in enumerate(['uu', 'uv', 'uv']):
+            x, y = utils.pdf_from_array(tau[i].flatten(), bins, domain)
+            line = axarr[ind].plot(x, y, linewidth=1, label=r'$C_s \approx\  $' + str(round(C_s, 3)))
+            if ind == 0:
+                plots.append(line)
+                labels.append(r'$C_s \approx $' + str(round(C_s, 3)))
+    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+    axarr[0].set_ylabel('pdf')
+    axarr[0].set_yscale('log', nonposy='clip')
 
+    # Shrink current axis's width
+    for i in range(3):
+        box = axarr[i].get_position()
+        axarr[i].set_position([box.x0, box.y0, box.width*0.9, box.height])
+    # Put a legend below current axis
+    plt.legend(loc='upper center', bbox_to_anchor=(1.6, 1.1),  fancybox=True, shadow=True, ncol=2)
 
+    fig1 = plt.gcf()
+    plt.show()
+    fig1.savefig('tau_abc.eps')
 
+    del fig, fig1, axarr
+    gc.collect()
+
+def Cs_scatter(Cs, dist):
+    plt.scatter(Cs, dist)
+    plt.xlabel(r'$C_s$')
+    plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+    plt.show()
