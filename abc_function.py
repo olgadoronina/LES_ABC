@@ -48,7 +48,6 @@ def ABC(tau_exact, test_field):
     # Main loop
     ####################################################################################################################
     start = time()
-
     if PARALLEL:
         print("\n%d workers" % mp.cpu_count())
         pool = mp.Pool(mp.cpu_count())
@@ -58,18 +57,14 @@ def ABC(tau_exact, test_field):
         pool.join()
         print(result)
     else:
-        result = [[], []]
+        result = []
         for Cs in Cs_array:
-            work_function(Cs, test_field, pdf_true, S_mod_S_ij)
+            result.append(work_function(Cs, test_field, pdf_true, S_mod_S_ij))
     end = time()
     utils.timer(start, end, 'Time ')
-    print(result)
+    result = np.array(result)
     ####################################################################################################################
-
-    plot.tau_abc(pdf_true, result[0], test_field, S_mod_S_ij)
-    plot.Cs_scatter(result[0], result[1])
-
-    Cs_final = result[0][result[1].index(min(result[1]))]
-    print(Cs_final)
-
+    plot.Cs_scatter(result[:, 0], result[:, 1])
+    plot.tau_abc(pdf_true, np.sort(result, axis=0)[:, 0], test_field, S_mod_S_ij)
+    Cs_final = result[np.argmin(result[:, 1]), 0]
     return Cs_final

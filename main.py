@@ -73,6 +73,6 @@ def main():
 
     Cs = abc_function.ABC(T_TEST, TEST)
     # plot.tau_compare(T_LES, calculate.Reynolds_stresses_from_Cs(LES, Cs, LES_delta))
-
+    print(Cs)
 if __name__ == '__main__':
     main()

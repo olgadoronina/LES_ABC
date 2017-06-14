@@ -10,7 +10,7 @@ import random as rand
 
 # plt.style.use(['seaborn-paper', 'mystyle'])
 
-PARALLEL = 0
+PARALLEL = 1
 
 # path to dns data
 datafile_u = './data/HIT_u.bin'
