@@ -9,18 +9,20 @@ import random as rand
 import logging
 
 def main():
+    global TEST
+    global LES
+
     # HIT = utils.read_data()
     # print('\nTensor u_iu_j')
     # for i in ['u', 'v', 'w']:
     #     for j in ['u', 'v', 'w']:
     #         HIT[i+j] = np.multiply(HIT[i], HIT[j])
-    #
     # print('\nFilter data')
     # LES = filter.filter3d(data=HIT, scale_k=LES_scale)
     # TEST = filter.filter3d(data=HIT, scale_k=TEST_scale)
 
     print("\nLoad data")
-    LES = np.load('./data/LES.npz')
+    # LES = np.load('./data/LES.npz')
     TEST = np.load('./data/TEST.npz')
 
     # map_bounds = np.linspace(np.min(LES['u'][:, :, 127]), np.max(LES['v'][:, :, 127]), 20)

@@ -43,6 +43,10 @@ def strain_mod(strain):
     return S_mod
 
 def strain_mod_strain_ij(field):
+    """Calculate |S|S_ij product for given field
+    :param field:  dictionary of data
+    :return:       dictionary of product
+    """
     S_mod_S_ij = dict()
     S = strain_tensor(field)
     S_mod = strain_mod(S)
@@ -84,14 +88,14 @@ def Reynolds_stresses_from_DNS(field, Smag = None):
     return tau
 
 
-def Reynolds_stresses_from_Cs(field, C_s, delta, S_mod_S_ij=None):
-    if not S_mod_S_ij:
-        print('calc S')
-        S_mod_S_ij = strain_mod_strain_ij(field)
+def Reynolds_stresses_from_Cs(field, C_s, delta, S_mod_S_ij_tmp=None):
+    if not S_mod_S_ij_tmp:
+        print('calc S_mod_S_ij')
+        S_mod_S_ij_tmp = strain_mod_strain_ij(field)
     tau = dict()
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
-            tau[i+j] = -2*(C_s*delta)**2*S_mod_S_ij[i+j]
+            tau[i+j] = -2*(C_s*delta)**2*S_mod_S_ij_tmp[i+j]
     return tau
 
 

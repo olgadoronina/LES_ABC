@@ -10,7 +10,7 @@ import random as rand
 
 # plt.style.use(['seaborn-paper', 'mystyle'])
 
-PARALLEL = 1
+PARALLEL = 0
 
 # path to dns data
 datafile_u = './data/HIT_u.bin'
@@ -33,7 +33,13 @@ TEST_delta = 1/TEST_scale
 
 # params for abc algorithm
 domain = [-1.1, 1.1]
-Cs_limits = [0.19, 0.23]
+Cs_limits = [0.0, 0.4]
 bins = 100
 eps = 50
-N = 24
+N = 1000
+
+# Global variables
+TEST = dict()
+LES = dict()
+S_mod_S_ij = dict()
+pdf_true = dict()
