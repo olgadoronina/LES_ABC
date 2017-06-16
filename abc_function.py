@@ -1,10 +1,11 @@
 from params import *
+import glob
 import random as rand
 import calculate
 import utils
 import plot
 import multiprocessing as mp
-from functools import partial
+
 
 def distance_between_pdf(pdf_modeled, pdf_true):
     """Calculate statistical distance between two pdf as
@@ -30,30 +31,25 @@ def work_function(Cs):
     :param Cs: scalar value of sampled parameter
     :return:   list[Cs, dist] if accepted and None if not
     """
-    tau = calculate.Reynolds_stresses_from_Cs(TEST, Cs, TEST_delta, S_mod_S_ij_tmp=S_mod_S_ij)
+    tau = glob.TEST.Reynolds_stresses_from_Cs(Cs)
     dist = 0
     for key, value in tau.items():
         x, y = utils.pdf_from_array(value.flatten(), bins, domain)
-        dist += distance_between_pdf(pdf_modeled=y, pdf_true=pdf_true[key])
-
+        dist += distance_between_pdf(pdf_modeled=y, pdf_true=glob.TEST.tau_pdf_true[key])
     if dist <= eps:
         return [Cs, dist]
 
-
-def ABC(tau_exact, test_field):
+def ABC():
     """ Approximate Beyasian Computation algorithm
-    :param tau_exact:  dictionary of true data
-    :param test_field: dictionary of the data on TEST scale
-    :return:           scalar of best parameter value Cs
+    :return: scalar of best parameter value Cs
     """
-    global pdf_true
-    global S_mod_S_ij
+    if not glob.TEST.tau_true:
+        glob.TEST.Reynolds_stresses_from_DNS()
+    for key, value in glob.TEST.tau_true.items():
+        glob.TEST.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
 
-
-    for key, value in tau_exact.items():
-        pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
-
-    S_mod_S_ij = calculate.strain_mod_strain_ij(test_field)
+    if not glob.TEST.S_mod_S_ij:
+        glob.TEST.strain_mod_strain_ij()
 
     Cs_array = [rand.uniform(Cs_limits[0], Cs_limits[1]) for i in range(N)]
     # Main loop
@@ -73,6 +69,6 @@ def ABC(tau_exact, test_field):
     result = np.array([x for x in result if x is not None])
     ####################################################################################################################
     plot.Cs_scatter(result[:, 0], result[:, 1])
-    plot.tau_abc(pdf_true, np.sort(result, axis=0)[:, 0], test_field, S_mod_S_ij)
+    plot.tau_abc(glob.TEST.tau_pdf_true, np.sort(result, axis=0)[:, 0], glob.TEST.field, glob.TEST.S_mod_S_ij)
     Cs_final = result[np.argmin(result[:, 1]), 0]
     return Cs_final

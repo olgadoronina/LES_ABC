@@ -27,6 +27,8 @@ dx = np.divide(lx, N_points)  # grid cell size (resolution)
 # Scales
 LES_scale = 10
 TEST_scale = 5
+
+HIT_delta = lx[0]/N_points[0]
 LES_delta = 1/LES_scale
 TEST_delta = 1/TEST_scale
 
@@ -36,10 +38,6 @@ domain = [-1.1, 1.1]
 Cs_limits = [0.0, 0.4]
 bins = 100
 eps = 50
-N = 1000
+N = 100
 
-# Global variables
-TEST = dict()
-LES = dict()
-S_mod_S_ij = dict()
-pdf_true = dict()
+

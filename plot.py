@@ -1,5 +1,6 @@
 import calculate
 from params import *
+import glob
 
 def imagesc(Arrays, map_bounds, name=None, titles=None):
     cmap = plt.cm.jet  # define the colormap
@@ -165,7 +166,7 @@ def tau_abc(pdf_true, Cs_abc, test_field, S_mod_S_ij):
         axarr[ind].set_xlabel(titles[ind])
 
     for C_s in Cs_abc:
-        tau = calculate.Reynolds_stresses_from_Cs(test_field, C_s, TEST_delta, S_mod_S_ij)
+        tau = glob.TEST.Reynolds_stresses_from_Cs(C_s)
         for ind, i in enumerate(['uu', 'uv', 'uv']):
             x, y = utils.pdf_from_array(tau[i].flatten(), bins, domain)
             line = axarr[ind].plot(x, y, linewidth=1, label=r'$C_s \approx\  $' + str(round(C_s, 3)))
