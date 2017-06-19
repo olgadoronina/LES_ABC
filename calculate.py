@@ -1,7 +1,7 @@
 import plot
 import filter
 from params import *
-import glob
+import global_var as g
 
 
 def scalar_product(array1, array2):
@@ -40,12 +40,12 @@ def Smagorinsky_constant_dynamic():
     """
     print("\nL_ij")
     L = dict()
-    print(glob.LES)
+    print(g.LES)
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
-            tensor = np.multiply(glob.LES.field[i], glob.LES.field[j])
+            tensor = np.multiply(g.LES.field[i], g.LES.field[j])
             tensor1 = filter.filter3d_array(tensor, TEST_scale)
-            L[i + j] = tensor1 - np.multiply(glob.TEST.field[i], glob.TEST.field[j])
+            L[i + j] = tensor1 - np.multiply(g.TEST.field[i], g.TEST.field[j])
             if np.isnan(np.sum(L[i + j])):
                 print('L_' + i + j + ': nan is detected ')
     trace = L['uu'] + L['vv'] + L['ww']
@@ -53,18 +53,18 @@ def Smagorinsky_constant_dynamic():
         L[i] -= 1/3*trace
 
     print("\nM_ij")
-    if not glob.LES.S_mod:
-        glob.LES.strain_mod()
-    if not glob.TEST.S_mod:
-        glob.TEST.strain_mod()
+    if not g.LES.S_mod:
+        g.LES.strain_mod()
+    if not g.TEST.S_mod:
+        g.TEST.strain_mod()
 
     M = dict()
     for i in ['u', 'v', 'w']:
         for j in ['u', 'v', 'w']:
-            tensor = np.multiply(glob.TEST.S_mod, glob.TEST.S[i + j])
-            tensor1 = np.multiply(glob.LES.S_mod, glob.LES.S[i + j])
+            tensor = np.multiply(g.TEST.S_mod, g.TEST.S[i + j])
+            tensor1 = np.multiply(g.LES.S_mod, g.LES.S[i + j])
             tensor2 = filter.filter3d_array(tensor1, TEST_scale)
-            M[i + j] = -2 * (glob.TEST.delta ** 2 * tensor - glob.LES.delta ** 2 * tensor2)
+            M[i + j] = -2 * (g.TEST.delta ** 2 * tensor - g.LES.delta ** 2 * tensor2)
 
     print("\nCalculate C_s")
     M_M = np.mean(scalar_product(M, M))

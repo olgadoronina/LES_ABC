@@ -1,6 +1,6 @@
 import calculate
 from params import *
-import glob
+import global_var as g
 
 def imagesc(Arrays, map_bounds, name=None, titles=None):
     cmap = plt.cm.jet  # define the colormap
@@ -131,11 +131,14 @@ def tau_sp(tau_sp, name=None):
     del fig, fig1, axarr
     gc.collect()
 
-def tau_compare(tau_true, tau_modeled):
+def tau_compare(Cs):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
-    titles = titles=[r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
+    titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
+    if not g.LES.tau_true:
+        g.LES.Reynolds_stresses_from_DNS()
+    tau_modeled = g.LES.Reynolds_stresses_from_Cs(Cs)
     for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data1, data2 = tau_true[i].flatten(), tau_modeled[i].flatten()
+        data1, data2 = g.LES.tau_true[i].flatten(), tau_modeled[i].flatten()
         x, y = utils.pdf_from_array(data1, 100, [-1.1, 1.1])
         axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
         x, y = utils.pdf_from_array(data2, 100, [-1.1, 1.1])
@@ -151,7 +154,8 @@ def tau_compare(tau_true, tau_modeled):
     del fig, axarr
     gc.collect()
 
-def tau_abc(pdf_true, Cs_abc, test_field, S_mod_S_ij):
+
+def tau_abc(Cs_abc):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(18, 6))
     titles = [r'$\widehat{T}_{11}$', r'$\widehat{T}_{12}$', r'$\widehat{T}_{13}$']
 
@@ -159,14 +163,13 @@ def tau_abc(pdf_true, Cs_abc, test_field, S_mod_S_ij):
     plots = []
     labels = []
     for ind, i in enumerate(['uu', 'uv', 'uv']):
-        line = axarr[ind].plot(x, pdf_true[i], linewidth=3, label='true pdf')
+        line = axarr[ind].plot(x, g.TEST.tau_pdf_true[i], linewidth=3, label='true pdf')
         if ind == 0:
             plots.append(line)
             labels.append('true pdf')
         axarr[ind].set_xlabel(titles[ind])
-
     for C_s in Cs_abc:
-        tau = glob.TEST.Reynolds_stresses_from_Cs(C_s)
+        tau = g.TEST.Reynolds_stresses_from_Cs(C_s)
         for ind, i in enumerate(['uu', 'uv', 'uv']):
             x, y = utils.pdf_from_array(tau[i].flatten(), bins, domain)
             line = axarr[ind].plot(x, y, linewidth=1, label=r'$C_s \approx\  $' + str(round(C_s, 3)))
@@ -176,23 +179,48 @@ def tau_abc(pdf_true, Cs_abc, test_field, S_mod_S_ij):
     axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
     axarr[0].set_ylabel('pdf')
     axarr[0].set_yscale('log', nonposy='clip')
-
     # Shrink current axis's width
     for i in range(3):
         box = axarr[i].get_position()
         axarr[i].set_position([box.x0, box.y0, box.width*0.9, box.height])
     # Put a legend below current axis
     plt.legend(loc='upper center', bbox_to_anchor=(1.6, 1.1),  fancybox=True, shadow=True, ncol=2)
-
     fig1 = plt.gcf()
     plt.show()
     fig1.savefig('tau_abc.eps')
-
-    del fig, fig1, axarr
+    del fig, axarr
     gc.collect()
 
-def Cs_scatter(Cs, dist):
-    plt.scatter(Cs, dist)
+
+def Cs_scatter(Cs_accepted, Cs_failed = None):
+    plt.scatter(Cs_accepted[:,0], Cs_accepted[:,1], color='blue')
+    if Cs_failed is not None:
+        plt.scatter(Cs_failed[:, 0], Cs_failed[:, 1], color='red')
+        plt.axhline(y=eps, color='r', linestyle='--')
+    plt.axis(xmin=Cs_limits[0], xmax=Cs_limits[1])
     plt.xlabel(r'$C_s$')
     plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
     plt.show()
+    gc.collect()
+
+
+def S_compare(field, axarr, titles, label, color):
+    for ind, i in enumerate(['uu', 'uv', 'uw']):
+        data = field[i].flatten()
+        x, y = utils.pdf_from_array(data, 100, [-1.1, 1.1])
+        axarr[ind].plot(x, y, 'r', linewidth=2, label=label, color=color)
+        axarr[ind].set_xlabel(titles[ind])
+    axarr[0].axis(xmin=-1.1, xmax=1.1)
+    axarr[0].set_ylabel('pdf')
+    # axarr[0].set_yscale('log', nonposy='clip')
+
+def A_compare(field, axarr, titles, M, color):
+    x = np.linspace(0, 2*pi, M)
+    for ind, i in enumerate(['uu', 'uv', 'uw']):
+        data = field[i][int(M/2), int(M/2), :]
+        print(data.shape, x.shape)
+        axarr[ind].plot(x, data, 'r', linewidth=2, label=str(M), color=color)
+        axarr[ind].set_xlabel(titles[ind])
+    axarr[0].axis(xmin=0, xmax=2*pi)
+    # axarr[0].set_ylabel('')
+    # axarr[0].set_yscale('log', nonposy='clip')

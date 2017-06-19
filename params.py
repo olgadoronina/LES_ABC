@@ -7,10 +7,13 @@ import utils
 import matplotlib as mpl
 import multiprocessing as mp
 import random as rand
+import logging
 
-# plt.style.use(['seaborn-paper', 'mystyle'])
+plt.style.use(['seaborn-paper', 'mystyle'])
+logging.basicConfig(format='%(levelname)s:%(message)s',level=logging.INFO)
 
-PARALLEL = 0
+PARALLEL = 1
+PLOT_ALL_DIST = 0
 
 # path to dns data
 datafile_u = './data/HIT_u.bin'
@@ -18,20 +21,18 @@ datafile_v = './data/HIT_v.bin'
 datafile_w = './data/HIT_w.bin'
 
 # Case parameters
-N_points = [256, 256, 256]  # number of points
-N_dx = [255, 255, 255]  # number of intervals
+# N_points = [256, 256, 256]  # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]  # domain size
-dx = np.divide(lx, N_points)  # grid cell size (resolution)
+# dx = np.divide(lx, N_points)  # grid cell size (resolution)
 # N = Nx[0] * Nx[1] * Nx[2]
 
 # Scales
 LES_scale = 10
 TEST_scale = 5
 
-HIT_delta = lx[0]/N_points[0]
+# HIT_delta = lx[0]/N_points[0]
 LES_delta = 1/LES_scale
 TEST_delta = 1/TEST_scale
-
 
 # params for abc algorithm
 domain = [-1.1, 1.1]
