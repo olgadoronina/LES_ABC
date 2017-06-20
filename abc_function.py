@@ -27,11 +27,11 @@ def work_function(tasks):
     :return:   list[Cs, dist] if accepted and None if not
     """
     Cs, eps = tasks[0], tasks[1]
-    tau = g.TEST.Reynolds_stresses_from_Cs(Cs)
+    tau = g.TEST_sp.Reynolds_stresses_from_Cs(Cs)
     dist = 0
     for key, value in tau.items():
         x, y = utils.pdf_from_array(value.flatten(), bins, domain)
-        dist += distance_between_pdf(pdf_modeled=y, pdf_true=g.TEST.tau_pdf_true[key])
+        dist += distance_between_pdf(pdf_modeled=y, pdf_true=g.TEST_sp.tau_pdf_true[key])
     if dist <= eps:
         return [True, Cs, dist]
     elif PLOT_ALL_DIST:
@@ -42,13 +42,16 @@ def ABC(eps, N):
     """ Approximate Beyasian Computation algorithm
     :return: scalar of best parameter value Cs
     """
-    if not g.TEST.tau_true:
-        g.TEST.Reynolds_stresses_from_DNS()
-    for key, value in g.TEST.tau_true.items():
-        g.TEST.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
+    if not g.TEST_sp.tau_true:
+        g.TEST_sp.Reynolds_stresses_from_DNS()
+    for key, value in g.TEST_sp.tau_true.items():
+        g.TEST_sp.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
 
-    if not g.TEST.S_mod_S_ij:
-        g.TEST.strain_mod_strain_ij()
+    if not g.TEST_sp.S:
+        g.TEST_sp.S = utils.sparse_dict(g.TEST.S, g.TEST_sp.M[0])
+
+    if not g.TEST_sp.S_mod_S_ij:
+        g.TEST_sp.strain_mod_strain_ij()
 
     Cs_array = [rand.uniform(Cs_limits[0], Cs_limits[1]) for i in range(N)]
     # Main loop
@@ -64,17 +67,21 @@ def ABC(eps, N):
     else:
         result = []
         for Cs in Cs_array:
-            result.append(work_function(Cs))
+            result.append(work_function((Cs, eps)))
     end = time()
     utils.timer(start, end, 'Time ')
+
     ####################################################################################################################
+    result = np.array([x for x in result if x is not None])
+
     Cs_accepted = np.array([[Cs, dist] for [accepted, Cs, dist] in result if accepted])
+
     if PLOT_ALL_DIST:
         Cs_failed = np.array([[Cs, dist] for [accepted, Cs, dist] in result if not accepted])
         plot.Cs_scatter(Cs_accepted, Cs_failed)
 
     plot.Cs_scatter(Cs_accepted)
-    print(len(Cs_accepted))
+
     ####################################################################################################################
     # plot.tau_abc(np.sort(Cs_accepted, axis=0)[:, 0])
     Cs_final = Cs_accepted[np.argmin(Cs_accepted[:, 1]), 0]

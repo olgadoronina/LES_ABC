@@ -193,11 +193,14 @@ def tau_abc(Cs_abc):
 
 
 def Cs_scatter(Cs_accepted, Cs_failed = None):
-    plt.scatter(Cs_accepted[:,0], Cs_accepted[:,1], color='blue')
+
     if Cs_failed is not None:
         plt.scatter(Cs_failed[:, 0], Cs_failed[:, 1], color='red')
         plt.axhline(y=eps, color='r', linestyle='--')
-    plt.axis(xmin=Cs_limits[0], xmax=Cs_limits[1])
+        plt.axis(xmin=Cs_limits[0], xmax=Cs_limits[1])
+    else:
+        plt.axis(xmin=0.18, xmax=0.26, ymin=25, ymax=51)
+    plt.scatter(Cs_accepted[:, 0], Cs_accepted[:, 1], color='blue')
     plt.xlabel(r'$C_s$')
     plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
     plt.show()
@@ -214,13 +217,12 @@ def S_compare(field, axarr, titles, label, color):
     axarr[0].set_ylabel('pdf')
     # axarr[0].set_yscale('log', nonposy='clip')
 
+
 def A_compare(field, axarr, titles, M, color):
-    x = np.linspace(0, 2*pi, M)
+    x = np.linspace(0, 2*pi-2*pi/M, M)
     for ind, i in enumerate(['uu', 'uv', 'uw']):
         data = field[i][int(M/2), int(M/2), :]
         print(data.shape, x.shape)
         axarr[ind].plot(x, data, 'r', linewidth=2, label=str(M), color=color)
         axarr[ind].set_xlabel(titles[ind])
-    axarr[0].axis(xmin=0, xmax=2*pi)
-    # axarr[0].set_ylabel('')
-    # axarr[0].set_yscale('log', nonposy='clip')
+    axarr[0].axis(xmin=0, xmax=2*pi, ymin=-10, ymax=10)

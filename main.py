@@ -28,46 +28,58 @@ def main():
     colors = ['b', 'g', 'r', 'k']
 
     k = 0
+    logging.info("Load data")
+    LES_data = np.load('./data/LES.npz')
+    TEST_data = np.load('./data/TEST.npz')
+    g.LES = data.Data(LES_data, LES_delta, N_points)
+    g.TEST = data.Data(TEST_data, TEST_delta, N_points)
+    del LES_data, TEST_data
+
+    logging.info(' Calculate strain tensors')
+    # g.HIT.strain_tensor()
+    g.LES.strain_tensor()
+    g.TEST.strain_tensor()
+
     for M in [256, 128, 64, 32]:
-        logging.info("Load data")
-        LES_data = np.load('./data/LES.npz')
-        TEST_data = np.load('./data/TEST.npz')
 
         logging.info('Sparse data')
         Nx = [M, M, M]
-        LES_data = utils.sparse_dict(LES_data, M)
-        TEST_data = utils.sparse_dict(TEST_data, M)
-        print(LES_data['uu'].shape)
+        LES_data_sp = utils.sparse_dict(g.LES.field, M)
+        TEST_data_sp = utils.sparse_dict(g.TEST.field, M)
+        print(LES_data_sp['uu'].shape)
 
-        g.LES = data.Data(LES_data, LES_delta, Nx)
-        g.TEST = data.Data(TEST_data, TEST_delta, Nx)
-        del LES_data, TEST_data
+        g.LES_sp = data.Data(LES_data_sp, LES_delta, Nx)
+        g.TEST_sp = data.Data(TEST_data_sp, TEST_delta, Nx)
+        g.LES_sp.S = utils.sparse_dict(g.LES.S, M)
+        g.TEST_sp.S = utils.sparse_dict(g.TEST.S, M)
 
-        logging.info('Strain tensors')
-        # g.HIT.strain_tensor()
-        g.LES.strain_tensor()
-        g.TEST.strain_tensor()
+        g.LES_sp.A = utils.sparse_dict(g.LES.A, M)
+        g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
+        plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
+
+        del LES_data_sp, TEST_data_sp
 
 
-        # g.LES.strain_mod_strain_ij()
-        # g.TEST.strain_mod_strain_ij()
+        # g.LES_sp.strain_mod_strain_ij()
+        # g.TEST_sp.strain_mod_strain_ij()
+
+        # logging.info('Reynolds stresses')
+        # # T_TEST = np.load('./data/T.npz')
+        # g.TEST.Reynolds_stresses_from_DNS()
+        # g.LES.Reynolds_stresses_from_DNS()
+        # plot.tau_sp(LES.tau_true, 'tau_LES')
 
         # plot.S_compare(g.TEST.S, axarr, titles, label=str(M), color=colors[k])
 
-        plot.A_compare(g.TEST.A, axarr, titles, M=M, color=colors[k])
-        # logging.info('Reynolds stresses')
-        # # # T_TEST = np.load('./data/T.npz')
-        # g.TEST.Reynolds_stresses_from_DNS()
-        # g.LES.Reynolds_stresses_from_DNS()
-        # # plot.tau_sp(LES.tau_true, 'tau_LES')
-        #
+
+
         # logging.info('ABC algorithm')
         # Cs = abc_function.ABC(eps, N)
         # # plot.tau_compare(Cs)
         # print(M, Cs)
 
-        g.LES = None
-        g.TEST = None
+        g.LES_sp = None
+        g.TEST_sp = None
         k += 1
 
         # map_bounds = np.linspace(np.min(LES.field['u'][:, :, 127]), np.max(LES.field['v'][:, :, 127]), 20)

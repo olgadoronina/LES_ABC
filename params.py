@@ -20,8 +20,10 @@ datafile_u = './data/HIT_u.bin'
 datafile_v = './data/HIT_v.bin'
 datafile_w = './data/HIT_w.bin'
 
+
+
 # Case parameters
-# N_points = [256, 256, 256]  # number of points
+N_points = [256, 256, 256]  # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]  # domain size
 # dx = np.divide(lx, N_points)  # grid cell size (resolution)
 # N = Nx[0] * Nx[1] * Nx[2]
@@ -39,6 +41,6 @@ domain = [-1.1, 1.1]
 Cs_limits = [0.0, 0.4]
 bins = 100
 eps = 50
-N = 100
+N = 1000
 
 
