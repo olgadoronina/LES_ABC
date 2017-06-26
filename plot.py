@@ -40,8 +40,8 @@ def imagesc(Arrays, map_bounds, name=None, titles=None):
 
 
 def histogram(field, bins, pdf=None, label=None, log=False):
-    plt.figure(figsize=(8, 8))
-    plt.hist(field, bins=bins, normed=1, alpha=0.4)
+    plt.figure(figsize=(6, 4))
+    plt.hist(field, bins=bins, alpha=0.4)
 
     # h, edges = np.histogram(field, bins=bins, range=[-2,2], normed=1)
     if pdf:
@@ -52,8 +52,9 @@ def histogram(field, bins, pdf=None, label=None, log=False):
         plt.legend(loc=0)
     if log:
         plt.yscale('log', nonposy='clip')
-    plt.xlabel(label)
-    plt.ylabel('pdf(' + label + ')')
+    if label:
+        plt.xlabel(label)
+        plt.ylabel('pdf(' + label + ')')
     plt.axis(xmin=np.min(field), xmax=np.max(field))  # xmax=4xmax = np.max(field)
     plt.show()
     gc.collect()
@@ -192,16 +193,25 @@ def tau_abc(Cs_abc):
     gc.collect()
 
 
-def Cs_scatter(Cs_accepted, Cs_failed = None):
+def Cs_scatter(Cs_accepted, Cs_failed = None, label=None):
 
     if Cs_failed is not None:
         plt.scatter(Cs_failed[:, 0], Cs_failed[:, 1], color='red')
         plt.axhline(y=eps, color='r', linestyle='--')
-        plt.axis(xmin=Cs_limits[0], xmax=Cs_limits[1])
+        # plt.axis(xmin=C_limits[0, 0], xmax=C_limits[0, 1])
+    # else:
+    if label == r'$C_1$':
+        plt.axis(xmin=C_limits[0, 0], xmax=C_limits[0, 1], ymax=75)
+    elif label == r'$C_2$':
+        plt.axis(xmin=C_limits[1, 0], xmax=C_limits[1, 1], ymax=75)
+    elif label == r'$C_4$':
+        plt.axis(xmin=C_limits[3, 0], xmax=C_limits[3, 1], ymax=75)
     else:
-        plt.axis(xmin=0.18, xmax=0.26, ymin=25, ymax=51)
+        plt.axis(xmin=C_limits[2, 0], xmax=C_limits[2, 1], ymax=75)
     plt.scatter(Cs_accepted[:, 0], Cs_accepted[:, 1], color='blue')
-    plt.xlabel(r'$C_s$')
+    if label==None:
+        plt.xlabel(r'$C_s$')
+    plt.xlabel(label)
     plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
     plt.show()
     gc.collect()

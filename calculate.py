@@ -73,4 +73,3 @@ def Smagorinsky_constant_dynamic():
     C_s = sqrt(C_s_sqr)
     print('C_s from Dynamic model:', C_s)
     return C_s
-

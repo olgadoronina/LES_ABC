@@ -26,63 +26,81 @@ def work_function(tasks):
     :param Cs: scalar value of sampled parameter
     :return:   list[Cs, dist] if accepted and None if not
     """
-    Cs, eps = tasks[0], tasks[1]
-    tau = g.TEST_sp.Reynolds_stresses_from_Cs(Cs)
+    C, eps = tasks[0], tasks[1]
+    tau = g.TEST_sp.Reynolds_stresses_from_C(C)
     dist = 0
     for key, value in tau.items():
         x, y = utils.pdf_from_array(value.flatten(), bins, domain)
         dist += distance_between_pdf(pdf_modeled=y, pdf_true=g.TEST_sp.tau_pdf_true[key])
     if dist <= eps:
-        return [True, Cs, dist]
-    elif PLOT_ALL_DIST:
-        return [False, Cs, dist]
+        return [True, C, dist]
+    else:
+        return [False, C, dist]
 
 
 def ABC(eps, N):
-    """ Approximate Beyasian Computation algorithm
+    """Approximate Beyasian Computation algorithm
     :return: scalar of best parameter value Cs
     """
     if not g.TEST_sp.tau_true:
         g.TEST_sp.Reynolds_stresses_from_DNS()
     for key, value in g.TEST_sp.tau_true.items():
         g.TEST_sp.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
-
     if not g.TEST_sp.S:
         g.TEST_sp.S = utils.sparse_dict(g.TEST.S, g.TEST_sp.M[0])
+    if not g.TEST_sp.R:
+        g.TEST_sp.R = utils.sparse_dict(g.TEST.R, g.TEST_sp.M[0])
+    if not g.TEST_sp.Tensor_1:
+        g.TEST_sp.calc_tensor_1()
+    if not g.TEST_sp.Tensor_2:
+        g.TEST_sp.calc_tensor_2()
+    if not g.TEST_sp.Tensor_3:
+        g.TEST_sp.calc_tensor_3()
+    if not g.TEST_sp.Tensor_4:
+        g.TEST_sp.calc_tensor_4()
 
-    if not g.TEST_sp.S_mod_S_ij:
-        g.TEST_sp.strain_mod_strain_ij()
-
-    Cs_array = [rand.uniform(Cs_limits[0], Cs_limits[1]) for i in range(N)]
+    C_array = utils.form_C_array()
     # Main loop
     ####################################################################################################################
     start = time()
     if PARALLEL:
         print("\n%d workers" % mp.cpu_count())
         pool = mp.Pool(mp.cpu_count())
-        tasks = [(Cs, eps) for Cs in Cs_array]
+        tasks = [(C, eps) for C in C_array]
         result = pool.map(work_function, tasks)  # in parallel
         pool.close()
         pool.terminate()
     else:
         result = []
-        for Cs in Cs_array:
-            result.append(work_function((Cs, eps)))
+        for C in C_array:
+            result.append(work_function((C, eps)))
     end = time()
     utils.timer(start, end, 'Time ')
-
     ####################################################################################################################
-    result = np.array([x for x in result if x is not None])
-
-    Cs_accepted = np.array([[Cs, dist] for [accepted, Cs, dist] in result if accepted])
-
+    C1_accepted = np.array([[C[0], dist] for [accepted, C, dist] in result if accepted])
+    C2_accepted = np.array([[C[1], dist] for [accepted, C, dist] in result if accepted])
+    C3_accepted = np.array([[C[2], dist] for [accepted, C, dist] in result if accepted])
+    C4_accepted = np.array([[C[3], dist] for [accepted, C, dist] in result if accepted])
     if PLOT_ALL_DIST:
-        Cs_failed = np.array([[Cs, dist] for [accepted, Cs, dist] in result if not accepted])
-        plot.Cs_scatter(Cs_accepted, Cs_failed)
+        C1_failed = np.array([[C[0], dist] for [accepted, C, dist] in result if not accepted])
+        C2_failed = np.array([[C[1], dist] for [accepted, C, dist] in result if not accepted])
+        C3_failed = np.array([[C[2], dist] for [accepted, C, dist] in result if not accepted])
+        C4_failed = np.array([[C[3], dist] for [accepted, C, dist] in result if not accepted])
+        plot.Cs_scatter(C1_accepted, C1_failed, label=r'$C_1$')
+        plot.Cs_scatter(C2_accepted, C2_failed, label=r'$C_2$')
+        plot.Cs_scatter(C3_accepted, C3_failed, label=r'$C_3$')
+        plot.Cs_scatter(C4_accepted, C4_failed, label=r'$C_4$')
 
-    plot.Cs_scatter(Cs_accepted)
+    plot.Cs_scatter(C1_accepted, label=r'$C_1$')
+    plot.Cs_scatter(C2_accepted, label=r'$C_2$')
+    plot.Cs_scatter(C3_accepted, label=r'$C_3$')
+    plot.Cs_scatter(C4_accepted, label=r'$C_4$')
 
+    plot.histogram(C1_accepted[:, 0], bins=20, label=r'$C_1$')
+    plot.histogram(C2_accepted[:, 0], bins=20, label=r'$C_2$')
+    plot.histogram(C3_accepted[:, 0], bins=20, label=r'$C_3$')
+    plot.histogram(C4_accepted[:, 0], bins=20, label=r'$C_4$')
     ####################################################################################################################
     # plot.tau_abc(np.sort(Cs_accepted, axis=0)[:, 0])
-    Cs_final = Cs_accepted[np.argmin(Cs_accepted[:, 1]), 0]
-    return Cs_final
+    # C_final = C_accepted[np.argmin(C_accepted[:, 1]), 0]
+    # return Cs_final

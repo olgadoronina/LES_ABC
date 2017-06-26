@@ -38,3 +38,12 @@ def pdf_from_array(array, bins, range):
     x = (edges[1:] + edges[:-1])/2
     return x, pdf
 
+def form_C_array():
+    C_array = []
+    for i in range(N):
+        C = []
+        for j in range(4):
+            C.append(rand.uniform(C_limits[j][0], C_limits[j][1]))
+        C_array.append(C)
+    return C_array
+
