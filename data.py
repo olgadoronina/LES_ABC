@@ -6,17 +6,39 @@ class Data(object):
     def __init__(self, data_dict, delta, n_points):
         self.field = data_dict
         self.delta = delta
-        # self.A = dict()
-        self.S = dict()
-        self.R = dict()
-        self.S_mod = 0
-        self.Tensor_1 = dict()
-        self.Tensor_2 = dict()
-        self.Tensor_3 = dict()
-        self.Tensor_4 = dict()
+        self.A = dict()
         self.tau_true = dict()
         self.tau_pdf_true = dict()
         self.M = n_points
+        if ORDER >= 1:
+            self.num_of_params = 1
+            self.S = dict()
+            self.S_mod = 0
+            self.Tensor_1 = dict()
+        if ORDER >= 2:
+            self.num_of_params = 4
+            self.R = dict()
+            self.Tensor_2 = dict()
+            self.Tensor_3 = dict()
+            self.Tensor_4 = dict()
+        if ORDER >= 3:
+            self.num_of_params = 6
+            self.Tensor_5 = dict()
+            self.Tensor_6 = dict()
+            logging.error('ORDER parameter should be int from 1 to 2')
+        if ORDER >= 4:
+            self.num_of_params = 9
+            self.Tensor_7 = dict()
+            self.Tensor_8 = dict()
+            self.Tensor_9 = dict()
+            logging.error('ORDER parameter should be int from 1 to 3')
+        if ORDER >= 5:
+            self.num_of_params = 10
+            self.Tensor_10 = dict()
+            logging.error('ORDER parameter should be int from 1 to 4')
+        if ORDER > 5:
+            logging.error('ORDER parameter should be int from 1 to 5')
+
 
     def field_gradient(self):
         """Calculate tensor of gradients of given field.
@@ -28,7 +50,7 @@ class Data(object):
         grad['uu'], grad['uv'], grad['uw'] = np.gradient(self.field['u'], dx[0], dx[1], dx[2], edge_order=2)
         grad['vu'], grad['vv'], grad['vw'] = np.gradient(self.field['v'], dx[0], dx[1], dx[2], edge_order=2)
         grad['wu'], grad['wv'], grad['ww'] = np.gradient(self.field['w'], dx[0], dx[1], dx[2], edge_order=2)
-        self.A = grad
+        # self.A = grad
         return grad
 
     def calc_strain_tensor(self):
@@ -133,15 +155,23 @@ class Data(object):
         :return: dictionary of modeled Reynolds stresses tensor
         """
         tau = dict()
+        if not self.Tensor_1:
+            self.calc_tensor_1()
+        if not self.Tensor_2:
+            self.calc_tensor_2()
+        if not self.Tensor_3:
+            self.calc_tensor_3()
+        if not self.Tensor_4:
+            self.calc_tensor_4()
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 tau[i+j] = -2*C[0]**2*self.delta**2*self.Tensor_1[i+j]
-                if len(C)>1:
+                if ORDER > 1:
                     tau[i + j] += C[1] * self.delta ** 2 * self.Tensor_2[i + j] +\
                                   C[2] * self.delta ** 2 * self.Tensor_3[i + j] + \
                                   C[3] * self.delta ** 2 * self.Tensor_4[i + j]
         if np.isnan(np.sum(tau[i + j])):
-            print('tau_' + i + j + ': nan is detected ')
+            logging.error('tau_' + i + j + ': nan is detected ')
         return tau
 
 

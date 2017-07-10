@@ -41,7 +41,7 @@ def imagesc(Arrays, map_bounds, name=None, titles=None):
 
 def histogram(field, bins, pdf=None, label=None, log=False):
     plt.figure(figsize=(6, 4))
-    plt.hist(field, bins=bins, alpha=0.4)
+    plt.hist(field, bins=bins, alpha=0.4, normed=1)
 
     # h, edges = np.histogram(field, bins=bins, range=[-2,2], normed=1)
     if pdf:
@@ -137,7 +137,7 @@ def tau_compare(Cs):
     titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
     if not g.LES.tau_true:
         g.LES.Reynolds_stresses_from_DNS()
-    tau_modeled = g.LES.Reynolds_stresses_from_Cs(Cs)
+    tau_modeled = g.LES.Reynolds_stresses_from_C(Cs)
     for ind, i in enumerate(['uu', 'uv', 'uw']):
         data1, data2 = g.LES.tau_true[i].flatten(), tau_modeled[i].flatten()
         x, y = utils.pdf_from_array(data1, 100, [-1.1, 1.1])
@@ -200,8 +200,8 @@ def Cs_scatter(Cs_accepted, Cs_failed = None, label=None):
         plt.axhline(y=eps, color='r', linestyle='--')
         # plt.axis(xmin=C_limits[0, 0], xmax=C_limits[0, 1])
     # else:
-    if label == r'$C_1$':
-        plt.axis(xmin=C_limits[0, 0], xmax=C_limits[0, 1], ymax=75)
+    if label == r'$C_s$':
+        plt.axis(xmin=0.18, xmax=0.3, ymax=50)
     elif label == r'$C_2$':
         plt.axis(xmin=C_limits[1, 0], xmax=C_limits[1, 1], ymax=75)
     elif label == r'$C_4$':
@@ -229,6 +229,7 @@ def S_compare(field, axarr, titles, label, color):
 
 
 def A_compare(field, axarr, titles, M, color):
+
     x = np.linspace(0, 2*pi-2*pi/M, M)
     for ind, i in enumerate(['uu', 'uv', 'uw']):
         data = field[i][int(M/2), int(M/2), :]

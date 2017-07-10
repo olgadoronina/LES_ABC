@@ -23,9 +23,9 @@ def main():
     # LES_data = filter.filter3d(data=HIT.field, scale_k=LES_scale)
     # TEST_data = filter.filter3d(data=HIT.field, scale_k=TEST_scale)
 
-    # fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
+    # fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 3))
     # titles = [r'$\widehat{\widetilde{A}}_{11}$', r'$\widehat{\widetilde{A}}_{12}$', r'$\widehat{\widetilde{A}}_{13}$']
-    # colors = ['b', 'g', 'r', 'k']
+    # colors = ['b', 'y', 'g', 'r', 'k']
 
     logging.info("Load data")
     LES_data = np.load('./data/LES.npz')
@@ -35,11 +35,11 @@ def main():
     del LES_data, TEST_data
 
     logging.info('Calculate strain and rotation tensor')
-    # g.LES.calc_strain_tensor()
+    g.LES.calc_strain_tensor()
     g.TEST.calc_strain_tensor()
-    # g.LES.calc_rotation_tensor()
-    g.TEST.calc_rotation_tensor()
-
+    if ORDER > 1:
+        g.LES.calc_rotation_tensor()
+        g.TEST.calc_rotation_tensor()
 
     logging.info('Sparse data')
     Nx = [M, M, M]
@@ -54,7 +54,8 @@ def main():
     # g.LES_sp.S = utils.sparse_dict(g.LES.S, M)
     g.TEST_sp.S = utils.sparse_dict(g.TEST.S, M)
     # g.LES_sp.A = utils.sparse_dict(g.LES.A, M)
-    g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
+    # g.TEST.A = g.TEST.field_gradient()
+    # g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
     # plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
 
     # g.LES_sp.strain_mod_strain_ij()
@@ -68,16 +69,13 @@ def main():
 
     # plot.S_compare(g.TEST.S, axarr, titles, label=str(M), color=colors[k])
 
-
-
     logging.info('ABC algorithm')
-    abc_function.ABC(eps, N)
-    # plot.tau_compare(Cs)
-    # print(M, Cs)
+    C = abc_function.ABC(eps, N)
+    plot.tau_compare(C)
+    print(M, C)
 
     # g.LES_sp = None
     g.TEST_sp = None
-
 
     # map_bounds = np.linspace(np.min(LES.field['u'][:, :, 127]), np.max(LES.field['v'][:, :, 127]), 20)
     # plot.imagesc([LES.field['u'][:, :, 127], LES.field['v'][:, :, 127], LES.field['w'][:, :, 127]], map_bounds,
