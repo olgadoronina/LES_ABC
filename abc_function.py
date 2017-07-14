@@ -3,12 +3,9 @@ import global_var as g
 import utils
 import plot
 import parallel
-import multiprocessing as mp
+from tqdm import tqdm
 
-from time import sleep
-
-
-def distance_between_pdf(pdf_modeled, pdf_true):
+def distance_between_pdf(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
     In the simple case, a KL divergence of 0 indicates that we can expect similar,
@@ -17,7 +14,7 @@ def distance_between_pdf(pdf_modeled, pdf_true):
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
-    log_true = np.log(pdf_true, out=np.zeros_like(pdf_true), where=pdf_true != 0)
+    log_true = g.TEST_sp.log_tau_pdf_true[key]
     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - log_true)))
     return dist
@@ -30,24 +27,26 @@ def work_function(C):
     """
     tau = g.TEST_sp.Reynolds_stresses_from_C(C)
     dist = 0
-    for key, value in tau.items():
-        x, y = utils.pdf_from_array(value.flatten(), bins, domain)
-        dist += distance_between_pdf(pdf_modeled=y, pdf_true=g.TEST_sp.tau_pdf_true[key])
-
+    for key in ['uu', 'vv', 'ww', 'uv', 'uw', 'vw']:
+        x, y = utils.pdf_from_array(tau[key].flatten(), bins, domain)
+        dist += distance_between_pdf(pdf_modeled=y, key=key)
     if dist <= g.eps:
         return [True, C, dist]
     else:
         return [False, C, dist]
 
 
-def ABC(eps, N):
+def ABC(N):
     """Approximate Beyasian Computation algorithm
-    :return: scalar of best parameter value Cs
+    :return: scalar of best parameter value C
     """
     if not g.TEST_sp.tau_true:
         g.TEST_sp.Reynolds_stresses_from_DNS()
     for key, value in g.TEST_sp.tau_true.items():
         g.TEST_sp.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
+        g.TEST_sp.log_tau_pdf_true[key] = np.log(g.TEST_sp.tau_pdf_true[key],
+                                                 out=np.empty_like(g.TEST_sp.tau_pdf_true[key]).fill(-20),
+                                                 where=g.TEST_sp.tau_pdf_true[key] != 0)
     if not g.TEST_sp.S:
         g.TEST_sp.S = utils.sparse_dict(g.TEST.S, g.TEST_sp.M[0])
     if not g.TEST_sp.Tensor_1:
@@ -73,8 +72,11 @@ def ABC(eps, N):
         result = par_process.get_results()
     else:
         result = []
-        for C in C_array:
-            result.append(work_function((C, eps)))
+        with tqdm(total=N) as pbar:
+            for C in C_array:
+                result.append(work_function(C))
+                pbar.update()
+        pbar.close()
     end = time()
     utils.timer(start, end, 'Time ')
     ####################################################################################################################

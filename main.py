@@ -70,7 +70,7 @@ def main():
     # plot.S_compare(g.TEST.S, axarr, titles, label=str(M), color=colors[k])
 
     logging.info('ABC algorithm')
-    C = abc_function.ABC(eps, N)
+    C = abc_function.ABC(N)
     plot.tau_compare(C)
     print(M, C)
 

@@ -1,6 +1,5 @@
 from params import *
 from tqdm import tqdm
-from time import sleep
 
 
 class Parallel(object):

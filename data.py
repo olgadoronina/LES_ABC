@@ -9,6 +9,7 @@ class Data(object):
         self.A = dict()
         self.tau_true = dict()
         self.tau_pdf_true = dict()
+        self.log_tau_pdf_true = dict()
         self.M = n_points
         if ORDER >= 1:
             self.num_of_params = 1
@@ -157,12 +158,13 @@ class Data(object):
         tau = dict()
         if not self.Tensor_1:
             self.calc_tensor_1()
-        if not self.Tensor_2:
-            self.calc_tensor_2()
-        if not self.Tensor_3:
-            self.calc_tensor_3()
-        if not self.Tensor_4:
-            self.calc_tensor_4()
+        if ORDER > 1:
+            if not self.Tensor_2:
+                self.calc_tensor_2()
+            if not self.Tensor_3:
+                self.calc_tensor_3()
+            if not self.Tensor_4:
+                self.calc_tensor_4()
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 tau[i+j] = -2*C[0]**2*self.delta**2*self.Tensor_1[i+j]
