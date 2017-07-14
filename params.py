@@ -22,6 +22,7 @@ datafile_v = './data/HIT_v.bin'
 datafile_w = './data/HIT_w.bin'
 
 # Initial case parameters
+HOMOGENEOUS = 1
 N_points = [256, 256, 256]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 
@@ -47,7 +48,7 @@ bins = 100  # for joint pdf
 eps = 50        # acceptance tolerance
 N = int(1.5e6)  # number of samples
 M = 16          # number of training points
-ORDER = 1       # order of eddy-viscosity model
+ORDER = 2       # order of eddy-viscosity model
 #################################################
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel

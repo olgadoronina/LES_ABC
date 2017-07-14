@@ -33,10 +33,14 @@ def sparse_dict(data, M):
         sparse[key] = sparse_array(value, M)
     return sparse
 
+def pdf_from_array_with_x(array, bins, range):
+    pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
+    x = (edges[1:] + edges[:-1]) / 2
+    return x, pdf
+
 def pdf_from_array(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
-    x = (edges[1:] + edges[:-1])/2
-    return x, pdf
+    return pdf
 
 def form_C_array(n):
     C_array = []

@@ -27,9 +27,10 @@ def work_function(C):
     """
     tau = g.TEST_sp.Reynolds_stresses_from_C(C)
     dist = 0
-    for key in ['uu', 'vv', 'ww', 'uv', 'uw', 'vw']:
-        x, y = utils.pdf_from_array(tau[key].flatten(), bins, domain)
-        dist += distance_between_pdf(pdf_modeled=y, key=key)
+    for key in g.TEST_sp.elements_in_tensor:
+        # pdf = utils.pdf_from_array(tau[key].flatten(), bins, domain)
+        pdf, edges = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)
+        dist += distance_between_pdf(pdf_modeled=pdf, key=key)
     if dist <= g.eps:
         return [True, C, dist]
     else:

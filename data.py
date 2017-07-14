@@ -4,6 +4,10 @@ import logging
 class Data(object):
 
     def __init__(self, data_dict, delta, n_points):
+        if HOMOGENEOUS:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
+        else:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
         self.field = data_dict
         self.delta = delta
         self.A = dict()
@@ -95,6 +99,9 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 self.Tensor_1[i + j] = np.multiply(self.S_mod, self.S[i + j])
+        for key, value in self.Tensor_1.items():
+            value *= self.delta**2
+
 
     def calc_tensor_2(self):
         """Calculate tensor (S_ikR_kj - R_ikS_kj)   for given field
@@ -106,6 +113,9 @@ class Data(object):
                 for k in ['u', 'v', 'w']:
                     self.Tensor_2[i + j] += np.multiply(self.S[i + k], self.R[k + j]) - \
                                             np.multiply(self.R[i + k], self.S[k + j])
+        for key, value in self.Tensor_2.items():
+            value *= self.delta**2
+
 
     def calc_tensor_3(self):
         """Calculate tensor (S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
@@ -115,7 +125,6 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for k in ['u', 'v', 'w']:
                 S_S_inv += np.multiply(self.S[i + k], self.S[k + i])
-
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 self.Tensor_3[i + j] = 0
@@ -123,6 +132,9 @@ class Data(object):
                     self.Tensor_3[i + j] += np.multiply(self.S[i + k], self.S[k + j])
                     if i == j:
                         self.Tensor_3[i + j] -= 1/3*S_S_inv
+        for key, value in self.Tensor_3.items():
+            value *= self.delta**2
+
 
     def calc_tensor_4(self):
         """Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
@@ -132,7 +144,6 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for k in ['u', 'v', 'w']:
                 R_R_inv += np.multiply(self.R[i + k], self.R[k + i])
-
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 self.Tensor_4[i + j] = 0
@@ -140,6 +151,9 @@ class Data(object):
                     self.Tensor_4[i + j] += np.multiply(self.R[i + k], self.R[k + j])
                     if i == j:
                         self.Tensor_4[i + j] -= 1/3*R_R_inv
+        for key, value in self.Tensor_4.items():
+            value *= self.delta**2
+
 
     def Reynolds_stresses_from_DNS(self):
         """Calculate Reynolds stresses using DNS data.
@@ -150,10 +164,10 @@ class Data(object):
                 self.tau_true[i + j] = self.field[i + j] - np.multiply(self.field[i], self.field[j])
 
     def Reynolds_stresses_from_C(self, C):
-        """Calculate Reynolds stresses using given Smagorinsky constant Cs
-            (Smagorinsky model).
-        :param C_s: given Smagorinsky constant Cs
-        :return: dictionary of modeled Reynolds stresses tensor
+        """Calculate Reynolds stresses using eddy-viscosity model with constants C
+            (Smagorinsky model if model is linear).
+        :param C: given list of constant parameters
+        :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
         if not self.Tensor_1:
@@ -165,15 +179,12 @@ class Data(object):
                 self.calc_tensor_3()
             if not self.Tensor_4:
                 self.calc_tensor_4()
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tau[i+j] = -2*C[0]**2*self.delta**2*self.Tensor_1[i+j]
-                if ORDER > 1:
-                    tau[i + j] += C[1] * self.delta ** 2 * self.Tensor_2[i + j] +\
-                                  C[2] * self.delta ** 2 * self.Tensor_3[i + j] + \
-                                  C[3] * self.delta ** 2 * self.Tensor_4[i + j]
-        if np.isnan(np.sum(tau[i + j])):
-            logging.error('tau_' + i + j + ': nan is detected ')
+        for i in self.elements_in_tensor:
+            tau[i] = -2*C[0]**2*self.Tensor_1[i]
+            if ORDER > 1:
+                tau[i] += C[1] * self.Tensor_2[i] + \
+                          C[2] * self.Tensor_3[i] + \
+                          C[3] * self.Tensor_4[i]
         return tau
 
 
