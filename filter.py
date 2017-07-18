@@ -1,6 +1,6 @@
 import numpy.fft as fft
 from utils import *
-from time import time
+# from time import time
 
 def tophat_kernel(k, limit):
     """Create 3D array of Tophat filter3d.

@@ -8,7 +8,7 @@ import matplotlib as mpl
 import multiprocessing as mp
 import random as rand
 import logging
-import progressbar
+
 
 plt.style.use(['seaborn-paper', 'mystyle'])
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
@@ -17,6 +17,9 @@ logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
 PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
 
 # Path to dns data
+LOAD = 1
+loadfile_LES = './data/LES.npz'
+loadfile_TEST = './data/TEST.npz'
 datafile_u = './data/HIT_u.bin'
 datafile_v = './data/HIT_v.bin'
 datafile_w = './data/HIT_w.bin'
@@ -25,7 +28,7 @@ datafile_w = './data/HIT_w.bin'
 HOMOGENEOUS = 1
 N_points = [256, 256, 256]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
-
+dx = np.divide(lx, N_points)
 # Filter scales
 LES_scale = 10
 TEST_scale = 5
@@ -45,12 +48,12 @@ C_limits[3] = [-0.2, 0.2]
 bins = 100  # for joint pdf
 #################################################
 # abs algorithm
-eps = 50        # acceptance tolerance
-N = int(1.5e6)  # number of samples
+eps = 500        # acceptance tolerance
+N = int(1.5e5)  # number of samples
 M = 16          # number of training points
 ORDER = 2       # order of eddy-viscosity model
 #################################################
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel
-PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+PROGRESSBAR = 0     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+N_proc = 12          # Number of processes

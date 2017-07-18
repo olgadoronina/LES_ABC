@@ -35,3 +35,4 @@ class Parallel(object):
             return self.results.get()
         else:
             return self.results
+
