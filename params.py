@@ -9,7 +9,6 @@ import multiprocessing as mp
 import random as rand
 import logging
 
-
 plt.style.use(['seaborn-paper', 'mystyle'])
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
 
@@ -25,7 +24,7 @@ datafile_v = './data/HIT_v.bin'
 datafile_w = './data/HIT_w.bin'
 
 # Initial case parameters
-HOMOGENEOUS = 1
+HOMOGENEOUS = 0
 N_points = [256, 256, 256]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 dx = np.divide(lx, N_points)
@@ -48,12 +47,12 @@ C_limits[3] = [-0.2, 0.2]
 bins = 100  # for joint pdf
 #################################################
 # abs algorithm
-eps = 500        # acceptance tolerance
-N = int(1.5e5)  # number of samples
-M = 16          # number of training points
-ORDER = 2       # order of eddy-viscosity model
+eps = 50        # acceptance tolerance
+N = int(1.5e3)  # number of samples
+M = 64          # number of training points
+ORDER = 1       # order of eddy-viscosity model
 #################################################
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel
-PROGRESSBAR = 0     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 12          # Number of processes
+PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+N_proc = 6          # Number of processes

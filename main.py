@@ -41,7 +41,8 @@ def main():
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N, M)
     abc.main_loop()
-    abc.plot_marginal_pdf()
+    abc.plot_scatter()
+    # abc.plot_marginal_pdf()
     C = abc.calc_final_C()
     #
     # # C = abc_function.ABC(N)

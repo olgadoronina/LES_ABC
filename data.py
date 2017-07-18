@@ -82,7 +82,7 @@ class DataSparse(object):
         self.tau_pdf_true = dict()
         self.log_tau_pdf_true = dict()
         for key, value in self.tau_true.items():
-            self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)[1]
+            self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
             self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key],
                                                 out=np.empty_like(self.tau_pdf_true[key]).fill(-20),
                                                 where=self.tau_pdf_true[key] != 0)
@@ -229,7 +229,7 @@ class ViscosityModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2*C[0]**2*self.Tensor_1[i]
+            tau[i] = -2*C[0]**2 * self.Tensor_1[i]
             if ORDER > 1:
                 tau[i] += C[1] * self.Tensor_2[i] + \
                           C[2] * self.Tensor_3[i] + \

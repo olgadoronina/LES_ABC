@@ -9,6 +9,7 @@ from tqdm import tqdm
 class ABC(object):
 
     def __init__(self, N, M):
+        self.N = N
         g.TEST_sp = data.DataSparse(g.TEST, M)
         g.Model = data.ViscosityModel(g.TEST_sp)
         self.C_array = self.form_C_array(N, g.Model.num_of_params)
@@ -41,42 +42,70 @@ class ABC(object):
         utils.timer(start, end, 'Time ')
         self.accepted = np.array([C for [accepted, C, dist] in self.result if accepted])
         self.dist = np.array([dist for [accepted, C, dist] in self.result if accepted])
-        logging.debug('Number of accepted values: '+str(len(self.accepted)))
+        logging.debug('Number of accepted values: ' + str(len(self.accepted)) + ' ' + str(round(len(self.accepted)/self.N*100,2))+'%')
 
     def plot_marginal_pdf(self):
-        C1_accepted = self.accepted[:, 0]
-        plot.histogram(C1_accepted, bins=20, label=r'$C_s$')
+        if len(self.accepted) == 0:
+            logging.warning('No accepted values')
+        else:
+            C1_accepted = self.accepted[:, 0]
+            plot.histogram(C1_accepted, bins=20, label=r'$C_s$')
+            if ORDER > 1:
+                C2_accepted, C3_accepted , C4_accepted  = self.accepted[:, 1], self.accepted[:, 2], self.accepted[:, 3]
+                plot.histogram(C2_accepted, bins=20, label=r'$C_2$')
+                plot.histogram(C3_accepted, bins=20, label=r'$C_3$')
+                plot.histogram(C4_accepted, bins=20, label=r'$C_4$')
+                minim = np.argmin(self.dist)
+                logging.debug('Minimum distance is' + str(self.dist[minim]) + 'in: ' + str(C1_accepted[minim]) + ' '
+                              + str(C2_accepted[minim]) + ' ' + str(C3_accepted[minim]) + ' '
+                              + str(C4_accepted[minim]))
+    def plot_scatter(self):
+        if len(self.accepted) == 0:
+            logging.warning('No accepted values')
+        plt.axis(xmin=0.18, xmax=0.24, ymax=50)
+        plt.scatter(self.accepted[:, 0], self.dist, color='blue')
+        plt.xlabel(r'$C_s$')
+        plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+        plt.show()
         if ORDER > 1:
-            C2_accepted, C3_accepted , C4_accepted  = self.accepted[:, 1], self.accepted[:, 2], self.accepted[:, 3]
-            plot.histogram(C2_accepted, bins=20, label=r'$C_2$')
-            plot.histogram(C3_accepted, bins=20, label=r'$C_3$')
-            plot.histogram(C4_accepted, bins=20, label=r'$C_4$')
-            minim = np.argmin(self.dist)
-            logging.debug('Minimum distance is in: ' + str(C1_accepted[minim]) + ' '
-                          + str(C2_accepted[minim]) + ' ' + str(C3_accepted[minim]) + ' '
-                          + str(C4_accepted[minim]))
+            plt.scatter(self.accepted[:, 1], self.dist, color='blue')
+            plt.xlabel(r'$C_2$')
+            plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+            plt.show()
+            plt.scatter(self.accepted[:, 2], self.dist, color='blue')
+            plt.xlabel(r'$C_3$')
+            plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+            plt.show()
+            plt.scatter(self.accepted[:, 3], self.dist, color='blue')
+            plt.xlabel(r'$C_4$')
+            plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+            plt.show()
+        gc.collect()
 
     def calc_final_C(self):
         # Joint PDF
-        if ORDER == 1:
-            C1_accepted = self.accepted[:, 0]
-            C_final = [C1_accepted[np.argmin(self.dist)]]
-            logging.info('Estimated parameters: ' + str(C_final))
+        if len(self.accepted) == 0:
+            logging.warning('No accepted values')
         else:
-            C_joint = self.accepted
-            H, edges = np.histogramdd(C_joint, bins=(10, 10, 10, 10))
-            logging.debug('Max number in bin: ' + str(np.max(H)))
-            logging.debug('Mean number in bin: ' + str(np.mean(H)))
-            C1_bin = (edges[0][:-1] + edges[0][1:]) / 2
-            if ORDER > 1:
-                C2_bin = (edges[1][:-1] + edges[1][1:]) / 2
-                C3_bin = (edges[2][:-1] + edges[2][1:]) / 2
-                C4_bin = (edges[3][:-1] + edges[3][1:]) / 2
-            i, j, k, m = np.unravel_index(H.argmax(), H.shape)
-            logging.info('Estimated parameters from joint pdf: ' + str(C1_bin[i]) + ' ' + str(C2_bin[j]) + ' ' + str(
-                C3_bin[k]) + ' ' + str(C4_bin[m]))
-            C_final = [C1_bin[i], C2_bin[i], C3_bin[i], C4_bin[i]]
-        return C_final
+            if ORDER == 1:
+                C1_accepted = self.accepted[:, 0]
+                C_final = [C1_accepted[np.argmin(self.dist)]]
+                logging.info('Estimated parameters: ' + str(C_final))
+            else:
+                C_joint = self.accepted
+                H, edges = np.histogramdd(C_joint, bins=(10, 10, 10, 10))
+                logging.debug('Max number in bin: ' + str(np.max(H)))
+                logging.debug('Mean number in bin: ' + str(np.mean(H)))
+                C1_bin = (edges[0][:-1] + edges[0][1:]) / 2
+                if ORDER > 1:
+                    C2_bin = (edges[1][:-1] + edges[1][1:]) / 2
+                    C3_bin = (edges[2][:-1] + edges[2][1:]) / 2
+                    C4_bin = (edges[3][:-1] + edges[3][1:]) / 2
+                i, j, k, m = np.unravel_index(H.argmax(), H.shape)
+                logging.info('Estimated parameters from joint pdf: ' + str(C1_bin[i]) + ' ' + str(C2_bin[j]) + ' ' + str(
+                    C3_bin[k]) + ' ' + str(C4_bin[m]))
+                C_final = [C1_bin[i], C2_bin[i], C3_bin[i], C4_bin[i]]
+            return C_final
 
 def distance_between_pdf(pdf_modeled, key):
     """Calculate statistical distance between two pdf as

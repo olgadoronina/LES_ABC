@@ -193,7 +193,7 @@ def tau_abc(Cs_abc):
     gc.collect()
 
 
-def Cs_scatter(Cs_accepted, Cs_failed = None, label=None):
+def C_scatter(Cs_accepted, dist,  Cs_failed = None, label=None):
 
     if Cs_failed is not None:
         plt.scatter(Cs_failed[:, 0], Cs_failed[:, 1], color='red')
@@ -208,7 +208,7 @@ def Cs_scatter(Cs_accepted, Cs_failed = None, label=None):
         plt.axis(xmin=C_limits[3, 0], xmax=C_limits[3, 1], ymax=75)
     else:
         plt.axis(xmin=C_limits[2, 0], xmax=C_limits[2, 1], ymax=75)
-    plt.scatter(Cs_accepted[:, 0], Cs_accepted[:, 1], color='blue')
+    plt.scatter(Cs_accepted, dist, color='blue')
     if label==None:
         plt.xlabel(r'$C_s$')
     plt.xlabel(label)
