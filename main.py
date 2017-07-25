@@ -7,7 +7,6 @@ import abc_class
 import data
 import global_var as g
 
-
 def main():
 
     if LOAD:    # Load filtered data from file
@@ -33,63 +32,22 @@ def main():
         g.LES = data.Data(LES_data, LES_delta)
         logging.info('Create TEST class')
         g.TEST = data.Data(TEST_data, TEST_delta)
+        # logging.info('Writing files')
+        # np.savez('./data/T.npz', uu=g.TEST.field['uu'], uv=g.TEST.field['uv'], uw=g.TEST.field['uw'])
         del LES_data, TEST_data
 
-    # # logging.info('Plot true Reynolds stresses')
-    # # plot.tau_sp(LES.tau_true, 'tau_LES')
-
     logging.info('ABC algorithm')
-    abc = abc_class.ABC(N, M)
+    abc = abc_class.ABC(N=N, M=M)
     abc.main_loop()
-    abc.plot_scatter()
-    # abc.plot_marginal_pdf()
-    C = abc.calc_final_C()
-    #
-    # # C = abc_function.ABC(N)
-    # plot.tau_compare(C)
-    # print(M, C)
-    #
-    # # g.LES_sp = None
-    # g.TEST_sp = None
-
-    # map_bounds = np.linspace(np.min(LES.field['u'][:, :, 127]), np.max(LES.field['v'][:, :, 127]), 20)
-    # plot.imagesc([LES.field['u'][:, :, 127], LES.field['v'][:, :, 127], LES.field['w'][:, :, 127]], map_bounds,
-    #              name='LES_velocities', titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
-    # map_bounds = np.linspace(np.min(HIT.field['u'][:, :, 127]), np.max(HIT.field['u'][:, :, 127]), 20)
-    # plot.imagesc([HIT.field['u'][:, :, 127], LES.field['u'][:, :, 127], TEST.field['u'][:, :, 127]], map_bounds, 'fourier_tophat')
-
-    # map_bounds = np.linspace(-0.2, 0.2, 10)
-    # plot.imagesc([LES.tau_true['uu'][:, :, 127], LES.tau_true['uv'][:, :, 127], LES.tau_true['uw'][:, :, 127]], map_bounds,
-    #              name='tau_LES', titles=[r'$\widetilde{\tau_{11}}$', r'$\widetilde{\tau_{12}}$', r'$\widetilde{\tau_{13}}$'])
-
-    # logging.info('T_ijS_ij')
-    # TS = np.load('./data/TS.npz')['TS']
-    # TS = calculate.scalar_product(TEST.tau_true, TEST.S)
-    # plot.TS(TS)
-    #
-    # # logging.info('Writing files')
-    # # np.savez('./data/T.npz', uu=T_TEST['uu'], uv=T_TEST['uv'], uw=T_TEST['uw'])
-    # # np.savez('./data/TS.npz' TS=TS)
-    #
+    # abc.plot_scatter()
+    abc.plot_marginal_pdf()
+    abc.calc_final_C()
+    abc.plot_compare_tau('TEST')
+    abc.plot_compare_tau('LES')
     # logging.info('Calculate Smagorinsky constant')
     # C_s = calculate.Smagorinsky_constant_dynamic()
     # C_s = calculate.Smagorinsky_constant_from_DNS(g.LES)
     # C_s = calculate.Smagorinsky_constant_from_DNS(g.TEST)
 
-
-    # plot.tau_tau_sp(T_TEST, T_TEST_sp)
-    # plot.tau_sp(T_TEST_sp)
-    # T_TEST_modeled = calculate.Reynolds_stresses_from_Cs(TEST, 0.2, TEST_delta)
-    # plot.tau_compare(T_TEST, T_TEST_modeled)
-    # T_TEST_modeled_sp = calculate.Reynolds_stresses_from_Cs(TEST_sp, 0.2, TEST_delta)
-    # plot.tau_compare(T_TEST_sp, T_TEST_modeled_sp)
-
-    # logger = mp.log_to_stderr(logging.DEBUG)
-
-    # fig.tight_layout()
-    # plt.legend(loc=0)
-    # plt.show()
-    # del fig, axarr
-    # gc.collect()
 if __name__ == '__main__':
     main()

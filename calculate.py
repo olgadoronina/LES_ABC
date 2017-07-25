@@ -1,5 +1,3 @@
-import plot
-import filter
 from params import *
 import global_var as g
 
@@ -27,10 +25,10 @@ def Smagorinsky_constant_from_DNS(data):
     if not data.S_mod:
         data.strain_mod()
     eps = -np.mean(scalar_product(data.tau_true, data.S))
-    print('eps_true', eps)
+    logging.debug('eps_true', eps)
     denominator = np.mean(data.delta**2*data.S_mod**3)
     C_s = sqrt(eps/denominator)
-    print('C_s from DNS: ', C_s)
+    logging.debug('C_s from DNS: ', C_s)
     return C_s
 
 
@@ -38,7 +36,7 @@ def Smagorinsky_constant_dynamic():
     """ Calculate Smagorinsky constant using Dynamic Smagorinsky model
     :return: scalar Smagorinsky constant
     """
-    print("\nL_ij")
+    logging.debug("L_ij")
     L = dict()
     print(g.LES)
     for i in ['u', 'v', 'w']:
@@ -52,7 +50,7 @@ def Smagorinsky_constant_dynamic():
     for i in ['uu', 'vv', 'ww']:
         L[i] -= 1/3*trace
 
-    print("\nM_ij")
+    logging.debug("M_ij")
     if not g.LES.S_mod:
         g.LES.strain_mod()
     if not g.TEST.S_mod:
@@ -66,10 +64,10 @@ def Smagorinsky_constant_dynamic():
             tensor2 = filter.filter3d_array(tensor1, TEST_scale)
             M[i + j] = -2 * (g.TEST.delta ** 2 * tensor - g.LES.delta ** 2 * tensor2)
 
-    print("\nCalculate C_s")
+    logging.debug("Calculate C_s")
     M_M = np.mean(scalar_product(M, M))
     L_M = np.mean(scalar_product(L, M))
     C_s_sqr = L_M/M_M
     C_s = sqrt(C_s_sqr)
-    print('C_s from Dynamic model:', C_s)
+    logging.debug('C_s from Dynamic model:', C_s)
     return C_s

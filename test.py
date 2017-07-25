@@ -11,10 +11,10 @@ class TestABC(unittest.TestCase):
         TEST_data = np.load(loadfile_TEST)
         g.LES = data.Data(LES_data, LES_delta)
         g.TEST = data.Data(TEST_data, TEST_delta)
-        abc = abc_class.ABC(1000, 64)
+        abc = abc_class.ABC(10000, 64)
         abc.main_loop()
-        C = abc.calc_final_C()[0]
-        self.assertAlmostEqual(C, 0.215, delta=0.001)
+        abc.calc_final_C()
+        self.assertAlmostEqual(abc.C_final_joint[0], 0.2225, delta=0.001)
 
 if __name__ == '__main__':
     unittest.main()

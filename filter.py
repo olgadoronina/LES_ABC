@@ -1,5 +1,6 @@
 import numpy.fft as fft
 from utils import *
+import plot
 # from time import time
 
 def tophat_kernel(k, limit):
@@ -77,3 +78,4 @@ def filter3d_array(array, scale_k):
     result = fft.ifftn(fft_filtered).real
 
     return result
+

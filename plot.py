@@ -132,28 +132,7 @@ def tau_sp(tau_sp, name=None):
     del fig, fig1, axarr
     gc.collect()
 
-def tau_compare(Cs):
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
-    titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
-    if not g.LES.tau_true:
-        g.LES.Reynolds_stresses_from_DNS()
-    tau_modeled = g.LES.Reynolds_stresses_from_C(Cs)
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data1, data2 = g.LES.tau_true[i].flatten(), tau_modeled[i].flatten()
-        x, y = utils.pdf_from_array(data1, 100, [-1.1, 1.1])
-        axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
-        x, y = utils.pdf_from_array(data2, 100, [-1.1, 1.1])
-        axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled')
-        axarr[ind].set_xlabel(titles[ind])
 
-    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
-    axarr[0].set_ylabel('pdf')
-    axarr[0].set_yscale('log', nonposy='clip')
-    fig.tight_layout()
-    plt.legend(loc=0)
-    plt.show()
-    del fig, axarr
-    gc.collect()
 
 
 def tau_abc(Cs_abc):
@@ -237,3 +216,24 @@ def A_compare(field, axarr, titles, M, color):
         axarr[ind].plot(x, data, 'r', linewidth=2, label=str(M), color=color)
         axarr[ind].set_xlabel(titles[ind])
     axarr[0].axis(xmin=0, xmax=2*pi, ymin=-10, ymax=10)
+
+
+def plot_LES_vel_fields():
+    if not g.LES:
+        logging.warning('Can not plot LES field: g.LES is None')
+    map_bounds = np.linspace(np.min(g.LES.field['u'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 20)
+    imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]], map_bounds,
+                 name='LES_velocities', titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
+
+def plot_compare_filtered_fields():
+    if not g.HIT or not g.LES or not g.TEST:
+        logging.warning('Can not plot fields: some of them is None')
+    map_bounds = np.linspace(np.min(g.HIT.field['u'][:, :, 127]), np.max(g.HIT.field['u'][:, :, 127]), 20)
+    imagesc([g.HIT.field['u'][:, :, 127], g.LES.field['u'][:, :, 127], g.TEST.field['u'][:, :, 127]], map_bounds, 'fourier_tophat')
+
+def plot_LES_tau():
+    if not g.LES:
+        logging.warning('Can not plot LES field: g.LES is None')
+    map_bounds = np.linspace(-0.2, 0.2, 10)
+    imagesc([g.LES.tau_true['uu'][:, :, 127], g.LES.tau_true['uv'][:, :, 127], g.LES.tau_true['uw'][:, :, 127]], map_bounds,
+                 name='tau_LES', titles=[r'$\widetilde{\tau_{11}}$', r'$\widetilde{\tau_{12}}$', r'$\widetilde{\tau_{13}}$'])
