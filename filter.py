@@ -1,17 +1,24 @@
 import numpy.fft as fft
-from utils import *
-import plot
-# from time import time
+from utils import timer
+from params import *
+
+from numpy.fft import fftfreq, fft, fftn, ifftn
+# try: # need to check if there is fftn in pyfftw
+#     from pyfftw.interfaces.numpy_fft import fft, ifft, irfft2, rfft2
+#     import pyfftw
+#     pyfftw.interfaces.cache.enable()
+# except ImportError:
+#     pass    # Rely on numpy.fft
 
 def tophat_kernel(k, limit):
-    """Create 3D array of Tophat filter3d.
+    """Create 3D array of Tophat filter.
         k - array of wave numbers;
         limit - size of the filter3d."""
     a = np.zeros((len(k[0]), len(k[1]), len(k[2])), dtype=np.float32)
     for indx, kx in enumerate(k[0]):
         for indy, ky in enumerate(k[1]):
             for indz, kz in enumerate(k[2]):
-                a[indx, indy, indz] = sqrt(kx ** 2 + ky ** 2 + kz ** 2)
+                a[indx, indy, indz] = np.sqrt(kx ** 2 + ky ** 2 + kz ** 2)
 
     kernel = np.piecewise(a, [a <= limit, a > limit], [1, 0])
     return kernel
@@ -33,8 +40,8 @@ def filter3d(data, scale_k, filename=None):
     start = time()
     FFT = dict()
     for key, value in data.items():
-        FFT[key] = fft.fftn(value)
-    k = [fft.fftfreq(N_points[0], dx[0]), fft.fftfreq(N_points[1], dx[1]), fft.fftfreq(N_points[2], dx[2])]
+        FFT[key] = fftn(value)
+    k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
     end = time()
     timer(start, end, 'Time for FFT')
 
@@ -56,7 +63,7 @@ def filter3d(data, scale_k, filename=None):
 
     start = time()
     for key, value in fft_filtered.items():
-        result[key] = fft.ifftn(value).real
+        result[key] = ifftn(value).real
     end = time()
     timer(start, end, 'Time for iFFT')
 
@@ -72,10 +79,10 @@ def filter3d(data, scale_k, filename=None):
 def filter3d_array(array, scale_k):
 
     fft_array = fft.fftn(array)
-    k = [fft.fftfreq(N_points[0], dx[0]), fft.fftfreq(N_points[1], dx[1]), fft.fftfreq(N_points[2], dx[2])]
+    k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
     kernel = tophat_kernel(k, scale_k)
     fft_filtered = np.multiply(fft_array, kernel)
-    result = fft.ifftn(fft_filtered).real
+    result = ifftn(fft_filtered).real
 
     return result
 

@@ -9,6 +9,7 @@ import random as rand
 import logging
 
 mpl.style.use(['dark_background','mystyle'])
+mpl.style.use(['mystyle'])
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
 
 # Parameters of post-plotting
@@ -49,7 +50,7 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 # abs algorithm
 eps = 50        # acceptance tolerance
 N = int(1e6)    # number of samples
-M = 32          # number of training points
+M = 64          # number of training points
 ORDER = 2       # order of eddy-viscosity model
 USE_C4 = 0
 #################################################

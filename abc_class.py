@@ -38,6 +38,7 @@ class ABC(object):
         return C_array
 
     def main_loop(self):
+        """ Main loop of ABC algorithm, fill list of accepted parameters """
         start = time()
         if PARALLEL:
             par_process = parallel.Parallel(processes=N_proc)
@@ -129,6 +130,7 @@ class ABC(object):
         gc.collect()
 
     def calc_final_C(self):
+        """ Estimate the best fit of parameters based on joint pdf if more than one parameter. """
         # Joint PDF
         if len(self.accepted) == 0:
             logging.warning('No accepted values')
@@ -149,15 +151,9 @@ class ABC(object):
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
 
 
-
-
-
 def distance_between_pdf(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
-    In the simple case, a KL divergence of 0 indicates that we can expect similar,
-    while a KL divergence of 1 indicates that the two distributions behave in a different manner.
-    :param pdf_true:    array of expected pdf
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
@@ -168,8 +164,8 @@ def distance_between_pdf(pdf_modeled, key):
 
 def work_function(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
-    :param Cs: scalar value of sampled parameter
-    :return:   list[Cs, dist] if accepted and None if not
+    :param C: list of sampled parameters
+    :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
     tau = g.TEST_Model.Reynolds_stresses_from_C(C)
     dist = 0
