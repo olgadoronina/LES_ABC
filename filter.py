@@ -1,8 +1,8 @@
 import numpy.fft as fft
 from utils import timer
 from params import *
-
 from numpy.fft import fftfreq, fft, fftn, ifftn
+
 # try: # need to check if there is fftn in pyfftw
 #     from pyfftw.interfaces.numpy_fft import fft, ifft, irfft2, rfft2
 #     import pyfftw
@@ -78,7 +78,7 @@ def filter3d(data, scale_k, filename=None):
 
 def filter3d_array(array, scale_k):
 
-    fft_array = fft.fftn(array)
+    fft_array = fftn(array)
     k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
     kernel = tophat_kernel(k, scale_k)
     fft_filtered = np.multiply(fft_array, kernel)
@@ -86,3 +86,11 @@ def filter3d_array(array, scale_k):
 
     return result
 
+def filter3d_array_inFspace(array, scale_k):
+
+    print(array.shape)
+    k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
+    kernel = tophat_kernel(k, scale_k)
+    fft_filtered = np.multiply(array, kernel)
+
+    return fft_filtered

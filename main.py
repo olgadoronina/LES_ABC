@@ -6,6 +6,7 @@ import calculate
 import abc_class
 import data
 import global_var as g
+import spectralLES
 
 def main():
 
@@ -36,18 +37,29 @@ def main():
         # np.savez('./data/T.npz', uu=g.TEST.field['uu'], uv=g.TEST.field['uv'], uw=g.TEST.field['uw'])
         del LES_data, TEST_data
 
-    logging.info('ABC algorithm')
-    abc = abc_class.ABC(N=N, M=M)
-    abc.main_loop()
-    # abc.plot_scatter()
-    abc.plot_marginal_pdf()
-    abc.calc_final_C()
-    abc.plot_compare_tau('TEST')
-    abc.plot_compare_tau('LES')
-    # logging.info('Calculate Smagorinsky constant')
-    # C_s = calculate.Smagorinsky_constant_dynamic()
-    # C_s = calculate.Smagorinsky_constant_from_DNS(g.LES)
-    # C_s = calculate.Smagorinsky_constant_from_DNS(g.TEST)
+
+    spectralLES.solve()
+
+
+
+
+    # logging.info('ABC algorithm')
+    # abc = abc_class.ABC(N=N, M=M)
+    # abc.main_loop()
+    # # abc.plot_scatter()
+    # abc.plot_marginal_pdf()
+    # abc.calc_final_C()
+    # abc.plot_compare_tau('TEST')
+    # abc.plot_compare_tau('LES')
+    # # logging.info('Calculate Smagorinsky constant')
+    # # C_s = calculate.Smagorinsky_constant_dynamic()
+    # # C_s = calculate.Smagorinsky_constant_from_DNS(g.LES)
+    # # C_s = calculate.Smagorinsky_constant_from_DNS(g.TEST)
+
+
+
+
+
 
 if __name__ == '__main__':
     main()

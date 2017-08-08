@@ -24,7 +24,7 @@ class ABC(object):
         self.C_final_joint = []
 
     def form_C_array(self, N):
-        """Create list of lists of 4 parameters uniformly distributed on given interval
+        """Create list of lists of N parameters uniformly distributed on given interval
         :param N: number of samples values
         :param n: number of parameters
         :return: list of lists of sampled parameters
