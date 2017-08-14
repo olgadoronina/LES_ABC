@@ -10,6 +10,9 @@ import spectralLES
 
 def main():
 
+    ####################################################################################################################
+    # Initial data
+    ####################################################################################################################
     if LOAD:    # Load filtered data from file
         logging.info("Load LES and TEST data")
         LES_data = np.load(loadfile_LES)
@@ -19,7 +22,6 @@ def main():
         logging.info('Create TEST class')
         g.TEST = data.Data(TEST_data, TEST_delta)
         del LES_data, TEST_data
-
     else:       # Filter HIT data
         logging.info('Load HIT data')
         HIT_data = utils.read_data()
@@ -36,11 +38,18 @@ def main():
         # logging.info('Writing files')
         # np.savez('./data/T.npz', uu=g.TEST.field['uu'], uv=g.TEST.field['uv'], uw=g.TEST.field['uw'])
         del LES_data, TEST_data
+    ####################################################################################################################
+    map_bounds = np.linspace(np.min(g.LES.field['v'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 10)
+    plot.imagesc([g.LES.field['u'][:, :, 127],g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]], map_bounds,
+                 name='LES', titles=[r'$u$', r'$v$', r'$w$'])
 
 
+
+    ####################################################################################################################
+    # Forward solver
+    ####################################################################################################################
     spectralLES.solve()
-
-
+    ####################################################################################################################
 
 
     # logging.info('ABC algorithm')

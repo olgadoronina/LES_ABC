@@ -29,6 +29,7 @@ datafile_w = './data/HIT_w.bin'
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1
+N_point = 256
 N_points = [256, 256, 256]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 dx = np.divide(lx, N_points)

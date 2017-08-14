@@ -2,18 +2,21 @@ import calculate
 from params import *
 import global_var as g
 
-def imagesc(Arrays, map_bounds, name=None, titles=None):
+def imagesc(Arrays, map_bounds, name=None, titles=None, N_proc=None):
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
     cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
     norm = mpl.colors.BoundaryNorm(map_bounds, cmap.N)
 
     # fig = plt.figure()
-    axis = [0, 2 * pi, 0, 2 * pi]
+    if N_proc:
+        axis = [0, 2 * pi/N_proc, 0, 2 * pi]
+    else:
+        axis = [0, 2 * pi, 0, 2 * pi]
     if not titles:
         titles = ['DNS data', 'LES filter', 'Test filter']
     if len(Arrays) > 1:
-        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(15, 4))
+        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), figsize=(15, 4))
         k = 0
         for ax in axes.flat:
             im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
