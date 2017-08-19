@@ -10,7 +10,7 @@ import logging
 
 ########################################################################################################################
 # mpl.style.use(['dark_background','mystyle'])
-mpl.style.use(['mystyle'])
+# mpl.style.use(['mystyle'])
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
 
 ########################################################################################################################
@@ -19,16 +19,16 @@ PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
 
 ########################################################################################################################
 # Path to data
-LOAD = 1
-loadfile_LES = './data/LES.npz'
-loadfile_TEST = './data/TEST.npz'
-datafile_u = './data/HIT_u.bin'
-datafile_v = './data/HIT_v.bin'
-datafile_w = './data/HIT_w.bin'
+LOAD = 1            # Load filtered data or filter from DNS
+loadfile_LES = '../data_input/LES.npz'
+loadfile_TEST = '../data_input//TEST.npz'
+datafile_u = '../data_input//HIT_u.bin'
+datafile_v = '../data_input//HIT_v.bin'
+datafile_w = '../data_input/HIT_w.bin'
 
 ########################################################################################################################
 # Initial case parameters
-HOMOGENEOUS = 1
+HOMOGENEOUS = 1    # Use symmetry of tau tensor
 N_point = 256
 N_points = [256, 256, 256]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
@@ -65,7 +65,7 @@ USE_C4 = 0
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel
 PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 2          # Number of processes
+N_proc = 4          # Number of processes
 
 ########################################################################################################################
 # Forward Run

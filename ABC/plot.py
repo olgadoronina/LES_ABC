@@ -35,9 +35,9 @@ def imagesc(Arrays, map_bounds, name=None, titles=None, N_proc=None):
         plt.colorbar(im, fraction=0.05, pad=0.04)
 
     fig1 = plt.gcf()
-    plt.show()
+    # plt.show()
     if name:
-        fig1.savefig(name + '.eps')
+        fig1.savefig('./plots/'+ name + '.eps')
     del ax, im, fig, fig1, cmap
     gc.collect()
 
@@ -134,9 +134,6 @@ def tau_sp(tau_sp, name=None):
         fig1.savefig(name + '.eps')
     del fig, fig1, axarr
     gc.collect()
-
-
-
 
 def tau_abc(Cs_abc):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(18, 6))
