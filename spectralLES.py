@@ -383,10 +383,11 @@ class spectralLES(object):
 
     def computeSource_Smagorinksy_SGS(self, *args):
         """
-        Standard Smagorinsky model (fixed C_s for now)
-        Note that self.A is the generic Tensor memory space, with the letter
+        Standard Smagorinsky model
+        Note:
+        - self.A is the generic Tensor memory space, with the letter
         S reserved for 'Source', as in self.S_hat.
-        all *args are ignored for now, but you could pass in a user-defined
+        - all *args are ignored for now, but you could pass in a user-defined
         Cs here, or some other kinds of parameters.
         """
         for i in range(3):
@@ -425,7 +426,7 @@ class spectralLES(object):
         dtMin = min(dtMinHydro, dtMinDiff)
 
         if self.comm.rank == 0:
-            print("dt = {}".format(dtMin))
+            # print("dt = {}".format(dtMin))
             if dtMinDiff < dtMinHydro:
                 print("timestep limited by diffusion! {} {}"
                       .format(dtMinHydro, dtMinDiff))

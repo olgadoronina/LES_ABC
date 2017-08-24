@@ -53,6 +53,7 @@ import sys
 import getopt
 # import os
 import time
+import ABC.plot as plot
 comm = MPI.COMM_WORLD
 
 
@@ -137,87 +138,106 @@ def homogeneous_isotropic_turbulence(args):
                                       -solver.K[2]*solver.U_hat[1]))
     enst = 0.5*np.sum(np.square(solver.omega), axis=0)
 
-    writer.write_scalar('Enstrophy_%3.3d.bin' % ibin, enst, dtype=np.float32)
+    writer.write_scalar('Enstrophy_%3.3d.bin' % tstep, enst, dtype=np.float32)
 
     emin = min(emin, comm.allreduce(np.min(enst), op=MPI.MIN))
     emax = max(emax, comm.allreduce(np.max(enst), op=MPI.MAX))
     scalar_analysis(analyzer, enst, (emin, emax), None, None,
-                    '%3.3d_enst' % ihst, 'enstrophy', '\Omega')
-    analyzer.spectral_density(solver.omega, '%3.3d_omega' % ispec,
+                    '%3.3d_enst' % tstep, 'enstrophy', '\Omega')
+    analyzer.spectral_density(solver.omega, '%3.3d_omega' % tstep,
                               'vorticity PSD', Ek_fmt('\omega_i'))
 
-    writer.write_scalar('Velocity1_%3.3d.rst' % irst, solver.U[0],
+    writer.write_scalar('Velocity1_%3.3d.rst' % tstep, solver.U[0],
                         dtype=np.float64)
-    writer.write_scalar('Velocity2_%3.3d.rst' % irst, solver.U[1],
+    writer.write_scalar('Velocity2_%3.3d.rst' % tstep, solver.U[1],
                         dtype=np.float64)
-    writer.write_scalar('Velocity3_%3.3d.rst' % irst, solver.U[2],
+    writer.write_scalar('Velocity3_%3.3d.rst' % tstep, solver.U[2],
                         dtype=np.float64)
-
+    # Plot velocity slices
+    ############################################################################################################
+    if comm.rank == 2:
+        map_bounds = np.linspace(np.min(solver.U[1][0, :, :]), np.max(solver.U[1][0, :, :]), 10)
+        plot.imagesc([solver.U[0][0, :, :], solver.U[1][0, :, :], solver.U[2][0, :, :]],
+                     map_bounds,
+                     name='LES_' + str(tstep), output_dir=odir, titles=[r'$u$', r'$v$', r'$w$'])
+    ############################################################################################################
     # -------------------------------------------------------------------------
     # Run the simulation
 
     solver.computeAD = solver.computeAD_vorticity_formulation
 
     while t_sim < tlimit+1.e-8:
+
         if tstep % 10 == 0:
             k = comm.reduce(0.5*np.sum(np.square(solver.U))*(1./N)**3)
             if comm.rank == 0:
                 print("KE = {}".format(k))
 
-        t_sim += dt
-        tstep += 1
+        if comm.rank == 0:
+            print('KT:{}  T:{}  dt:{}'.format(tstep, t_sim, dt))
 
         # Integrate the solution forward in time
         solver.RK4_integrate(dt,
                              solver.computeSource_HIT_linear_forcing,
                              solver.computeSource_Smagorinksy_SGS)
 
+        t_sim += dt
+        tstep += 1
+
         # Update the dynamic dt based on CFL constraint
         dt = solver.new_dt_const_nu(cfl)
 
         # Output snapshots and data analysis products
         if t_sim + 0.5*dt >= t_spec:
-            analyzer.spectral_density(solver.U_hat, '%3.3d_u' % ispec,
-                                      'velocity PSD', Ek_fmt('u_i'))
+            analyzer.spectral_density(solver.U_hat, '%3.3d_u' % tstep,'Velocity PSD', Ek_fmt('u_i'))
             t_spec += dt_spec
             ispec += 1
 
         if t_sim + 0.5*dt >= t_hst:
 
-            solver.omega[2] = irfft3(comm, 1j*(solver.K[0]*solver.U_hat[1]
-                                              -solver.K[1]*solver.U_hat[0]))
-            solver.omega[1] = irfft3(comm, 1j*(solver.K[2]*solver.U_hat[0]
-                                              -solver.K[0]*solver.U_hat[2]))
-            solver.omega[0] = irfft3(comm, 1j*(solver.K[1]*solver.U_hat[2]
-                                              -solver.K[2]*solver.U_hat[1]))
+            solver.omega[2] = irfft3(comm, 1j*(solver.K[0]*solver.U_hat[1]-solver.K[1]*solver.U_hat[0]))
+            solver.omega[1] = irfft3(comm, 1j*(solver.K[2]*solver.U_hat[0]-solver.K[0]*solver.U_hat[2]))
+            solver.omega[0] = irfft3(comm, 1j*(solver.K[1]*solver.U_hat[2]-solver.K[2]*solver.U_hat[1]))
             enst = 0.5*np.sum(np.square(solver.omega), axis=0)
-
             emin = min(emin, comm.allreduce(np.min(enst), op=MPI.MIN))
             emax = max(emax, comm.allreduce(np.max(enst), op=MPI.MAX))
 
             scalar_analysis(analyzer, enst, (emin, emax), None, None,
-                            '%3.3d_enst' % ihst, 'enstrophy', '\Omega')
+                            '%3.3d_enst' % tstep, 'Enstrophy', 'r$\Omega$')
 
-            analyzer.spectral_density(solver.omega, '%3.3d_omega' % ispec,
-                                      'vorticity PSD', Ek_fmt('\omega_i'))
+            analyzer.spectral_density(solver.omega, '%3.3d_omega' % tstep,
+                                      'Vorticity PSD', Ek_fmt(r'$\omega_i$'))
+
+            # Plot velocity slices
+            ############################################################################################################
+            if comm.rank == 2:
+                plot.imagesc([solver.U[0][0, :, :], solver.U[1][0, :, :], solver.U[2][0, :, :]],
+                             map_bounds,
+                             name='LES_' + str(tstep), output_dir=odir, titles=[r'$u$', r'$v$', r'$w$'])
+            ############################################################################################################
             t_hst += dt_hst
             ihst += 1
 
             if t_sim + 0.5*dt >= t_bin:
-                writer.write_scalar('Enstrophy_%3.3d.bin' % ibin, enst,
-                                    dtype=np.float32)
+                writer.write_scalar('Enstrophy_%3.3d.bin' % tstep, enst,dtype=np.float32)
                 t_bin += dt_bin
                 ibin += 1
 
+        # Recovery
+        ################################################################################################################
         if t_sim + 0.5*dt >= t_rst:
-            writer.write_scalar('Velocity1_%3.3d.rst' % irst, solver.U[0],
+            writer.write_scalar('Velocity1_%3.3d.rst' % tstep, solver.U[0],
                                 dtype=np.float64)
-            writer.write_scalar('Velocity2_%3.3d.rst' % irst, solver.U[1],
+            writer.write_scalar('Velocity2_%3.3d.rst' % tstep, solver.U[1],
                                 dtype=np.float64)
-            writer.write_scalar('Velocity3_%3.3d.rst' % irst, solver.U[2],
+            writer.write_scalar('Velocity3_%3.3d.rst' % tstep, solver.U[2],
                                 dtype=np.float64)
+
+
+
             t_rst += dt_rst
             irst += 1
+        ################################################################################################################
 
     return
 
