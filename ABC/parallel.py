@@ -1,7 +1,6 @@
-from params import *
+from ABC.params import *
 from tqdm import tqdm
 import multiprocessing as mp
-
 
 
 class Parallel(object):

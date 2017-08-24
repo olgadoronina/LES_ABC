@@ -1,20 +1,22 @@
-from params import *
-import global_var as g
-import data
-import utils
-import plot
-import parallel
-import model
+from ABC.params import *
+import ABC.global_var as g
+import ABC.data as data
+import ABC.utils as utils
+# import ABC.plot as plot
+import ABC.parallel as parallel
+import ABC.model as model
 from tqdm import tqdm
 
 
 class ABC(object):
 
-    def __init__(self, N, M):
+    def __init__(self, N, M, eps, order):
         self.N = N
         self.M = M
+        g.eps = eps
+        self.order = order
         g.TEST_sp = data.DataSparse(g.TEST, M)
-        g.TEST_Model = model.ViscosityModel(g.TEST_sp)
+        g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.order)
         self.num_of_params = g.TEST_Model.num_of_params
         self.C_array = self.form_C_array(N)
         self.result = []
@@ -135,7 +137,7 @@ class ABC(object):
         if len(self.accepted) == 0:
             logging.warning('No accepted values')
         else:
-            if ORDER == 1:
+            if self.order == 1:
                 self.C_final_joint = [self.accepted[:, 0][np.argmin(self.dist)]]
                 logging.info('Estimated parameters:{}'.format(self.C_final_joint))
             else:

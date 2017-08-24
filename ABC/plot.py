@@ -1,18 +1,14 @@
-import calculate
-from params import *
-import global_var as g
+from ABC.params import *
+import ABC.global_var as g
 
-def imagesc(Arrays, map_bounds, name=None, titles=None, N_proc=None):
+def imagesc(Arrays, map_bounds, name=None, output_dir = '.', titles=None):
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
     cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
     norm = mpl.colors.BoundaryNorm(map_bounds, cmap.N)
 
     # fig = plt.figure()
-    if N_proc:
-        axis = [0, 2 * pi/N_proc, 0, 2 * pi]
-    else:
-        axis = [0, 2 * pi, 0, 2 * pi]
+    axis = [0, 2 * pi, 0, 2 * pi]
     if not titles:
         titles = ['DNS data', 'LES filter', 'Test filter']
     if len(Arrays) > 1:
@@ -28,7 +24,7 @@ def imagesc(Arrays, map_bounds, name=None, titles=None, N_proc=None):
         fig.subplots_adjust(right=0.85)
         fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
     else:
-        fig = plt.figure(figsize=(12, 10))
+        fig = plt.figure(figsize=(7, 5))
         ax = plt.gca()
         im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
         fig.tight_layout()
@@ -37,7 +33,7 @@ def imagesc(Arrays, map_bounds, name=None, titles=None, N_proc=None):
     fig1 = plt.gcf()
     # plt.show()
     if name:
-        fig1.savefig('./plots/'+ name + '.eps')
+        fig1.savefig(output_dir+'/plots/' + name + '.eps')
     del ax, im, fig, fig1, cmap
     gc.collect()
 

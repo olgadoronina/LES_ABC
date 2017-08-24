@@ -1,4 +1,5 @@
-from params import *
+from ABC.params import *
+import ABC.utils as utils
 
 class Data(object):
 
@@ -6,14 +7,19 @@ class Data(object):
         self.field = data_dict
         self.delta = delta
         self.tau_true = self.Reynolds_stresses_from_DNS()
+        self.S = None
+        self.S_mod = None
+        self.R = None
+        self.calc_stresses()
+
+    def calc_stresses(self):
         self.S = self.calc_strain_tensor()
         self.S_mod = self.calc_strain_mod()
         if ORDER > 1:
             self.R = self.calc_rotation_tensor()
 
     def field_gradient(self):
-        """Calculate tensor of gradients of given field.
-        :param field: dictionary of field variables
+        """Calculate tensor of gradients of self.field.
         :return:      dictionary of gradient tensor
         """
         grad = dict()

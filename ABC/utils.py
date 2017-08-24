@@ -1,4 +1,4 @@
-from params import *
+from ABC.params import *
 
 
 def timer(start, end, label):

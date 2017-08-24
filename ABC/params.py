@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from time import time, sleep
 import gc
-import utils
 import random as rand
 import logging
 
@@ -64,11 +63,7 @@ USE_C4 = 0
 ########################################################################################################################
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel
-PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+PROGRESSBAR = 0    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
 N_proc = 4          # Number of processes
 
 ########################################################################################################################
-# Forward Run
-nu = 0.000625
-T = 0.1
-dt = 0.01

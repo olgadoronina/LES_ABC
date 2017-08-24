@@ -1,6 +1,6 @@
 import numpy.fft as fft
-from utils import timer
-from params import *
+from ABC.utils import timer
+from ABC.params import *
 from numpy.fft import fftfreq, fft, fftn, ifftn
 
 # try: # need to check if there is fftn in pyfftw
