@@ -18,23 +18,24 @@ PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
 
 ########################################################################################################################
 # Path to data
-LOAD = 1            # Load filtered data or filter from DNS
-loadfile_LES = '../data_input/LES.npz'
-loadfile_TEST = '../data_input//TEST.npz'
-datafile_u = '../data_input//HIT_u.bin'
-datafile_v = '../data_input//HIT_v.bin'
-datafile_w = '../data_input/HIT_w.bin'
+LOAD = 0            # Load filtered data or filter from DNS
+loadfile_LES = '../data_input/HIT_DNS_N256/LES.npz'
+loadfile_TEST = '../data_input/HIT_DNS_N256/TEST.npz'
+datafile_u = '../data_input/HIT_DNS_N256/Velocity1_003.rst'
+datafile_v = '../data_input/HIT_DNS_N256/Velocity2_003.rst'
+datafile_w = '../data_input/HIT_DNS_N256/Velocity3_003.rst'
+type_of_bin_data = np.float64
 
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
 N_point = 256
-N_points = [256, 256, 256]      # number of points
+N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 dx = np.divide(lx, N_points)
 # Filter scales
-LES_scale = 10
-TEST_scale = 5
+LES_scale = 20
+TEST_scale = 10
 # Characteristic length \Delta
 LES_delta = 1/LES_scale
 TEST_delta = 1/TEST_scale
@@ -57,7 +58,7 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 eps = 50        # acceptance tolerance
 N = int(1e6)    # number of samples
 M = 64          # number of training points
-ORDER = 2       # order of eddy-viscosity model
+ORDER = 1       # order of eddy-viscosity model
 USE_C4 = 0
 
 ########################################################################################################################

@@ -134,14 +134,9 @@ class NonlinearModel(object):
         return tau
 
 
-class SmagorinskyModel(object):
+class DynamicSmagorinskyModel(object):
 
     def __init__(self):
-
-        if HOMOGENEOUS:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
-        else:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
         self.num_of_params = 1
         self.Tensor_1 = self.calc_tensor_1()
 
@@ -175,7 +170,7 @@ class SmagorinskyModel(object):
             M[i + j] = -2 * (g.TEST.delta ** 2 * tensor - g.LES.delta ** 2 * tensor2)
             logging.debug("Mean of M[{}] = {}".format(i + j, np.mean(M[i + j])))
         for k in ['vu', 'wu', 'wv']:
-            L[k] = L[k[1]+k[0]]
+            L[k] = L[k[1] + k[0]]
             M[k] = M[k[1] + k[0]]
         trace = L['uu'] + L['vv'] + L['ww']
         print('trace = ', np.mean(trace))
@@ -208,7 +203,7 @@ class SmagorinskyModel(object):
         plt.xlabel(r'C_s')
         plt.ylabel('pdf')
         plt.show()
-        #####################################
+        ####################################
         C_s = np.sqrt(np.mean(C_s_sqr))
         logging.debug('C_s from Dynamic model: {}'.format(C_s))
         return C_s

@@ -13,7 +13,7 @@ from numpy.fft import fftfreq, fft, fftn, ifftn
 def tophat_kernel(k, limit):
     """Create 3D array of Tophat filter.
         k - array of wave numbers;
-        limit - size of the filter3d."""
+        limit - cutoff wavenumber."""
     a = np.zeros((len(k[0]), len(k[1]), len(k[2])), dtype=np.float32)
     for indx, kx in enumerate(k[0]):
         for indy, ky in enumerate(k[1]):
@@ -31,6 +31,26 @@ def tophat_kernel(k, limit):
     # z = zaxis[None, None, :]
     # return np.exp(-(x**2 + y**2 + z**2)/(2.0*sigma_square))/(np.sqrt(2.0*np.pi*sigma_square))
 
+
+# def comp_exp_kernel(k, kf):
+#     """ A 'COMPact EXPonential' filter which:
+#         1) has compact support in a ball of radius kf (1/kf)
+#         2) is strictly positive, and
+#         3) is smooth (infinitely differentiable)
+#         in _both_ physical and spectral space!
+#     :param k: array of wave numbers;
+#     :param kf: input cutoff wavenumber
+#     :return:  filtered 3D array of wavenumbers
+#     """
+#     Hhat = np.exp(-k_kf**2/(0.25-k_kf**2))
+#     Ghat[:] = np.where(k_kf <= 0.5, Hhat, 0.0).astype(dtype)
+#     G = irfft3(self.comm, Ghat)
+#     G[:] = G**2
+#     G /= self.comm.allreduce(psum(G), op=MPI.SUM)
+#     rfft3(self.comm, G, Ghat)
+#
+#
+#     return Ghat
 
 def filter3d(data, scale_k, filename=None):
     """ Tophat filter in Fourier space for dictionary of 3D arrays.
