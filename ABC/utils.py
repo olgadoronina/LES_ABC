@@ -1,5 +1,6 @@
 from ABC.params import *
-
+from numpy.fft import fftfreq, fft, fftn, ifftn
+from collections import OrderedDict
 
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
@@ -28,6 +29,62 @@ def pdf_from_array(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
 
+
+
+def shell_average(spect3D, k_3d):
+    """ Compute the 1D, shell-averaged, spectrum of the 3D Fourier-space
+    variable E3.
+    :param E3: 3-dimensional complex or real Fourier-space scalar
+    :param km:  wavemode of each n-D wavevector
+    :return: 1D, shell-averaged, spectrum
+    """
+    i = 0
+    F_k = np.zeros(N_point**3)
+    k_array = np.empty_like(F_k)
+    for ind_x, kx in enumerate(k_3d[0]):
+        for ind_y, ky in enumerate(k_3d[1]):
+            for ind_z, kz in enumerate(k_3d[2]):
+                k_array[i] = round(sqrt(kx**2 + ky**2 + kz**2))
+                F_k[i] = 2*pi*k_array[i]**2*spect3D[ind_x, ind_y, ind_z]
+                i += 1
+    all_F_k = sorted(list(zip(k_array, F_k)))
+
+    x, y = [all_F_k[0][0]], [all_F_k[0][1]]
+    n = 1
+    for k, F in all_F_k[1:]:
+        if k == x[-1]:
+            n += 1
+            y[-1] += F
+        else:
+            y[-1] /= n
+            x.append(k)
+            y.append(F)
+            n = 1
+    return x, y
+
+def spectral_density(vel_array, fname):
+    """
+    Write the 1D power spectral density of var to text file. Method
+    assumes a real input in physical space.
+    """
+    k = 2*pi*np.array([fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])])
+    spect3d = 0
+    for array in vel_array:
+        fft_array = fftn(array)
+        spect3d += np.real(fft_array * np.conj(fft_array))
+
+    x, y = shell_average(spect3d, k)
+    print('done')
+    plt.loglog(x, y, '-')
+    # plt.semilogx(x, np.power(x, -5 / 3)+1e15, 'r--')
+    plt.xlabel(r'$k$')
+    plt.ylabel(r'$E$')
+    plt.title('Spectrum')
+    plt.show()
+
+    fh = open('./plots/' + fname + '.spectra', 'w')
+    fh.writelines(["%s\n" % item for item in y])
+    fh.close()
 
 # import scipy.ndimage as ndimage
 #

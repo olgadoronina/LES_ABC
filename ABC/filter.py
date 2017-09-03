@@ -114,3 +114,4 @@ def filter3d_array_inFspace(array, scale_k):
     fft_filtered = np.multiply(array, kernel)
 
     return fft_filtered
+

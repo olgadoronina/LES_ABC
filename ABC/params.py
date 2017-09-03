@@ -34,8 +34,8 @@ N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 dx = np.divide(lx, N_points)
 # Filter scales
-LES_scale = 20
-TEST_scale = 10
+LES_scale = 10
+TEST_scale = 5
 # Characteristic length \Delta
 LES_delta = 1/LES_scale
 TEST_delta = 1/TEST_scale
