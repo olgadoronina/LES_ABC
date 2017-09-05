@@ -96,7 +96,7 @@ class ABC(object):
             logging.warning('No accepted values')
         else:
             for i in range(self.num_of_params):
-                plt.axis(xmin=0.0, xmax=0.3, ymax=50)
+                plt.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=eps+1)
                 plt.scatter(self.accepted[:, i], self.dist, color='blue')
                 plt.xlabel(params_names[i])
                 plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
@@ -108,12 +108,12 @@ class ABC(object):
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
         if scale == 'LES':
             titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
-            tau_modeled_joint = model.ViscosityModel(g.LES).Reynolds_stresses_from_C(self.C_final_joint)
-            tau_modeled_dist = model.ViscosityModel(g.LES).Reynolds_stresses_from_C(self.C_final_dist)
+            tau_modeled_joint = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C(self.C_final_joint)
+            tau_modeled_dist = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         if scale == 'TEST':
             titles = [r'$\widetilde{T}_{11}$', r'$\widetilde{T}_{12}$', r'$\widetilde{T}_{13}$']
-            tau_modeled_joint = model.ViscosityModel(g.TEST).Reynolds_stresses_from_C(self.C_final_joint)
-            tau_modeled_dist = model.ViscosityModel(g.TEST).Reynolds_stresses_from_C(self.C_final_dist)
+            tau_modeled_joint = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_joint)
+            tau_modeled_dist = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), 100, domain)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
@@ -122,7 +122,7 @@ class ABC(object):
             x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), 100, domain)
             axarr[ind].plot(x, y, 'g', linewidth=2, label='modeled dist')
             axarr[ind].set_xlabel(titles[ind])
-        axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+        axarr[0].axis(xmin=domain[0], xmax=domain[1], ymin=1e-5)
         axarr[0].set_ylabel('pdf')
         axarr[0].set_yscale('log', nonposy='clip')
         fig.tight_layout()

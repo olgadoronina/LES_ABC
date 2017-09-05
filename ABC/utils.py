@@ -74,15 +74,7 @@ def spectral_density(vel_array, fname):
         spect3d += np.real(fft_array * np.conj(fft_array))
 
     x, y = shell_average(spect3d, k)
-    print('done')
-    plt.loglog(x, y, '-')
-    # plt.semilogx(x, np.power(x, -5 / 3)+1e15, 'r--')
-    plt.xlabel(r'$k$')
-    plt.ylabel(r'$E$')
-    plt.title('Spectrum')
-    plt.show()
-
-    fh = open('./plots/' + fname + '.spectra', 'w')
+    fh = open('./ABC/plots/' + fname + '.spectra', 'w')
     fh.writelines(["%s\n" % item for item in y])
     fh.close()
 

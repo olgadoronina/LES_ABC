@@ -1,7 +1,7 @@
 from ABC.params import *
 import ABC.global_var as g
 
-def imagesc(Arrays, map_bounds, name=None, output_dir = '.', titles=None):
+def imagesc(Arrays, map_bounds, name=None, output_dir = './ABC', titles=None):
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
     cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
