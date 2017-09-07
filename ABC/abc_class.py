@@ -18,25 +18,40 @@ class ABC(object):
         g.TEST_sp = data.DataSparse(g.TEST, M)
         g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.order)
         self.num_of_params = g.TEST_Model.num_of_params
-        self.C_array = self.form_C_array(N)
+        self.C_array = self.form_C_array_manual()
         self.result = []
         self.accepted = []
         self.dist = []
         self.C_final_dist = []
         self.C_final_joint = []
 
-    def form_C_array(self, N):
+    def form_C_array_random(self):
         """Create list of lists of N parameters uniformly distributed on given interval
-        :param N: number of samples values
-        :param n: number of parameters
         :return: list of lists of sampled parameters
         """
         C_array = []
-        for i in range(N):
+        for i in range(self.N):
             C = []
             for j in range(self.num_of_params):
                 C.append(rand.uniform(C_limits[j][0], C_limits[j][1]))
             C_array.append(C)
+        return C_array
+
+    def form_C_array_manual(self):
+        """ Create list of lists of N parameters manually uniformly distributed on given interval
+        :return: list of lists of sampled parameters
+        """
+        if self.N != 1.25e5:
+            print('Achtung!: cannot manually sample C')
+        C_array = []
+        C1 = np.linspace(C_limits[0][0], C_limits[0][1], 100)
+        C2 = np.linspace(C_limits[1][0], C_limits[1][1], 100)
+        C3 = np.linspace(C_limits[2][0], C_limits[2][1], 100)
+        for i in range(50):
+            for j in range(50):
+                for k in range(50):
+                    C_array.append([C1[i], C2[j], C3[k]])
+
         return C_array
 
     def main_loop(self):

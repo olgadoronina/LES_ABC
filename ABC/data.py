@@ -69,6 +69,11 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 tensor[i + j] = self.field[i + j] - np.multiply(self.field[i], self.field[j])
+
+        trace = tensor['uu'] + tensor['vv'] + tensor['ww']
+        for i in ['uu', 'vv', 'ww']:
+            tensor[i] -= trace
+
         return tensor
 
 

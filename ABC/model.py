@@ -69,7 +69,7 @@ class NonlinearModel(object):
         return tensor
 
     def calc_tensor_2(self, data):
-        """Calculate tensor (S_ikR_kj - R_ikS_kj)   for given field
+        """Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
         :return:       dictionary of tensor
         """
         tensor = dict()
@@ -133,9 +133,8 @@ class NonlinearModel(object):
             tau[i] = -2 * C[0] ** 2 * self.Tensor_1[i]
         return tau
 
-    def Reynolds_stresses_from_C_Kosovic(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model with constants C
-            in Branco Kosovic formulation.
+    def Reynolds_stresses_from_C_Nonlin(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model with constants C.
         :param C: given list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
@@ -144,9 +143,9 @@ class NonlinearModel(object):
             tau[i] = -2 * C[0] ** 2 * self.Tensor_1[i] + C[1] * self.Tensor_2[i] + C[2] * self.Tensor_3[i]
         return tau
 
-
-    def Reynolds_stresses_from_C_Nonlin(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model with constants C.
+    def Reynolds_stresses_from_C_Kosovic(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model with constants C
+            in Branco Kosovic formulation.
         :param C: given list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
