@@ -41,10 +41,10 @@ class ABC(object):
         """ Create list of lists of N parameters manually uniformly distributed on given interval
         :return: list of lists of sampled parameters
         """
-        if self.N != 1e6:
+        if self.N != 1.25e5:
             print('Achtung!: cannot manually sample C')
         else:
-            n = 100
+            n = 50
         C_array = []
         C1 = np.linspace(C_limits[0][0], C_limits[0][1], n+1)
         C1 = C1[:-1]+(C1[1]-C1[0])/2
@@ -172,7 +172,7 @@ class ABC(object):
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
 
 
-def distance_between_pdf(pdf_modeled, key):
+def distance_between_pdf_KL(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
@@ -182,6 +182,25 @@ def distance_between_pdf(pdf_modeled, key):
     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
     return dist
 
+def distance_between_pdf_L1(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
+    return dist
+
+def distance_between_pdf_L2(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2)
+    return dist
 
 def work_function(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -192,7 +211,7 @@ def work_function(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf, edges = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)
-        dist += distance_between_pdf(pdf_modeled=pdf, key=key)
+        dist += distance_between_pdf_L2(pdf_modeled=pdf, key=key)
     if dist <= g.eps:
         return [True, C, dist]
     else:

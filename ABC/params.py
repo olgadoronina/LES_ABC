@@ -57,7 +57,7 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 ########################################################################################################################
 # abs algorithm
 eps = 30        # acceptance tolerance
-N = int(1e6)    # number of samples
+N = int(1.25e5)    # number of samples
 M = 64          # number of training points
 MODEL = None    # 'Kosovic'
 ORDER = 2       # order of eddy-viscosity model
