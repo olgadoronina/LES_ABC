@@ -18,7 +18,7 @@ PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
 
 ########################################################################################################################
 # Path to data
-LOAD = 0            # Load filtered data or filter from DNS
+LOAD = 1          # Load filtered data or filter from DNS
 data_folder = './data_input/HIT_DNS_N256/'
 loadfile_LES = data_folder + 'LES.npz'
 loadfile_TEST = data_folder + 'TEST.npz'
@@ -43,7 +43,7 @@ TEST_delta = 1/TEST_scale
 
 ########################################################################################################################
 # Params for abc algorithm
-domain = [-3.1, 3.1]  # for pdf comparison
+domain = [-2.1, 2.1]  # for pdf comparison
 # Sample limits
 C_limits = np.zeros((4, 2))
 C_limits[0] = [0.1, 0.3]
@@ -57,7 +57,7 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 ########################################################################################################################
 # abs algorithm
 eps = 30        # acceptance tolerance
-N = int(1.25e5)    # number of samples
+N = int(1e6)    # number of samples
 M = 64          # number of training points
 MODEL = None    # 'Kosovic'
 ORDER = 2       # order of eddy-viscosity model

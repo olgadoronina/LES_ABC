@@ -41,17 +41,21 @@ class ABC(object):
         """ Create list of lists of N parameters manually uniformly distributed on given interval
         :return: list of lists of sampled parameters
         """
-        if self.N != 1.25e5:
+        if self.N != 1e6:
             print('Achtung!: cannot manually sample C')
+        else:
+            n = 100
         C_array = []
-        C1 = np.linspace(C_limits[0][0], C_limits[0][1], 100)
-        C2 = np.linspace(C_limits[1][0], C_limits[1][1], 100)
-        C3 = np.linspace(C_limits[2][0], C_limits[2][1], 100)
-        for i in range(50):
-            for j in range(50):
-                for k in range(50):
+        C1 = np.linspace(C_limits[0][0], C_limits[0][1], n+1)
+        C1 = C1[:-1]+(C1[1]-C1[0])/2
+        C2 = np.linspace(C_limits[1][0], C_limits[1][1], n+1)
+        C2 = C2[:-1] + (C2[1] - C2[0]) / 2
+        C3 = np.linspace(C_limits[2][0], C_limits[2][1], n+1)
+        C3 = C3[:-1] + (C3[1] - C3[0]) / 2
+        for i in range(n):
+            for j in range(n):
+                for k in range(n):
                     C_array.append([C1[i], C2[j], C3[k]])
-
         return C_array
 
     def main_loop(self):
