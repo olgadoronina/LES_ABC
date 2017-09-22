@@ -16,34 +16,34 @@ class NonlinearModel(object):
         self.Tensor_1 = self.calc_tensor_1(data)
         self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
         if order >= 2:
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
             self.num_of_params = 3
             self.Tensor_2 = self.calc_tensor_2(data)
             self.Tensor_3 = self.calc_tensor_3(data)
-            if MODEL == 'Kosovic':
-                logging.info('Model: Kosovic formulation')
-                self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Kosovic
-            else:
-                self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
-                if USE_C4:
-                    self.num_of_params = 4
-                    self.Tensor_4 = self.calc_tensor_4(data)
+            logging.debug('ORDER of model = 2')
+            if USE_C4:
+                self.num_of_params = 4
+                self.Tensor_4 = self.calc_tensor_4(data)
+                logging.debug('ORDER of model = 2 with C4')
         if order >= 3:
             self.num_of_params = 6
-            self.Tensor_5 = dict()
-            self.Tensor_6 = dict()
-            logging.error('ORDER parameter should be int from 1 to 2')
+            self.Tensor_5 = self.calc_tensor_5(data)
+            self.Tensor_6 = self.calc_tensor_6(data)
+            logging.debug('ORDER of model = 3')
         if order >= 4:
             self.num_of_params = 9
-            self.Tensor_7 = dict()
-            self.Tensor_8 = dict()
-            self.Tensor_9 = dict()
-            logging.error('ORDER parameter should be int from 1 to 3')
-        if order >= 5:
+            self.Tensor_7 = self.calc_tensor_7(data)
+            self.Tensor_8 = self.calc_tensor_8(data)
+            self.Tensor_9 = self.calc_tensor_9(data)
+            logging.debug('ORDER of model = 4')
+        if order == 5:
             self.num_of_params = 10
-            self.Tensor_10 = dict()
-            logging.error('ORDER parameter should be int from 1 to 4')
+            self.Tensor_10 = self.calc_tensor_10(data)
+            logging.debug('ORDER of model = 5')
         if order > 5:
             logging.error('ORDER parameter should be int from 1 to 5')
+
+
     def calc_tensor_1(self, data):
         """Calculate tensor |S|S_ij for given field
         :return:       dictionary of tensor
@@ -112,6 +112,7 @@ class NonlinearModel(object):
         for i in ['u', 'v', 'w']:
             for k in ['u', 'v', 'w']:
                 R_R_inv += np.multiply(data.R[i + k], data.R[k + i])
+
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 tensor[i + j] = 0
@@ -119,9 +120,143 @@ class NonlinearModel(object):
                     tensor[i + j] += np.multiply(data.R[i + k], data.R[k + j])
                     if i == j:
                         tensor[i + j] -= 1 / 3 * R_R_inv
+
         for key, value in tensor.items():
             value *= data.delta ** 2
         return tensor
+
+    def calc_tensor_5(self, data):
+        """Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2 = 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        tensor1[i + j] += data.R[i + k]*data.S[k + l]*data.S[l + j]
+                        tensor2+= data.S[i + k] * data.S[k + l] * data.R[l + j]
+                tensor1[i + j] -= tensor2
+                tensor1[i + j] *= data.delta ** 2
+
+        return tensor1
+
+    def calc_tensor_6(self, data):
+        """Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+        S_R_R_inv = 0
+
+        for i in ['u', 'v', 'w']:
+            for k in ['u', 'v', 'w']:
+                for l in ['u', 'v', 'w']:
+                    S_R_R_inv += data.S[i + k] * data.R[k + l] * data.R[l + i]
+
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2 = 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        tensor1[i + j] += data.R[i + k]*data.R[k + l]*data.S[l + j]
+                        tensor2 += data.S[i + k] * data.R[k + l] * data.R[l + j]
+                tensor1[i + j] += tensor2
+                if i == j:
+                    tensor1[i + j] -= 2 / 3 * S_R_R_inv
+                tensor1[i + j] *= data.delta ** 2
+
+        return tensor1
+
+    def calc_tensor_7(self, data):
+        """Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2 = 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        for m in ['u', 'v', 'w']:
+                            tensor1[i + j] += data.R[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
+                            tensor2 += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.R[m + j]
+                tensor1[i + j] -= tensor2
+                tensor1[i + j] *= data.delta ** 2
+        return tensor1
+
+    def calc_tensor_8(self, data):
+        """Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2 = 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        for m in ['u', 'v', 'w']:
+                            tensor1[i + j] += data.S[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
+                            tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.S[m + j]
+                tensor1[i + j] -= tensor2
+                tensor1[i + j] *= data.delta ** 2
+
+        return tensor1
+
+    def calc_tensor_9(self, data):
+        """Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+        S2_R2_inv = 0
+
+        for i in ['u', 'v', 'w']:
+            for k in ['u', 'v', 'w']:
+                for l in ['u', 'v', 'w']:
+                    for m in ['u', 'v', 'w']:
+                        S2_R2_inv += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + i]
+
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2= 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        for m in ['u', 'v', 'w']:
+                            tensor1[i + j] += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
+                            tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
+                tensor1[i + j] += tensor2
+                tensor1[i + j] *= data.delta ** 2
+
+        return tensor1
+
+    def calc_tensor_10(self, data):
+        """Calculate tensor (RS^2R^2 - R^2S^2R) for given field
+        :return:       dictionary of tensor
+        """
+        tensor1 = dict()
+
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                tensor1[i + j] = 0
+                tensor2 = 0
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        for m in ['u', 'v', 'w']:
+                            for n in ['u', 'v', 'w']:
+                                tensor1[i + j] += data.R[i + k] * data.S[k + l] * \
+                                                  data.S[l + m] * data.R[m + n] * data.R[n + j]
+                                tensor2 += data.R[i + k] * data.R[k + l] * \
+                                           data.S[l + m] * data.S[m + n] * data.R[n + j]
+                tensor1[i + j] -= tensor2
+                tensor1[i + j] *= data.delta ** 2
+        return tensor1
 
     def Reynolds_stresses_from_C_Smagorinsky(self, C):
         """Calculate Reynolds stresses using Smagorinsky eddy-viscosity model with constants C.

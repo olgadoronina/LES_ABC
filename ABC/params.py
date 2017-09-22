@@ -66,8 +66,7 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 eps = 200      # acceptance tolerance
 N = int(60**3)    # number of samples
 M = 64          # number of training points
-MODEL = None    # 'Kosovic'
-ORDER = 2       # order of eddy-viscosity model
+ORDER = 5       # order of eddy-viscosity model
 USE_C4 = 0
 
 ########################################################################################################################
