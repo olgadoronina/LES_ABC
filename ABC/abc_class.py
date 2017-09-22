@@ -41,21 +41,28 @@ class ABC(object):
         """ Create list of lists of N parameters manually uniformly distributed on given interval
         :return: list of lists of sampled parameters
         """
-        if self.N != 1.25e5:
-            print('Achtung!: cannot manually sample C')
-        else:
-            n = 50
         C_array = []
-        C1 = np.linspace(C_limits[0][0], C_limits[0][1], n+1)
-        C1 = C1[:-1]+(C1[1]-C1[0])/2
-        C2 = np.linspace(C_limits[1][0], C_limits[1][1], n+1)
-        C2 = C2[:-1] + (C2[1] - C2[0]) / 2
-        C3 = np.linspace(C_limits[2][0], C_limits[2][1], n+1)
-        C3 = C3[:-1] + (C3[1] - C3[0]) / 2
-        for i in range(n):
-            for j in range(n):
-                for k in range(n):
-                    C_array.append([C1[i], C2[j], C3[k]])
+        if ORDER == 1:
+            C1 = np.linspace(C_limits[0][0], C_limits[0][1], self.N+1)
+            C1 = C1[:-1] + (C1[1] - C1[0]) / 2
+            for i in C1:
+                C_array.append([i])
+        else:
+            if self.N != 60**3:
+                print('Achtung!: cannot manually sample C')
+            else:
+                n = 60
+            C_array = []
+            C1 = np.linspace(C_limits[0][0], C_limits[0][1], n+1)
+            C1 = C1[:-1]+(C1[1]-C1[0])/2
+            C2 = np.linspace(C_limits[1][0], C_limits[1][1], n+1)
+            C2 = C2[:-1] + (C2[1] - C2[0]) / 2
+            C3 = np.linspace(C_limits[2][0], C_limits[2][1], n+1)
+            C3 = C3[:-1] + (C3[1] - C3[0]) / 2
+            for i in range(n):
+                for j in range(n):
+                    for k in range(n):
+                        C_array.append([C1[i], C2[j], C3[k]])
         return C_array
 
     def main_loop(self):
@@ -90,23 +97,28 @@ class ABC(object):
             #     plt.xlabel(params_names[i])
             #     plt.show()
 
+            cmap = plt.cm.jet  # define the colormap
+            cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+            cmaplist[0] = ('white')  # force the first color entry to be grey
+            cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+
             fig = plt.figure(figsize=(9, 9))
             for i in range(self.num_of_params):
                 for j in range(self.num_of_params):
                     if i == j:
-                        x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=50, range=C_limits[i])
+                        x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=60, range=C_limits[i])
                         ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, i))
-                        plt.hist(self.accepted[:, i], bins=20, normed=1, alpha=0.5, color='grey')
+                        plt.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey', range=C_limits[i])
                         plt.plot(x, y)
-                        ax.axis(xmin=C_limits[i,0], xmax=C_limits[i,1])
+                        ax.axis(xmin=C_limits[i,0], xmax=C_limits[i, 1])
                         ax.set_xlabel(params_names[i])
                     elif i < j:
                         ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, j))
                         ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
-                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=100, normed=1, cmap=plt.cm.jet)
+                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, normed=1, cmap=cmap, range=[C_limits[j], C_limits[i]])
             fig.tight_layout()
             # plt.legend(loc=0)
-            fig.show()
+            plt.show()
             # del fig
 
 
@@ -134,7 +146,10 @@ class ABC(object):
             tau_modeled_joint = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_joint)
             tau_modeled_dist = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         for ind, key in enumerate(['uu', 'uv', 'uw']):
-            x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), 100, domain)
+            if scale == 'LES':
+                x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), 100, domain)
+            if scale == 'TEST':
+                x, y = utils.pdf_from_array_with_x(g.TEST.tau_true[key].flatten(), 100, domain)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
             x, y = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), 100, domain)
             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
@@ -182,7 +197,7 @@ def distance_between_pdf_KL(pdf_modeled, key):
     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
     return dist
 
-def distance_between_pdf_L1(pdf_modeled, key):
+def distance_between_pdf_L1log(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
@@ -193,6 +208,15 @@ def distance_between_pdf_L1(pdf_modeled, key):
     return dist
 
 def distance_between_pdf_L2(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
+    return dist
+
+def distance_between_pdf_L2log(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
@@ -211,7 +235,7 @@ def work_function(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf, edges = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)
-        dist += distance_between_pdf_L2(pdf_modeled=pdf, key=key)
+        dist += distance_between_pdf_L2log(pdf_modeled=pdf, key=key)
     if dist <= g.eps:
         return [True, C, dist]
     else:

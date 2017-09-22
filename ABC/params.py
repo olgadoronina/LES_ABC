@@ -19,14 +19,21 @@ PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
 ########################################################################################################################
 # Path to data
 LOAD = 1          # Load filtered data or filter from DNS
-data_folder = './data_input/HIT_DNS_N256/'
+# ## JHU data
+data_folder = './data_input/JohnHopkins/'
+datafile_u = data_folder + 'HIT_u.bin'
+datafile_v = data_folder + 'HIT_v.bin'
+datafile_w = data_folder + 'HIT_w.bin'
+type_of_bin_data = np.float32
+# # CU data
+# data_folder = './data_input/HIT_DNS_N256/'
+# datafile_u = data_folder + 'Velocity1_003.rst'
+# datafile_v = data_folder + 'Velocity2_003.rst'
+# datafile_w = data_folder + 'Velocity3_003.rst'
+# type_of_bin_data = np.float64
+
 loadfile_LES = data_folder + 'LES.npz'
 loadfile_TEST = data_folder + 'TEST.npz'
-datafile_u = data_folder + 'Velocity1_003.rst'
-datafile_v = data_folder + 'Velocity2_003.rst'
-datafile_w = data_folder + 'Velocity3_003.rst'
-type_of_bin_data = np.float64
-
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
@@ -47,8 +54,8 @@ domain = [-2.1, 2.1]  # for pdf comparison
 # Sample limits
 C_limits = np.zeros((4, 2))
 C_limits[0] = [0.1, 0.3]
-C_limits[1] = [-0.2, 0]
-C_limits[2] = [-0.15, 0.05]
+C_limits[1] = [-0.3, 0]
+C_limits[2] = [-0.1, 0.2]
 # C_limits[3] = [-0.15, 0.2]
 bins = 100  # for pdf
 num_bin_joint = 20
@@ -56,8 +63,8 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
 
 ########################################################################################################################
 # abs algorithm
-eps = 30        # acceptance tolerance
-N = int(1.25e5)    # number of samples
+eps = 200      # acceptance tolerance
+N = int(60**3)    # number of samples
 M = 64          # number of training points
 MODEL = None    # 'Kosovic'
 ORDER = 2       # order of eddy-viscosity model

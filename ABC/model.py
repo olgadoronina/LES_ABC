@@ -84,7 +84,7 @@ class NonlinearModel(object):
         return tensor
 
     def calc_tensor_3(self, data):
-        """Calculate tensor (S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
+        """Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
         :return:       dictionary of tensor
         """
         tensor = dict()

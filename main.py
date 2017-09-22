@@ -29,8 +29,8 @@ def main():
         utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], 'LES')
         utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], 'TEST')
         logging.info('Writing files')
-        np.savez('./data_input/HIT_DNS_N256/LES.npz', **LES_data)
-        np.savez('./data_input/HIT_DNS_N256/TEST.npz', **TEST_data)
+        np.savez(data_folder + 'LES.npz', **LES_data)
+        np.savez(data_folder + 'TEST.npz', **TEST_data)
 
         map_bounds = np.linspace(np.min(HIT_data['v'][:, :, 127]), np.max(HIT_data['v'][:, :, 127]), 10)
         plot.imagesc([HIT_data['v'][:, :, 127], LES_data['v'][:, :, 127], TEST_data['v'][:, :, 127]],
@@ -44,23 +44,32 @@ def main():
     g.TEST = data.Data(TEST_data, TEST_delta)
     del LES_data, TEST_data
     ####################################################################################################################
-    logging.info('Plotting velocity fields for DNS, LES and TEST scale')
-    map_bounds = np.linspace(np.min(g.LES.field['v'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 10)
-    plot.imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]],
-                 map_bounds, name='LES', titles=[r'$u$', r'$v$', r'$w$'])
-    plt.show()
-    plot.imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]],
-                 map_bounds, name='TEST', titles=[r'$u$', r'$v$', r'$w$'])
-    plt.show()
+    # logging.info('Plotting velocity fields for DNS, LES and TEST scale')
+    # map_bounds = np.linspace(np.min(g.LES.field['v'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 10)
+    # plot.imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]],
+    #              map_bounds, name='LES', titles=[r'$u$', r'$v$', r'$w$'])
+    # plt.show()
+    # plot.imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]],
+    #              map_bounds, name='TEST', titles=[r'$u$', r'$v$', r'$w$'])
+    # plt.show()
     ####################################################################################################################
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N=N, M=M, eps=eps, order=ORDER)
-    abc.main_loop()
+    # abc.main_loop()
+    abc.accepted = np.load('./ABC/plots/accepted.npz')['c']
+    abc.dist = np.load('./ABC/plots/accepted.npz')['dist']
+
+    new_eps = 190
+    abc.accepted = abc.accepted[abc.dist < new_eps]
+    abc.dist = abc.dist[abc.dist < new_eps]
+    print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
     abc.plot_scatter()
     abc.plot_marginal_pdf()
     abc.calc_final_C()
     abc.plot_compare_tau('TEST')
     abc.plot_compare_tau('LES')
+
+    # np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
 
     # logging.info('Dynamic Smagorinsky')
     # SmagorinskyModel = model.DynamicSmagorinskyModel()

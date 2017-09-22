@@ -92,12 +92,12 @@ class DataSparse(object):
 
         # True pdf for distance calculation
         tau_true = data.Reynolds_stresses_from_DNS()
-        tau_pdf_true = dict()
+        self.tau_pdf_true = dict()
         self.log_tau_pdf_true = dict()
         for key, value in tau_true.items():
-            tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
-            self.log_tau_pdf_true[key] = np.log(tau_pdf_true[key], out=np.empty_like(tau_pdf_true[key]).fill(-20),
-                                                where=tau_pdf_true[key] != 0)
+            self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
+            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=np.empty_like(self.tau_pdf_true[key]).fill(-20),
+                                                where=self.tau_pdf_true[key] != 0)
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 
     def sparse_dict(self, data):
