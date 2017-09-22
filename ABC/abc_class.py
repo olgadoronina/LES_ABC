@@ -6,6 +6,7 @@ import ABC.utils as utils
 import ABC.parallel as parallel
 import ABC.model as model
 from tqdm import tqdm
+import itertools
 
 
 class ABC(object):
@@ -38,31 +39,29 @@ class ABC(object):
         return C_array
 
     def form_C_array_manual(self):
-        """ Create list of lists of N parameters manually uniformly distributed on given interval
+        """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
         :return: list of lists of sampled parameters
         """
         C_array = []
         if ORDER == 1:
-            C1 = np.linspace(C_limits[0][0], C_limits[0][1], self.N+1)
+            C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
             C1 = C1[:-1] + (C1[1] - C1[0]) / 2
             for i in C1:
                 C_array.append([i])
         else:
-            if self.N != 60**3:
+            if self.N != N_each**N_params:
                 print('Achtung!: cannot manually sample C')
             else:
-                n = 60
-            C_array = []
-            C1 = np.linspace(C_limits[0][0], C_limits[0][1], n+1)
-            C1 = C1[:-1]+(C1[1]-C1[0])/2
-            C2 = np.linspace(C_limits[1][0], C_limits[1][1], n+1)
-            C2 = C2[:-1] + (C2[1] - C2[0]) / 2
-            C3 = np.linspace(C_limits[2][0], C_limits[2][1], n+1)
-            C3 = C3[:-1] + (C3[1] - C3[0]) / 2
-            for i in range(n):
-                for j in range(n):
-                    for k in range(n):
-                        C_array.append([C1[i], C2[j], C3[k]])
+                C = np.ndarray((N_params, N_each))
+                for i in range(N_params):
+                    C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each+1)
+                    C[i, :] = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0])/2
+                print('start')
+                permitation = itertools.product(*C)
+                print('done')
+                C_array = list(map(list, permitation))
+                print('finish')
+                print(C_array.shape, N_each**N_params)
         return C_array
 
     def main_loop(self):

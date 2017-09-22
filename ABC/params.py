@@ -49,25 +49,31 @@ LES_delta = 1/LES_scale
 TEST_delta = 1/TEST_scale
 
 ########################################################################################################################
+# abs algorithm
+eps = 200      # acceptance tolerance
+N_each = 40
+N = int(N_each**6)    # number of samples
+M = 64          # number of training points
+ORDER = 3       # order of eddy-viscosity model
+N_params = 6
+USE_C3 = 0
+
+########################################################################################################################
 # Params for abc algorithm
 domain = [-2.1, 2.1]  # for pdf comparison
 # Sample limits
-C_limits = np.zeros((4, 2))
+C_limits = np.zeros((N_params, 2))
 C_limits[0] = [0.1, 0.3]
 C_limits[1] = [-0.3, 0]
 C_limits[2] = [-0.1, 0.2]
-# C_limits[3] = [-0.15, 0.2]
+C_limits[3] = [-0.15, 0.2]
+C_limits[4] = [-0.2, 0.2]
+C_limits[5] = [-0.3, 0.3]
 bins = 100  # for pdf
 num_bin_joint = 20
-params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$']
+params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
-########################################################################################################################
-# abs algorithm
-eps = 200      # acceptance tolerance
-N = int(60**3)    # number of samples
-M = 64          # number of training points
-ORDER = 5       # order of eddy-viscosity model
-USE_C3 = 0
+
 
 ########################################################################################################################
 # Parallel regime parameters

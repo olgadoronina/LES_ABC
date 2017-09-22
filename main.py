@@ -54,21 +54,23 @@ def main():
     ####################################################################################################################
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N=N, M=M, eps=eps, order=ORDER)
-    # abc.main_loop()
+    abc.main_loop()
+
+    #########################
     # abc.accepted = np.load('./ABC/plots/accepted.npz')['c']
     # abc.dist = np.load('./ABC/plots/accepted.npz')['dist']
-
     # new_eps = 190
     # abc.accepted = abc.accepted[abc.dist < new_eps]
     # abc.dist = abc.dist[abc.dist < new_eps]
     # print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
-    # abc.plot_scatter()
-    # abc.plot_marginal_pdf()
-    # abc.calc_final_C()
-    # abc.plot_compare_tau('TEST')
-    # abc.plot_compare_tau('LES')
+    #########################
+    abc.plot_scatter()
+    abc.plot_marginal_pdf()
+    abc.calc_final_C()
+    abc.plot_compare_tau('TEST')
+    abc.plot_compare_tau('LES')
 
-    # np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
+    np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
 
     # logging.info('Dynamic Smagorinsky')
     # SmagorinskyModel = model.DynamicSmagorinskyModel()
