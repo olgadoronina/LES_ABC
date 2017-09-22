@@ -13,38 +13,42 @@ class NonlinearModel(object):
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
         self.num_of_params = 1
-        self.Tensor_1 = self.calc_tensor_1(data)
+        self.Tensor_0 = self.calc_tensor_1(data)
         self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
         if order >= 2:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
             self.num_of_params = 3
+            self.Tensor_1 = self.calc_tensor_1(data)
             self.Tensor_2 = self.calc_tensor_2(data)
-            self.Tensor_3 = self.calc_tensor_3(data)
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_2
             logging.debug('ORDER of model = 2')
-            if USE_C4:
+            if USE_C3 or ORDER > 2:
                 self.num_of_params = 4
-                self.Tensor_4 = self.calc_tensor_4(data)
+                self.Tensor_3 = self.calc_tensor_3(data)
+                self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_2_withC3
                 logging.debug('ORDER of model = 2 with C4')
         if order >= 3:
             self.num_of_params = 6
+            self.Tensor_4 = self.calc_tensor_4(data)
             self.Tensor_5 = self.calc_tensor_5(data)
-            self.Tensor_6 = self.calc_tensor_6(data)
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_3
             logging.debug('ORDER of model = 3')
         if order >= 4:
             self.num_of_params = 9
+            self.Tensor_6 = self.calc_tensor_6(data)
             self.Tensor_7 = self.calc_tensor_7(data)
             self.Tensor_8 = self.calc_tensor_8(data)
-            self.Tensor_9 = self.calc_tensor_9(data)
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_4
             logging.debug('ORDER of model = 4')
         if order == 5:
             self.num_of_params = 10
-            self.Tensor_10 = self.calc_tensor_10(data)
+            self.Tensor_9 = self.calc_tensor_9(data)
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_5
             logging.debug('ORDER of model = 5')
         if order > 5:
             logging.error('ORDER parameter should be int from 1 to 5')
 
 
-    def calc_tensor_1(self, data):
+    def calc_tensor_0(self, data):
         """Calculate tensor |S|S_ij for given field
         :return:       dictionary of tensor
         """
@@ -68,7 +72,7 @@ class NonlinearModel(object):
             value *= data.delta ** 2
         return tensor
 
-    def calc_tensor_2(self, data):
+    def calc_tensor_1(self, data):
         """Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
         :return:       dictionary of tensor
         """
@@ -83,7 +87,7 @@ class NonlinearModel(object):
             value *= data.delta ** 2
         return tensor
 
-    def calc_tensor_3(self, data):
+    def calc_tensor_2(self, data):
         """Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
         :return:       dictionary of tensor
         """
@@ -103,7 +107,7 @@ class NonlinearModel(object):
             value *= data.delta ** 2
         return tensor
 
-    def calc_tensor_4(self, data):
+    def calc_tensor_3(self, data):
         """Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
         :return:       dictionary of tensor
         """
@@ -125,7 +129,7 @@ class NonlinearModel(object):
             value *= data.delta ** 2
         return tensor
 
-    def calc_tensor_5(self, data):
+    def calc_tensor_4(self, data):
         """Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
         :return:       dictionary of tensor
         """
@@ -143,7 +147,7 @@ class NonlinearModel(object):
 
         return tensor1
 
-    def calc_tensor_6(self, data):
+    def calc_tensor_5(self, data):
         """Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
         :return:       dictionary of tensor
         """
@@ -170,7 +174,7 @@ class NonlinearModel(object):
 
         return tensor1
 
-    def calc_tensor_7(self, data):
+    def calc_tensor_6(self, data):
         """Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
         :return:       dictionary of tensor
         """
@@ -189,7 +193,7 @@ class NonlinearModel(object):
                 tensor1[i + j] *= data.delta ** 2
         return tensor1
 
-    def calc_tensor_8(self, data):
+    def calc_tensor_7(self, data):
         """Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
         :return:       dictionary of tensor
         """
@@ -209,7 +213,7 @@ class NonlinearModel(object):
 
         return tensor1
 
-    def calc_tensor_9(self, data):
+    def calc_tensor_8(self, data):
         """Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
         :return:       dictionary of tensor
         """
@@ -236,7 +240,7 @@ class NonlinearModel(object):
 
         return tensor1
 
-    def calc_tensor_10(self, data):
+    def calc_tensor_9(self, data):
         """Calculate tensor (RS^2R^2 - R^2S^2R) for given field
         :return:       dictionary of tensor
         """
@@ -265,31 +269,73 @@ class NonlinearModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_1[i]
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i]
         return tau
 
-    def Reynolds_stresses_from_C_Nonlin(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model with constants C.
+    def Reynolds_stresses_from_C_Nonlin_2(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 3 parameters.
         :param C: given list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_1[i] + C[1] * self.Tensor_2[i] + C[2] * self.Tensor_3[i]
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] + C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i]
         return tau
 
-    def Reynolds_stresses_from_C_Kosovic(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model with constants C
-            in Branco Kosovic formulation.
+    def Reynolds_stresses_from_C_Nonlin_2_withC3(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 4 parameters.
         :param C: given list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -C[0]**2 * (2 * self.Tensor_1[i] + C[1] * self.Tensor_2[i] + C[2] * self.Tensor_3[i])
-            if USE_C4:
-                tau[i] += C[3] * self.Tensor_4[i]
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] + C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + \
+                     C[3] * self.Tensor_3[i]
         return tau
+
+    def Reynolds_stresses_from_C_Nonlin_3(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model of 3rd order.
+        :param C: given list of constant parameters
+        :return: dict of modeled Reynolds stresses tensor
+        """
+        tau = dict()
+        for i in self.elements_in_tensor:
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
+                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
+                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i]
+        return tau
+
+    def Reynolds_stresses_from_C_Nonlin_4(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model of 4th order.
+        :param C: given list of constant parameters
+        :return: dict of modeled Reynolds stresses tensor
+        """
+        tau = dict()
+        for i in self.elements_in_tensor:
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
+                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
+                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i] + \
+                     C[6] * self.Tensor_6[i] + C[7] * self.Tensor_7[i] + C[8] * self.Tensor_8[i]
+        return tau
+
+    def Reynolds_stresses_from_C_Nonlin_5(self, C):
+        """Calculate Reynolds stresses using eddy-viscosity model of 5th order.
+        :param C: given list of constant parameters
+        :return: dict of modeled Reynolds stresses tensor
+        """
+        tau = dict()
+        for i in self.elements_in_tensor:
+            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
+                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
+                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i] + \
+                     C[6] * self.Tensor_6[i] + C[7] * self.Tensor_7[i] + C[8] * self.Tensor_8[i] + \
+                     C[9] * self.Tensor_9[i]
+        return tau
+
+
+
+
+
 
 
 class DynamicSmagorinskyModel(object):

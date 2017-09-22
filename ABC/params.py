@@ -67,7 +67,7 @@ eps = 200      # acceptance tolerance
 N = int(60**3)    # number of samples
 M = 64          # number of training points
 ORDER = 5       # order of eddy-viscosity model
-USE_C4 = 0
+USE_C3 = 0
 
 ########################################################################################################################
 # Parallel regime parameters
