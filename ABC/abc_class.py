@@ -7,6 +7,7 @@ import ABC.parallel as parallel
 import ABC.model as model
 from tqdm import tqdm
 import itertools
+import baseconvert
 
 
 class ABC(object):
@@ -19,7 +20,10 @@ class ABC(object):
         g.TEST_sp = data.DataSparse(g.TEST, M)
         g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.order)
         self.num_of_params = g.TEST_Model.num_of_params
-        self.C_array = self.form_C_array_manual()
+        if ORDER == 1:
+            self.C_array = self.form_Cs_array_manual()
+        elif ORDER == 2:
+            self.C_array = self.form_C_array_manual()
         self.result = []
         self.accepted = []
         self.dist = []
@@ -38,41 +42,64 @@ class ABC(object):
             C_array.append(C)
         return C_array
 
-    def form_C_array_manual(self):
+    def form_Cs_array_manual(self):
         """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
+            for one parametes Smagorinsky model.
         :return: list of lists of sampled parameters
         """
         C_array = []
-        if ORDER == 1:
-            C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
-            C1 = C1[:-1] + (C1[1] - C1[0]) / 2
-            for i in C1:
-                C_array.append([i])
+        C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
+        C1 = C1[:-1] + (C1[1] - C1[0]) / 2
+        for i in C1:
+            C_array.append([i])
+        return C_array
+
+    def form_C_array_manual(self, iter=None):
+        """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
+        :return: list of lists of sampled parameters
+        """
+        if self.N != N_each**N_params:
+            print('Achtung!: cannot manually sample C')
+
+        elif ORDER == 2:
+            C = np.ndarray((N_params, N_each))
+            for i in range(N_params):
+                C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each+1)
+                C[i, :] = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0])/2
+            permitation = itertools.product(*C)
+            C_array = list(map(list, permitation))
+
         else:
-            if self.N != N_each**N_params:
-                print('Achtung!: cannot manually sample C')
-            else:
-                C = np.ndarray((N_params, N_each))
-                for i in range(N_params):
-                    C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each+1)
-                    C[i, :] = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0])/2
-                print('start')
-                permitation = itertools.product(*C)
-                print('done')
-                C_array = list(map(list, permitation))
-                print('finish')
-                print(C_array.shape, N_each**N_params)
+            index = baseconvert(iter, 10, 40)
+            print('index = ',index)
+            C = np.ndarray((N_params, N_each))
+            for i in range(N_params - N_params_in_pool):
+                C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
+                C[i, :] = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0]) / 2
+            for i in range(N_params_in_pool, N_params):
+                C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
+
+            permitation = itertools.product(*C)
+            C_array = list(map(list, permitation))
+
         return C_array
 
     def main_loop(self):
         """ Main loop of ABC algorithm, fill list of accepted parameters """
         start = time()
         if PARALLEL:
-            par_process = parallel.Parallel(processes=N_proc)
-            par_process.run(func=work_function, tasks=self.C_array)
-            self.result = par_process.get_results()
+            if ORDER <= 2:
+                par_process = parallel.Parallel(processes=N_proc)
+                par_process.run(func=work_function, tasks=self.C_array)
+                self.result = par_process.get_results()
+            else:
+                for i in range(N_each**(N_params-N_params_in_pool)):
+                    C_array = self.form_C_array_manual()
+                    par_process = parallel.Parallel(processes=N_proc)
+                    par_process.run(func=work_function, tasks=C_array)
+                    self.result.append(par_process.get_results())
         else:
-            with tqdm(total=N) as pbar:
+            with tqdm(total=self.N) as pbar:
                 for C in self.C_array:
                     self.result.append(work_function(C))
                     pbar.update()
@@ -81,7 +108,8 @@ class ABC(object):
         utils.timer(start, end, 'Time ')
         self.accepted = np.array([C for [accepted, C, dist] in self.result if accepted])
         self.dist = np.array([dist for [accepted, C, dist] in self.result if accepted])
-        logging.debug('Number of accepted values: ' + str(len(self.accepted)) + ' ' + str(round(len(self.accepted)/self.N*100,2))+'%')
+        logging.debug('Number of accepted values: {} {}%'.format(len(self.accepted),
+                                                                 round(len(self.accepted)/self.N*100,2)))
 
     def plot_marginal_pdf(self):
         if len(self.accepted) == 0:

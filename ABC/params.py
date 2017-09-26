@@ -50,14 +50,18 @@ TEST_delta = 1/TEST_scale
 
 ########################################################################################################################
 # abs algorithm
-eps = 200      # acceptance tolerance
-N_each = 40
-N = int(N_each**6)    # number of samples
+bins = 100  # for pdf
+num_bin_joint = 20
+N_each = 10
+N_params = 6
+N_params_in_pool = 4
+
+
 M = 64          # number of training points
 ORDER = 3       # order of eddy-viscosity model
-N_params = 6
-USE_C3 = 0
 
+USE_C3 = 0
+eps = 200      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
 domain = [-2.1, 2.1]  # for pdf comparison
@@ -69,8 +73,6 @@ C_limits[2] = [-0.1, 0.2]
 C_limits[3] = [-0.15, 0.2]
 C_limits[4] = [-0.2, 0.2]
 C_limits[5] = [-0.3, 0.3]
-bins = 100  # for pdf
-num_bin_joint = 20
 params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
 
@@ -79,6 +81,6 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C
 # Parallel regime parameters
 PARALLEL = 1        # 0 - Not parallel; 1 - parallel
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+N_proc = 3          # Number of processes
 
 ########################################################################################################################
