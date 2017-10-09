@@ -4,263 +4,266 @@ import ABC.global_var as g
 import ABC.plot as plot
 import ABC.utils as utils
 import matplotlib.pyplot as plt
+import timeit
 
 class NonlinearModel(object):
 
     def __init__(self, data, order):
+
+        num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
+        self.num_of_params = num_param[str(ORDER)]
+        if num_param[str(ORDER)] == 2 and USE_C3 == 0:
+            self.num_of_params = 3
+
         if HOMOGENEOUS:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
-        self.num_of_params = 1
-        self.Tensor_0 = self.calc_tensor_1(data)
-        self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
-        if order >= 2:
-            self.num_of_params = 3
-            self.Tensor_1 = self.calc_tensor_1(data)
-            self.Tensor_2 = self.calc_tensor_2(data)
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_2
-            logging.debug('ORDER of model = 2')
-            if USE_C3 or ORDER > 2:
-                self.num_of_params = 4
-                self.Tensor_3 = self.calc_tensor_3(data)
-                self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_2_withC3
-                logging.debug('ORDER of model = 2 with C4')
-        if order >= 3:
-            self.num_of_params = 6
-            self.Tensor_4 = self.calc_tensor_4(data)
-            self.Tensor_5 = self.calc_tensor_5(data)
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_3
-            logging.debug('ORDER of model = 3')
-        if order >= 4:
-            self.num_of_params = 9
-            self.Tensor_6 = self.calc_tensor_6(data)
-            self.Tensor_7 = self.calc_tensor_7(data)
-            self.Tensor_8 = self.calc_tensor_8(data)
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_4
-            logging.debug('ORDER of model = 4')
-        if order == 5:
-            self.num_of_params = 10
-            self.Tensor_9 = self.calc_tensor_9(data)
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_5
-            logging.debug('ORDER of model = 5')
-        if order > 5:
-            logging.error('ORDER parameter should be int from 1 to 5')
+
+        self.S_mod = self.calc_strain_mod(data)
+        self.Tensor = dict()
+        for i in range(self.num_of_params):
+            self.Tensor[str(i)] = self.calc_tensor(data, number=i)
+
+        if self.num_of_params == 1:
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
+        elif N_params_in_task == 1:
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
+        elif N_params_in_task == 2:
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_2_param2
+        else:
+            print('Check the number of parameters in one task. Given number is not supported')
 
 
-    def calc_tensor_0(self, data):
+    def calc_strain_mod(self, data):
+        """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
+        :return:       array of |S| in each point of domain
+        """
+        S_mod_sqr = 0
+        for i in ['u', 'v', 'w']:
+            for j in ['u', 'v', 'w']:
+                S_mod_sqr += 2 * np.multiply(data.S[i + j], data.S[i + j])
+        return np.sqrt(S_mod_sqr)
+
+
+    def calc_tensor(self, data, number):
         """Calculate tensor |S|S_ij for given field
         :return:       dictionary of tensor
         """
-
-        def calc_strain_mod():
-            """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
-            :return:       array of |S| in each point of domain
-            """
-            S_mod_sqr = 0
+        if number == 0:
+            tensor = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
-                    S_mod_sqr += 2 * np.multiply(data.S[i + j], data.S[i + j])
-            return np.sqrt(S_mod_sqr)
+                    tensor[i + j] = np.multiply(self.S_mod, data.S[i + j])
+            for key, value in tensor.items():
+                value *= data.delta ** 2
+            return tensor
+        elif number == 1:
+        # Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
+            tensor = dict()
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor[i + j] = 0
+                    for k in ['u', 'v', 'w']:
+                        tensor[i + j] += np.multiply(data.S[i + k], data.R[k + j]) - \
+                                                np.multiply(data.R[i + k], data.S[k + j])
+            for key, value in tensor.items():
+                value *= data.delta ** 2
+            return tensor
 
-        tensor = dict()
-        S_mod = calc_strain_mod()
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor[i + j] = np.multiply(S_mod, data.S[i + j])
-        for key, value in tensor.items():
-            value *= data.delta ** 2
-        return tensor
+        elif number == 2:
+        # Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
 
-    def calc_tensor_1(self, data):
-        """Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
-        :return:       dictionary of tensor
-        """
-        tensor = dict()
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor[i + j] = 0
+            tensor = dict()
+            S_S_inv = 0
+            for i in ['u', 'v', 'w']:
                 for k in ['u', 'v', 'w']:
-                    tensor[i + j] += np.multiply(data.S[i + k], data.R[k + j]) - \
-                                            np.multiply(data.R[i + k], data.S[k + j])
-        for key, value in tensor.items():
-            value *= data.delta ** 2
-        return tensor
+                    S_S_inv += np.multiply(data.S[i + k], data.S[k + i])
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor[i + j] = 0
+                    for k in ['u', 'v', 'w']:
+                        tensor[i + j] += np.multiply(data.S[i + k], data.S[k + j])
+                        if i == j:
+                            tensor[i + j] -= 1 / 3 * S_S_inv
+            for key, value in tensor.items():
+                value *= data.delta ** 2
+            return tensor
 
-    def calc_tensor_2(self, data):
-        """Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
-        :return:       dictionary of tensor
-        """
-        tensor = dict()
-        S_S_inv = 0
-        for i in ['u', 'v', 'w']:
-            for k in ['u', 'v', 'w']:
-                S_S_inv += np.multiply(data.S[i + k], data.S[k + i])
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor[i + j] = 0
+        elif number == 3:
+        # Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
+
+            tensor = dict()
+            R_R_inv = 0
+            for i in ['u', 'v', 'w']:
                 for k in ['u', 'v', 'w']:
-                    tensor[i + j] += np.multiply(data.S[i + k], data.S[k + j])
+                    R_R_inv += np.multiply(data.R[i + k], data.R[k + i])
+
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor[i + j] = 0
+                    for k in ['u', 'v', 'w']:
+                        tensor[i + j] += np.multiply(data.R[i + k], data.R[k + j])
+                        if i == j:
+                            tensor[i + j] -= 1 / 3 * R_R_inv
+
+            for key, value in tensor.items():
+                value *= data.delta ** 2
+            return tensor
+
+        elif number == 4:
+        # Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
+
+            tensor1 = dict()
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2 = 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            tensor1[i + j] += data.R[i + k]*data.S[k + l]*data.S[l + j]
+                            tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + j]
+                    tensor1[i + j] -= tensor2
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod
+
+            return tensor1
+
+        elif number == 5:
+        # Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
+
+            tensor1 = dict()
+            S_R_R_inv = 0
+
+            for i in ['u', 'v', 'w']:
+                for k in ['u', 'v', 'w']:
+                    for l in ['u', 'v', 'w']:
+                        S_R_R_inv += data.S[i + k] * data.R[k + l] * data.R[l + i]
+
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2 = 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            tensor1[i + j] += data.R[i + k]*data.R[k + l]*data.S[l + j]
+                            tensor2 += data.S[i + k] * data.R[k + l] * data.R[l + j]
+                    tensor1[i + j] += tensor2
                     if i == j:
-                        tensor[i + j] -= 1 / 3 * S_S_inv
-        for key, value in tensor.items():
-            value *= data.delta ** 2
-        return tensor
+                        tensor1[i + j] -= 2 / 3 * S_R_R_inv
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod
 
-    def calc_tensor_3(self, data):
-        """Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
-        :return:       dictionary of tensor
-        """
-        tensor = dict()
-        R_R_inv = 0
-        for i in ['u', 'v', 'w']:
-            for k in ['u', 'v', 'w']:
-                R_R_inv += np.multiply(data.R[i + k], data.R[k + i])
+            return tensor1
 
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor[i + j] = 0
-                for k in ['u', 'v', 'w']:
-                    tensor[i + j] += np.multiply(data.R[i + k], data.R[k + j])
-                    if i == j:
-                        tensor[i + j] -= 1 / 3 * R_R_inv
+        elif number == 6:
+        # Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
 
-        for key, value in tensor.items():
-            value *= data.delta ** 2
-        return tensor
+            tensor1 = dict()
 
-    def calc_tensor_4(self, data):
-        """Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
-        :return:       dictionary of tensor
-        """
-        tensor1 = dict()
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2 = 0
-                for k in ['u', 'v', 'w']:
-                    for l in ['u', 'v', 'w']:
-                        tensor1[i + j] += data.R[i + k]*data.S[k + l]*data.S[l + j]
-                        tensor2+= data.S[i + k] * data.S[k + l] * data.R[l + j]
-                tensor1[i + j] -= tensor2
-                tensor1[i + j] *= data.delta ** 2
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2 = 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            for m in ['u', 'v', 'w']:
+                                tensor1[i + j] += data.R[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
+                                tensor2 += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.R[m + j]
+                    tensor1[i + j] -= tensor2
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod
 
-        return tensor1
+            return tensor1
 
-    def calc_tensor_5(self, data):
-        """Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
-        :return:       dictionary of tensor
-        """
-        tensor1 = dict()
-        S_R_R_inv = 0
+        elif number == 7:
+        # Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
 
-        for i in ['u', 'v', 'w']:
-            for k in ['u', 'v', 'w']:
-                for l in ['u', 'v', 'w']:
-                    S_R_R_inv += data.S[i + k] * data.R[k + l] * data.R[l + i]
+            tensor1 = dict()
 
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2 = 0
-                for k in ['u', 'v', 'w']:
-                    for l in ['u', 'v', 'w']:
-                        tensor1[i + j] += data.R[i + k]*data.R[k + l]*data.S[l + j]
-                        tensor2 += data.S[i + k] * data.R[k + l] * data.R[l + j]
-                tensor1[i + j] += tensor2
-                if i == j:
-                    tensor1[i + j] -= 2 / 3 * S_R_R_inv
-                tensor1[i + j] *= data.delta ** 2
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2 = 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            for m in ['u', 'v', 'w']:
+                                tensor1[i + j] += data.S[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
+                                tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.S[m + j]
+                    tensor1[i + j] -= tensor2
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod**2
 
-        return tensor1
+            return tensor1
 
-    def calc_tensor_6(self, data):
-        """Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
-        :return:       dictionary of tensor
-        """
-        tensor1 = dict()
+        elif number == 8:
+        # Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
 
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2 = 0
+            tensor1 = dict()
+            S2_R2_inv = 0
+
+            for i in ['u', 'v', 'w']:
                 for k in ['u', 'v', 'w']:
                     for l in ['u', 'v', 'w']:
                         for m in ['u', 'v', 'w']:
-                            tensor1[i + j] += data.R[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
-                            tensor2 += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.R[m + j]
-                tensor1[i + j] -= tensor2
-                tensor1[i + j] *= data.delta ** 2
-        return tensor1
+                            S2_R2_inv += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + i]
 
-    def calc_tensor_7(self, data):
-        """Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
-        :return:       dictionary of tensor
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2= 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            for m in ['u', 'v', 'w']:
+                                tensor1[i + j] += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
+                                tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
+                    tensor1[i + j] += tensor2
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod ** 2
+
+            return tensor1
+
+        elif number == 9:
+        # Calculate tensor (RS^2R^2 - R^2S^2R) for given field
+
+            tensor1 = dict()
+
+            for i in ['u', 'v', 'w']:
+                for j in ['u', 'v', 'w']:
+                    tensor1[i + j] = 0
+                    tensor2 = 0
+                    for k in ['u', 'v', 'w']:
+                        for l in ['u', 'v', 'w']:
+                            for m in ['u', 'v', 'w']:
+                                for n in ['u', 'v', 'w']:
+                                    tensor1[i + j] += data.R[i + k] * data.S[k + l] * \
+                                                      data.S[l + m] * data.R[m + n] * data.R[n + j]
+                                    tensor2 += data.R[i + k] * data.R[k + l] * \
+                                               data.S[l + m] * data.S[m + n] * data.R[n + j]
+                    tensor1[i + j] -= tensor2
+                    tensor1[i + j] *= data.delta ** 2
+                    tensor1[i + j] /= self.S_mod ** 3
+
+            return tensor1
+
+    ####################################################################################################################
+    # Reynolds_stresses_from_C
+    ####################################################################################################################
+
+    def Reynolds_stresses_from_C_tau(self, C):
+
+        """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 3 parameters.
+        :param C: given list of constant parameters
+        :return: dict of modeled Reynolds stresses tensor
         """
-        tensor1 = dict()
+        tau = dict()
 
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2 = 0
-                for k in ['u', 'v', 'w']:
-                    for l in ['u', 'v', 'w']:
-                        for m in ['u', 'v', 'w']:
-                            tensor1[i + j] += data.S[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
-                            tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.S[m + j]
-                tensor1[i + j] -= tensor2
-                tensor1[i + j] *= data.delta ** 2
+        for i in self.elements_in_tensor:
+            tau[i] = -2 * C[0] ** 2 * self.Tensor['0'][i]
+            for j in range(1, N_params):
+                tau[i] += C[j] * self.Tensor[str(j)][i]
+        return tau
 
-        return tensor1
-
-    def calc_tensor_8(self, data):
-        """Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
-        :return:       dictionary of tensor
-        """
-        tensor1 = dict()
-        S2_R2_inv = 0
-
-        for i in ['u', 'v', 'w']:
-            for k in ['u', 'v', 'w']:
-                for l in ['u', 'v', 'w']:
-                    for m in ['u', 'v', 'w']:
-                        S2_R2_inv += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + i]
-
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2= 0
-                for k in ['u', 'v', 'w']:
-                    for l in ['u', 'v', 'w']:
-                        for m in ['u', 'v', 'w']:
-                            tensor1[i + j] += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
-                            tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
-                tensor1[i + j] += tensor2
-                tensor1[i + j] *= data.delta ** 2
-
-        return tensor1
-
-    def calc_tensor_9(self, data):
-        """Calculate tensor (RS^2R^2 - R^2S^2R) for given field
-        :return:       dictionary of tensor
-        """
-        tensor1 = dict()
-
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor1[i + j] = 0
-                tensor2 = 0
-                for k in ['u', 'v', 'w']:
-                    for l in ['u', 'v', 'w']:
-                        for m in ['u', 'v', 'w']:
-                            for n in ['u', 'v', 'w']:
-                                tensor1[i + j] += data.R[i + k] * data.S[k + l] * \
-                                                  data.S[l + m] * data.R[m + n] * data.R[n + j]
-                                tensor2 += data.R[i + k] * data.R[k + l] * \
-                                           data.S[l + m] * data.S[m + n] * data.R[n + j]
-                tensor1[i + j] -= tensor2
-                tensor1[i + j] *= data.delta ** 2
-        return tensor1
 
     def Reynolds_stresses_from_C_Smagorinsky(self, C):
         """Calculate Reynolds stresses using Smagorinsky eddy-viscosity model with constants C.
@@ -269,68 +272,90 @@ class NonlinearModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i]
+            tau[i] = -2 * C[0] ** 2 * self.Tensor['0'][i]
         return tau
 
-    def Reynolds_stresses_from_C_Nonlin_2(self, C):
+    # def Reynolds_stresses_from_C_Nonlin_2_improved_step(self, C, C2, dist_func):
+    #     """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 3 parameters.
+    #     :param C: given list of constant parameters
+    #     :return: dict of modeled Reynolds stresses tensor
+    #     """
+    #     dist = np.zeros(N_each)
+    #     for i in self.elements_in_tensor:
+    #         tau = C[0] * self.Tensor_0[i].flatten() + C[1] * self.Tensor_1[i].flatten()
+    #         tensor = self.Tensor_2[i].flatten()
+    #         pdf = 0
+    #         for k in (range(0, N_total, step)):
+    #             # start = time()
+    #             tau_tmp = np.outer(np.ones(N_each), tau[k:min(k+step, N_total)]) + \
+    #                       np.outer(C2, tensor[k:min(k+step, N_total)])
+    #             pdf += utils.pdf_from_array_improved(tau_tmp, bins=bins, domain=domain)
+    #         dist += dist_func(pdf_modeled=pdf, key=i)
+    #
+    #     return dist
+
+    def Reynolds_stresses_from_C_Nonlin(self, C, dist_func):
         """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 3 parameters.
         :param C: given list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
-        tau = dict()
+        dist = np.zeros(N_each)
+        C_last = utils.uniform_grid(N_params-1)
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] + C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i]
-        return tau
+            # pr.enable()
+            tau = np.zeros(M**3)
+            for j in range(N_params-N_params_in_task):
+                tau += C[j] * self.Tensor[str(j)][i].flatten()
+            tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params-2)][i].flatten())
+            pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
+            dist += dist_func(pdf_modeled=pdf, key=i)
 
-    def Reynolds_stresses_from_C_Nonlin_2_withC3(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model of 2nd order with 4 parameters.
-        :param C: given list of constant parameters
-        :return: dict of modeled Reynolds stresses tensor
-        """
-        tau = dict()
-        for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] + C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + \
-                     C[3] * self.Tensor_3[i]
-        return tau
+        # Check for each parameter if it is accepted
+        a = [0.0] * (N_params + 1)  # allocate memory
+        a[:(N_params - N_params_in_task)] = [c for c in C]
+        result = []
+        for ind, distance in enumerate(dist):
+            if distance <= g.eps:
+                a[-2] = C_last[ind]
+                a[-1] = distance
+                result.append(a[:])
+        return result
 
-    def Reynolds_stresses_from_C_Nonlin_3(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model of 3rd order.
-        :param C: given list of constant parameters
-        :return: dict of modeled Reynolds stresses tensor
-        """
-        tau = dict()
-        for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
-                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
-                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i]
-        return tau
+    def Reynolds_stresses_from_C_Nonlin_2_param2(self, C, dist_func):
+        """ Calculate Reynolds stresses using eddy-viscosity model with 2 parameters in task.
 
-    def Reynolds_stresses_from_C_Nonlin_4(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model of 4th order.
         :param C: given list of constant parameters
-        :return: dict of modeled Reynolds stresses tensor
+        :param C1:
+        :param C2:
+        :param dist_func:
+        :retur
         """
-        tau = dict()
-        for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
-                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
-                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i] + \
-                     C[6] * self.Tensor_6[i] + C[7] * self.Tensor_7[i] + C[8] * self.Tensor_8[i]
-        return tau
+        dist = np.zeros((N_each, N_each))
+        C_last = utils.uniform_grid(N_params-1)
+        C_before_last = utils.uniform_grid(N_params-2)
 
-    def Reynolds_stresses_from_C_Nonlin_5(self, C):
-        """Calculate Reynolds stresses using eddy-viscosity model of 5th order.
-        :param C: given list of constant parameters
-        :return: dict of modeled Reynolds stresses tensor
-        """
-        tau = dict()
-        for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor_0[i] +\
-                     C[1] * self.Tensor_1[i] + C[2] * self.Tensor_2[i] + C[3] * self.Tensor_3[i] + \
-                     C[4] * self.Tensor_4[i] + C[5] * self.Tensor_5[i] + \
-                     C[6] * self.Tensor_6[i] + C[7] * self.Tensor_7[i] + C[8] * self.Tensor_8[i] + \
-                     C[9] * self.Tensor_9[i]
-        return tau
+        for ind, c1 in enumerate(C_before_last):
+            for i in self.elements_in_tensor:
+                # pr.enable()
+                tau = np.zeros(M ** 3)
+                for j in range(N_params - N_params_in_task):
+                    tau += C[j] * self.Tensor[str(j)][i].flatten()
+                tau += c1 * self.Tensor[str(N_params-3)][i].flatten()
+                tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 2)][i].flatten())
+                pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
+                dist += dist_func(pdf_modeled=pdf, key=i)
+
+        # Check for each parameter if it is accepted
+        a = [0.0]*(N_params+1)   # allocate memory
+        a[:(N_params - N_params_in_task)] = [c for c in C]
+        result = []
+        for ind, distance in enumerate(dist):
+            if distance <= g.eps:
+                a[-3] = C_before_last[ind // N_each]
+                a[-2] = C_last[ind % N_each]
+                a[-1] = distance
+                result.append(a[:])
+        return result
 
 
 
@@ -433,3 +458,43 @@ class DynamicSmagorinskyModel(object):
         for i in self.elements_in_tensor:
             tau[i] = -2 * (Cs*g.LES.delta)**2 * self.Tensor_1[i]
         return tau
+
+
+def distance_between_pdf_KL(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
+    return dist
+
+def distance_between_pdf_L1log(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
+    return dist
+
+def distance_between_pdf_L2(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
+    return dist
+
+def distance_between_pdf_L2log(pdf_modeled, key):
+    """Calculate statistical distance between two pdf.
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
+    # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
+    return dist

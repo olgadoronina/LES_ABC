@@ -1,7 +1,6 @@
 from ABC.params import *
 from numpy.fft import fftfreq, fft, fftn, ifftn
-from collections import OrderedDict
-
+import ABC.global_var as g
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
@@ -24,12 +23,30 @@ def pdf_from_array_with_x(array, bins, range):
     x = (edges[1:] + edges[:-1]) / 2
     return x, pdf
 
+def pdf_from_array_improved(array, bins, domain):
+    pdf = np.empty((N_each, bins))
+    for i in range(N_each):
+        pdf[i, :] = np.histogram(array[i, :], bins=bins, range=domain, normed=1)[0]
+    return pdf
 
 def pdf_from_array(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
 
-
+def baseconvert(x, newbase, number_digits):
+    """Converts given number x, from base 10 to base 'newbase'
+    x -- the number in base 10
+    newbase -- base to convert
+    number_digits -- number of digits in new base (add zero in the beginning)
+    """
+    assert(x >= 0)
+    r = []
+    while x > 0:
+        r = [x % newbase] + r
+        x //= newbase
+    for i in range(number_digits-len(r)):
+        r = [0] + r
+    return r
 
 def shell_average(spect3D, k_3d):
     """ Compute the 1D, shell-averaged, spectrum of the 3D Fourier-space
@@ -78,6 +95,14 @@ def spectral_density(vel_array, fname):
     fh.writelines(["%s\n" % item for item in y])
     fh.close()
 
+def uniform_grid(i):
+
+    C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
+    C_tmp = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0]) / 2
+
+    return C_tmp
+
+
 # import scipy.ndimage as ndimage
 #
 # # Other filters
@@ -100,3 +125,43 @@ def spectral_density(vel_array, fname):
 #     TEST[key] = np.fft.ifftn(ndimage.fourier_uniform(input, size=10))
 # map_bounds = np.linspace(np.min(HIT['u'][:, :, 127]), np.max(HIT['u'][:, :, 127]), 20)
 # imagesc([HIT['u'][:, :, 127], LES['u'].real[:, :, 127], TEST['u'].real[:, :, 127]], map_bounds, 'Fourier_sharp')
+
+
+def distance_between_pdf_KL(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
+    return dist
+
+def distance_between_pdf_L1log(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
+    return dist
+
+def distance_between_pdf_L2(pdf_modeled, key):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
+    return dist
+
+def distance_between_pdf_L2log(pdf_modeled, key):
+    """Calculate statistical distance between two pdf.
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
+    # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
+    return dist

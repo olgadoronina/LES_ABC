@@ -6,13 +6,14 @@ import multiprocessing as mp
 class Parallel(object):
     def __init__(self, processes=mp.cpu_count()):
         self.pool = mp.Pool(processes=processes)
+        self.N = N_each**N_params
         self.results = None
         logging.info('\n' + str(processes) + " workers")
 
     def run(self, func, tasks):
         if PROGRESSBAR == 1:
             self.results = []
-            with tqdm(total=N) as pbar:
+            with tqdm(total=len(tasks)) as pbar:
                 for i, res in tqdm(enumerate(self.pool.imap_unordered(func, tasks)), desc='ABC algorithm'):
                     self.results.append(res)
                     pbar.update()
@@ -20,7 +21,7 @@ class Parallel(object):
         elif PROGRESSBAR == 2:
             self.results = self.pool.map_async(func, tasks)
             while not self.results.ready():
-                print("Done ", N - self.results._number_left, '/', N)
+                print("Done {}/{}".format(self.N - self.results._number_left, self.N))
                 sleep(5)
             self.pool.close()
             self.pool.join()

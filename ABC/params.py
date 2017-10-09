@@ -6,12 +6,12 @@ from time import time, sleep
 import gc
 import random as rand
 import logging
-
+import cProfile
 ########################################################################################################################
 # mpl.style.use(['dark_background','mystyle'])
 mpl.style.use(['mystyle'])
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-
+pr = cProfile.Profile()
 ########################################################################################################################
 # Parameters of post-plotting
 PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
@@ -52,21 +52,22 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 10
+N_each = 20
 N_params = 6
-N_params_in_pool = 4
+N_params_in_task = 1  # only 1 or 2 for now
+N_total = N_each**N_params
+# step = int(65000/2) #floor((32+256)*1024/8/N_each)-100  # 32KB L1 cache, 256KB L2 cache
+# print('step = ', step)
 
-
-M = 64          # number of training points
+M = 64          # numbestepr of training points
 ORDER = 3       # order of eddy-viscosity model
-
-USE_C3 = 0
-eps = 200      # acceptance tolerance
+USE_C3 = 1
+eps = 300      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
 domain = [-2.1, 2.1]  # for pdf comparison
 # Sample limits
-C_limits = np.zeros((N_params, 2))
+C_limits = np.zeros((10, 2))
 C_limits[0] = [0.1, 0.3]
 C_limits[1] = [-0.3, 0]
 C_limits[2] = [-0.1, 0.2]
@@ -74,13 +75,8 @@ C_limits[3] = [-0.15, 0.2]
 C_limits[4] = [-0.2, 0.2]
 C_limits[5] = [-0.3, 0.3]
 params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
-
-
-
 ########################################################################################################################
 # Parallel regime parameters
-PARALLEL = 1        # 0 - Not parallel; 1 - parallel
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 3          # Number of processes
-
+N_proc = 6          # Number of processes
 ########################################################################################################################
