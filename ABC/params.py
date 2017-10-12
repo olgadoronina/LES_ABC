@@ -10,7 +10,11 @@ import cProfile
 ########################################################################################################################
 # mpl.style.use(['dark_background','mystyle'])
 mpl.style.use(['mystyle'])
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
+# logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='ABC_log.log', filemode='w',
+                    format='%(levelname)s: %(name)s: %(message)s',
+                    level=logging.DEBUG)
+
 pr = cProfile.Profile()
 ########################################################################################################################
 # Parameters of post-plotting
@@ -52,17 +56,17 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 20
-N_params = 6
-N_params_in_task = 1  # only 1 or 2 for now
+N_each = 60
+N_params = 3
+N_params_in_task = 1  # only 0, 1 or 2
 N_total = N_each**N_params
 # step = int(65000/2) #floor((32+256)*1024/8/N_each)-100  # 32KB L1 cache, 256KB L2 cache
 # print('step = ', step)
 
-M = 64          # numbestepr of training points
-ORDER = 3       # order of eddy-viscosity model
-USE_C3 = 1
-eps = 300      # acceptance tolerance
+M = 64          # number of training points
+ORDER = 2       # order of eddy-viscosity model
+USE_C3 = 0
+eps = 150      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
 domain = [-2.1, 2.1]  # for pdf comparison

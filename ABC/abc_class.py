@@ -19,21 +19,16 @@ class ABC(object):
         g.TEST_sp = data.DataSparse(g.TEST, M)
         g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.order)
         self.num_of_params = g.TEST_Model.num_of_params
-        if ORDER == 1:
-            self.C_array = self.form_Cs_array_manual()
-        elif ORDER >= 2:
-            self.C_array = self.form_C_array_manual(N_params-N_params_in_task)
+        self.C_array = self.form_C_array_manual(N_params-N_params_in_task)
 
         self.accepted = []
         self.dist = []
         self.C_final_dist = []
         self.C_final_joint = []
-        if ORDER == 1:
+        if ORDER == 1 or N_params_in_task == 0:
             self.work_func = work_function
-        if N_params_in_task == 1:
+        elif N_params_in_task == 1 or N_params_in_task == 2:
             self.work_func = work_function_improved
-        elif N_params_in_task == 2:
-            self.work_func = work_function_improved2
         logging.info('Number of samples per interval = {}'.format(N_each))
         logging.info('Number of parameters per task = {}'.format(N_params_in_task))
 
@@ -49,31 +44,26 @@ class ABC(object):
             C_array.append(C)
         return C_array
 
-    def form_Cs_array_manual(self):
-        """ Create list of lists of N parameters manually (make grid) uniformly distributed on given interval
-            for one parameter of Smagorinsky model.
-        :return: list of lists of sampled parameters
-        """
-        C_array = []
-        C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
-        C1 = C1[:-1] + (C1[1] - C1[0]) / 2
-        for i in C1:
-            C_array.append([i])
-        return C_array
-
     def form_C_array_manual(self, n=N_params):
         """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
         :return: list of lists of sampled parameters
         """
-        if self.N != N_each**N_params:
-            print('Achtung!: cannot manually sample C')
+        if n == 1:
+            C_array = []
+            C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
+            C1 = C1[:-1] + (C1[1] - C1[0]) / 2
+            for i in C1:
+                C_array.append([i])
+        else:
+            if self.N != N_each**N_params:
+                print('Achtung!: cannot manually sample C')
 
-        C = np.ndarray((n, N_each))
-        for i in range(n):
-            C[i, :] = utils.uniform_grid(i)
-        C[0] = -2*C[0]**2
-        permitation = itertools.product(*C)
-        C_array = list(map(list, permitation))
+            C = np.ndarray((n, N_each))
+            for i in range(n):
+                C[i, :] = utils.uniform_grid(i)
+            C[0] = -2*C[0]**2
+            permitation = itertools.product(*C)
+            C_array = list(map(list, permitation))
 
         return C_array
 
@@ -94,15 +84,21 @@ class ABC(object):
             pbar.close()
         end = time()
         utils.timer(start, end, 'Time ')
-        self.accepted = np.array([chunk[:N_params] for item in result for chunk in item])
-        self.accepted[:, 0] = np.sqrt(-self.accepted[:, 0]/2)   # return back to standard Cs (-2*Cs^2)
-        self.dist = np.array([chunk[-1] for item in result for chunk in item])
-        logging.debug('Number of accepted values: {} {}%'.format(len(self.accepted),
-                                                                 round(len(self.accepted)/self.N*100, 2)))
+        if N_params_in_task == 0:
+            self.accepted = np.array([C[:N_params] for C in result if C])
+            self.dist = np.array([C[-1] for C in result if C])
+        else:
+            self.accepted = np.array([chunk[:N_params] for item in result for chunk in item if item])
+            self.dist = np.array([chunk[-1] for item in result for chunk in item if item])
+        self.accepted[:, 0] = np.sqrt(-self.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
+        logging.info('Number of accepted values: {} {}%'.format(len(self.accepted),
+                                                                round(len(self.accepted)/self.N*100, 2)))
+
     def calc_final_C(self):
         """ Estimate the best fit of parameters.
-            For 1 parameter: based on minimum distance;
-            For more then 1 parameter: based on joint pdf."""
+        For 1 parameter: based on minimum distance;
+        For more then 1 parameter: based on joint pdf.
+        """
         if len(self.accepted) == 0:
             logging.warning('No accepted values')
         else:
@@ -115,10 +111,18 @@ class ABC(object):
                 logging.debug('Mean number in bin: ' + str(np.mean(H)))
                 edges = np.array(edges)
                 C_bin = (edges[:, :-1] + edges[:, 1:]) / 2  # shift value in the center of the bin
-                ind = np.unravel_index(H.argmax(), H.shape)
-                for i in range(self.num_of_params):
-                    self.C_final_joint.append(C_bin[i, ind[i]])
-                logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
+                ind = np.argwhere(H == np.max(H))
+                for i in ind:
+                    point = []
+                    for j in range(self.num_of_params):
+                        point.append(C_bin[j, i[j]])
+                    self.C_final_joint.append(point)
+                if len(ind) > 10:
+                    logging.warning('Can not estimate parameters from joint pdf!'
+                                    'Too many bins ({} bins, max value {}) '
+                                    'with the same max value in joint pdf'.format(len(ind), np.max(H)))
+                else:
+                    logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
 
     def plot_marginal_pdf(self):
         if len(self.accepted) == 0:
@@ -128,10 +132,10 @@ class ABC(object):
             self.C_final_dist = self.accepted[minim, :]
             logging.debug('Minimum distance is {} in: {}'.format(self.dist[minim], self.C_final_dist))
 
-            for i in range(self.num_of_params):
-                plt.hist(self.accepted[:, i], bins=20, normed=1)
-                plt.xlabel(params_names[i])
-                plt.show()
+            # for i in range(self.num_of_params):
+            #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
+            #     plt.xlabel(params_names[i])
+            #     plt.show()
 
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
@@ -235,13 +239,13 @@ def distance_between_pdf_L2(pdf_modeled, key):
     dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
     return dist
 
-def distance_between_pdf_L2log(pdf_modeled, key):
+def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf.
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis)
     # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
     return dist
 
@@ -254,10 +258,11 @@ def work_function(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf, edges = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)
-        dist += distance_between_pdf_L2log(pdf_modeled=pdf, key=key)
+        dist += distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
     if dist <= g.eps:
-        return [C, dist]
-
+        result = C[:]
+        result.append(dist)
+        return result
 
 def work_function_improved(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -272,26 +277,8 @@ def work_function_improved(C):
     # print('Time for everything', end - start)
 
     result = g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_L2log)
+
     return result
 
-def work_function_improved2(C):
-    """ Worker function for parallel regime (for pool.map from multiprocessing module)
-    :param C: list of sampled parameters
-    :return:  list[bool, Cs, dist], where bool=True, if values are accepted
-    """
-    C_end = utils.uniform_grid(N_params - 1)  # Sample last parameter (create np.array)
-    C1 = utils.uniform_grid(N_params - 2)  # Sample last parameter (create np.array)
-
-    start = time()
-    dist = g.TEST_Model.Reynolds_stresses_from_C(C, C1, C_end, distance_between_pdf_L2log)
-    end = time()
-    # print('Time for everything', end - start)
-
-    # Check for each parameter if it is accepted
-    for i in range(N_each):
-        for j in range(N_each):
-            distance = dist[i, j]
-            if distance <= g.eps:
-                return [True, C.extend((C1[i], C_end[j])), distance]
 
 

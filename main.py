@@ -52,9 +52,15 @@ def main():
     #              map_bounds, name='TEST', titles=[r'$u$', r'$v$', r'$w$'])
     # plt.show()
     ####################################################################################################################
+
+    ####################################################################################################################
+    # ABC algorithm
+    ####################################################################################################################
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N=N_each**N_params, M=M, eps=eps, order=ORDER)
     abc.main_loop()
+    np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
+    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
     #########################
     # abc.accepted = np.load('./ABC/plots/accepted.npz')['c']
@@ -64,18 +70,16 @@ def main():
     # abc.dist = abc.dist[abc.dist < new_eps]
     # print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
     #########################
+
+    abc.calc_final_C()
     # abc.plot_scatter()
     abc.plot_marginal_pdf()
-    abc.calc_final_C()
-    abc.plot_compare_tau('TEST')
-    abc.plot_compare_tau('LES')
+    # abc.plot_compare_tau('TEST')
+    # abc.plot_compare_tau('LES')
 
-    np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
 
     # logging.info('Dynamic Smagorinsky')
     # SmagorinskyModel = model.DynamicSmagorinskyModel()
     # print(SmagorinskyModel.calculate_Cs_dynamic())
-
-
 if __name__ == '__main__':
     main()
