@@ -15,7 +15,7 @@ logging.basicConfig(filename='ABC_log.log', filemode='w',
                     format='%(levelname)s: %(name)s: %(message)s',
                     level=logging.DEBUG)
 
-pr = cProfile.Profile()
+prof = cProfile.Profile()
 ########################################################################################################################
 # Parameters of post-plotting
 PLOT_ALL_DIST = 0   # Show all distances with unaccepted ones
@@ -56,9 +56,9 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 60
-N_params = 3
-N_params_in_task = 1  # only 0, 1 or 2
+N_each = 2
+N_params = 2
+N_params_in_task = 0  # only 0, 1 or 2
 N_total = N_each**N_params
 # step = int(65000/2) #floor((32+256)*1024/8/N_each)-100  # 32KB L1 cache, 256KB L2 cache
 # print('step = ', step)
@@ -66,7 +66,7 @@ N_total = N_each**N_params
 M = 64          # number of training points
 ORDER = 2       # order of eddy-viscosity model
 USE_C3 = 0
-eps = 150      # acceptance tolerance
+eps = 500      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
 domain = [-2.1, 2.1]  # for pdf comparison
@@ -82,5 +82,5 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+N_proc = 1          # Number of processes
 ########################################################################################################################

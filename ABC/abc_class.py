@@ -52,19 +52,18 @@ class ABC(object):
             C_array = []
             C1 = np.linspace(C_limits[0][0], C_limits[0][1], N_each + 1)
             C1 = C1[:-1] + (C1[1] - C1[0]) / 2
+            C1 = -2 * C1 ** 2
             for i in C1:
                 C_array.append([i])
         else:
             if self.N != N_each**N_params:
                 print('Achtung!: cannot manually sample C')
-
             C = np.ndarray((n, N_each))
             for i in range(n):
                 C[i, :] = utils.uniform_grid(i)
             C[0] = -2*C[0]**2
             permitation = itertools.product(*C)
             C_array = list(map(list, permitation))
-
         return C_array
 
     def main_loop(self):
@@ -88,9 +87,12 @@ class ABC(object):
             self.accepted = np.array([C[:N_params] for C in result if C])
             self.dist = np.array([C[-1] for C in result if C])
         else:
-            self.accepted = np.array([chunk[:N_params] for item in result for chunk in item if item])
-            self.dist = np.array([chunk[-1] for item in result for chunk in item if item])
+            self.accepted = np.array([chunk[:N_params] for item in result for chunk in item])
+            self.dist = np.array([chunk[-1] for item in result for chunk in item])
+        # print(self.accepted.shape)
         self.accepted[:, 0] = np.sqrt(-self.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
+        np.savetxt('accepted_'+str(N_params_in_task)+'.out', self.accepted)
+        np.savetxt('dist_'+str(N_params_in_task)+'.out', self.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(self.accepted),
                                                                 round(len(self.accepted)/self.N*100, 2)))
 
@@ -130,7 +132,7 @@ class ABC(object):
         else:
             minim = np.argmin(self.dist)
             self.C_final_dist = self.accepted[minim, :]
-            logging.debug('Minimum distance is {} in: {}'.format(self.dist[minim], self.C_final_dist))
+            logging.info('Minimum distance is {} in: {}'.format(self.dist[minim], self.C_final_dist))
 
             # for i in range(self.num_of_params):
             #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
@@ -257,12 +259,12 @@ def work_function(C):
     tau = g.TEST_Model.Reynolds_stresses_from_C(C)
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
-        pdf, edges = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)
+        pdf = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)[0]
         dist += distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
-    if dist <= g.eps:
-        result = C[:]
-        result.append(dist)
-        return result
+    # if dist <= g.eps:
+    result = C[:]
+    result.append(dist)
+    return result
 
 def work_function_improved(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -277,7 +279,6 @@ def work_function_improved(C):
     # print('Time for everything', end - start)
 
     result = g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_L2log)
-
     return result
 
 

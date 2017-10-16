@@ -14,7 +14,7 @@ class NonlinearModel(object):
         num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
         self.num_of_params = num_param[str(order)]
         if order == 2 and USE_C3 == 0:
-            self.num_of_params = 3
+            self.num_of_params = 2
         logging.debug('Number of parameters = '+str(self.num_of_params))
         if HOMOGENEOUS:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
@@ -37,6 +37,7 @@ class NonlinearModel(object):
             if N_params_in_task > 2 or N_params_in_task < 0:
                 logging.warning(str(N_params_in_task) + ' parameters in one task is not supported.' +
                                 'Using 2 parameters instead')
+        print(str(self.Reynolds_stresses_from_C))
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -65,6 +66,7 @@ class NonlinearModel(object):
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
+
         elif number == 1:
         # Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
             tensor = dict()
@@ -250,8 +252,8 @@ class NonlinearModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor['0'][i]
-            for j in range(1, N_params):
+            tau[i] = np.zeros((M, M, M))
+            for j in range(N_params):
                 tau[i] += C[j] * self.Tensor[str(j)][i]
         return tau
 
@@ -262,7 +264,7 @@ class NonlinearModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * C[0] ** 2 * self.Tensor['0'][i]
+            tau[i] = C[0] * self.Tensor['0'][i]
         return tau
 
     # def Reynolds_stresses_from_C_Nonlin_2_improved_step(self, C, C2, dist_func):
@@ -297,19 +299,19 @@ class NonlinearModel(object):
             tau = np.zeros(M**3)
             for j in range(N_params-N_params_in_task):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
-            tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params-2)][i].flatten())
+            tau = np.outer(np.ones(N_each), tau)
+            tau += np.outer(C_last, self.Tensor[str(N_params-1)][i].flatten())
             pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
             dist += dist_func(pdf_modeled=pdf, key=i)
-
         # Check for each parameter if it is accepted
         a = [0.0] * (N_params + 1)  # allocate memory
         a[:(N_params - N_params_in_task)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
-            if distance <= g.eps:
-                a[-2] = C_last[ind]
-                a[-1] = distance
-                result.append(a[:])
+            # if distance <= g.eps:
+            a[-2] = C_last[ind]
+            a[-1] = distance
+            result.append(a[:])
         return result
 
     def Reynolds_stresses_from_C_Nonlin_2_param2(self, C, dist_func):
@@ -328,8 +330,8 @@ class NonlinearModel(object):
                 tau = np.zeros(M ** 3)
                 for j in range(N_params - N_params_in_task):
                     tau += C[j] * self.Tensor[str(j)][i].flatten()
-                tau += c1 * self.Tensor[str(N_params-3)][i].flatten()
-                tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 2)][i].flatten())
+                tau += c1 * self.Tensor[str(N_params-2)][i].flatten()
+                tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 21)][i].flatten())
                 pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
                 dist += dist_func(pdf_modeled=pdf, key=i)
 

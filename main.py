@@ -71,8 +71,8 @@ def main():
     # print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
     #########################
 
-    abc.calc_final_C()
-    # abc.plot_scatter()
+    # abc.calc_final_C()
+    abc.plot_scatter()
     abc.plot_marginal_pdf()
     # abc.plot_compare_tau('TEST')
     # abc.plot_compare_tau('LES')

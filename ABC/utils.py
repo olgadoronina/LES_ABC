@@ -98,8 +98,7 @@ def spectral_density(vel_array, fname):
 def uniform_grid(i):
 
     C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
-    C_tmp = C_tmp[:-1] + (C_tmp[:1] - C_tmp[0]) / 2
-
+    C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
     return C_tmp
 
 
@@ -139,7 +138,6 @@ def distance_between_pdf_KL(pdf_modeled, key):
 
 def distance_between_pdf_L1log(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
@@ -149,7 +147,6 @@ def distance_between_pdf_L1log(pdf_modeled, key):
 
 def distance_between_pdf_L2(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
