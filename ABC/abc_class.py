@@ -222,6 +222,7 @@ def distance_between_pdf_KL(pdf_modeled, key):
     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
     return dist
 
+
 def distance_between_pdf_L1log(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
@@ -232,6 +233,7 @@ def distance_between_pdf_L1log(pdf_modeled, key):
     dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
     return dist
 
+
 def distance_between_pdf_L2(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
@@ -241,15 +243,16 @@ def distance_between_pdf_L2(pdf_modeled, key):
     dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
     return dist
 
+
 def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf.
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis)
-    # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
     return dist
+
 
 def work_function(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)

@@ -6,16 +6,16 @@ import ABC.utils as utils
 import matplotlib.pyplot as plt
 import timeit
 
-class NonlinearModel(object):
 
+class NonlinearModel(object):
     def __init__(self, data, order):
 
         self.order = order
         num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
         self.num_of_params = num_param[str(order)]
         if order == 2 and USE_C3 == 0:
-            self.num_of_params = 2
-        logging.debug('Number of parameters = '+str(self.num_of_params))
+            self.num_of_params = 3
+        logging.debug('Number of parameters = ' + str(self.num_of_params))
         if HOMOGENEOUS:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
@@ -58,7 +58,7 @@ class NonlinearModel(object):
         """
 
         if number == 0:
-        # Calculate tensor |S|S_ij for given field
+            # Calculate tensor |S|S_ij for given field
             tensor = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
@@ -68,20 +68,20 @@ class NonlinearModel(object):
             return tensor
 
         elif number == 1:
-        # Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
+            # Calculate tensor Delta^2*(S_ikR_kj - R_ikS_kj)  for given field
             tensor = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
                     tensor[i + j] = 0
                     for k in ['u', 'v', 'w']:
                         tensor[i + j] += np.multiply(data.S[i + k], data.R[k + j]) - \
-                                                np.multiply(data.R[i + k], data.S[k + j])
+                                         np.multiply(data.R[i + k], data.S[k + j])
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
 
         elif number == 2:
-        # Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
+            # Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
 
             tensor = dict()
             S_S_inv = 0
@@ -100,7 +100,7 @@ class NonlinearModel(object):
             return tensor
 
         elif number == 3:
-        # Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
+            # Calculate tensor (R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
 
             tensor = dict()
             R_R_inv = 0
@@ -119,7 +119,7 @@ class NonlinearModel(object):
             return tensor
 
         elif number == 4:
-        # Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
+            # Calculate tensor (R_ikS_klSlj - S_ikS_klRlj) for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -128,7 +128,7 @@ class NonlinearModel(object):
                     tensor2 = 0
                     for k in ['u', 'v', 'w']:
                         for l in ['u', 'v', 'w']:
-                            tensor1[i + j] += data.R[i + k]*data.S[k + l]*data.S[l + j]
+                            tensor1[i + j] += data.R[i + k] * data.S[k + l] * data.S[l + j]
                             tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + j]
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
@@ -136,7 +136,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 5:
-        # Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
+            # Calculate tensor (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
 
             tensor1 = dict()
             S_R_R_inv = 0
@@ -150,7 +150,7 @@ class NonlinearModel(object):
                     tensor2 = 0
                     for k in ['u', 'v', 'w']:
                         for l in ['u', 'v', 'w']:
-                            tensor1[i + j] += data.R[i + k]*data.R[k + l]*data.S[l + j]
+                            tensor1[i + j] += data.R[i + k] * data.R[k + l] * data.S[l + j]
                             tensor2 += data.S[i + k] * data.R[k + l] * data.R[l + j]
                     tensor1[i + j] += tensor2
                     if i == j:
@@ -160,7 +160,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 6:
-        # Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
+            # Calculate tensor (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -178,7 +178,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 7:
-        # Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
+            # Calculate tensor (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -192,11 +192,11 @@ class NonlinearModel(object):
                                 tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.S[m + j]
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
-                    tensor1[i + j] /= self.S_mod**2
+                    tensor1[i + j] /= self.S_mod ** 2
             return tensor1
 
         elif number == 8:
-        # Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
+            # Calculate tensor (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
 
             tensor1 = dict()
             S2_R2_inv = 0
@@ -208,7 +208,7 @@ class NonlinearModel(object):
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
                     tensor1[i + j] = 0
-                    tensor2= 0
+                    tensor2 = 0
                     for k in ['u', 'v', 'w']:
                         for l in ['u', 'v', 'w']:
                             for m in ['u', 'v', 'w']:
@@ -220,7 +220,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 9:
-        # Calculate tensor (RS^2R^2 - R^2S^2R) for given field
+            # Calculate tensor (RS^2R^2 - R^2S^2R) for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -293,14 +293,13 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(N_each)
-        C_last = utils.uniform_grid(N_params-1)
+        C_last = utils.uniform_grid(N_params - 1)
         for i in self.elements_in_tensor:
             # pr.enable()
-            tau = np.zeros(M**3)
-            for j in range(N_params-N_params_in_task):
+            tau = np.zeros(M ** 3)
+            for j in range(N_params - N_params_in_task):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
-            tau = np.outer(np.ones(N_each), tau)
-            tau += np.outer(C_last, self.Tensor[str(N_params-1)][i].flatten())
+            tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 1)][i].flatten())
             pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
             dist += dist_func(pdf_modeled=pdf, key=i)
         # Check for each parameter if it is accepted
@@ -321,8 +320,8 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros((N_each, N_each))
-        C_last = utils.uniform_grid(N_params-1)
-        C_before_last = utils.uniform_grid(N_params-2)
+        C_last = utils.uniform_grid(N_params - 1)
+        C_before_last = utils.uniform_grid(N_params - 2)
 
         for ind, c1 in enumerate(C_before_last):
             for i in self.elements_in_tensor:
@@ -330,13 +329,13 @@ class NonlinearModel(object):
                 tau = np.zeros(M ** 3)
                 for j in range(N_params - N_params_in_task):
                     tau += C[j] * self.Tensor[str(j)][i].flatten()
-                tau += c1 * self.Tensor[str(N_params-2)][i].flatten()
+                tau += c1 * self.Tensor[str(N_params - 2)][i].flatten()
                 tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 21)][i].flatten())
                 pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
                 dist += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0]*(N_params+1)   # allocate memory
+        a = [0.0] * (N_params + 1)  # allocate memory
         a[:(N_params - N_params_in_task)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
@@ -348,16 +347,13 @@ class NonlinearModel(object):
         return result
 
 
-
 ####################################################################################################################
 # Reynolds_stresses_from_C
 ####################################################################################################################
 class DynamicSmagorinskyModel(object):
-
     def __init__(self):
         self.num_of_params = 1
         self.Tensor_1 = self.calc_tensor_1()
-
 
     def scalar_product(self, tensor1, tensor2):
         """Calculate product of two tensors as S_ijT_ij = sum(S_11T_11+S_12T_12+...)
@@ -393,7 +389,7 @@ class DynamicSmagorinskyModel(object):
         trace = L['uu'] + L['vv'] + L['ww']
         print('trace = ', np.mean(trace))
         for i in ['uu', 'vv', 'ww']:
-            L[i] -= 1/3*trace
+            L[i] -= 1 / 3 * trace
 
         # logging.debug("Calculate C_s")
         # M_M = np.mean(self.scalar_product(M, M))
@@ -445,45 +441,45 @@ class DynamicSmagorinskyModel(object):
         if not Cs:
             Cs = self.calculate_Cs_dynamic()
         for i in self.elements_in_tensor:
-            tau[i] = -2 * (Cs*g.LES.delta)**2 * self.Tensor_1[i]
+            tau[i] = -2 * (Cs * g.LES.delta) ** 2 * self.Tensor_1[i]
         return tau
 
 
-# def distance_between_pdf_KL(pdf_modeled, key):
-#     """Calculate statistical distance between two pdf as
-#     the Kullback-Leibler (KL) divergence (no symmetry).
-#     :param pdf_modeled: array of modeled pdf
-#     :return:            scalar of calculated distance
-#     """
-#     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-#     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
-#     return dist
-#
-# def distance_between_pdf_L1log(pdf_modeled, key):
-#     """Calculate statistical distance between two pdf as
-#     the Kullback-Leibler (KL) divergence (no symmetry).
-#     :param pdf_modeled: array of modeled pdf
-#     :return:            scalar of calculated distance
-#     """
-#     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-#     dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
-#     return dist
-#
-# def distance_between_pdf_L2(pdf_modeled, key):
-#     """Calculate statistical distance between two pdf as
-#     the Kullback-Leibler (KL) divergence (no symmetry).
-#     :param pdf_modeled: array of modeled pdf
-#     :return:            scalar of calculated distance
-#     """
-#     dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
-#     return dist
-#
-# def distance_between_pdf_L2log(pdf_modeled, key):
-#     """Calculate statistical distance between two pdf.
-#     :param pdf_modeled: array of modeled pdf
-#     :return:            scalar of calculated distance
-#     """
-#     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-#     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
-#     # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
-#     return dist
+        # def distance_between_pdf_KL(pdf_modeled, key):
+        #     """Calculate statistical distance between two pdf as
+        #     the Kullback-Leibler (KL) divergence (no symmetry).
+        #     :param pdf_modeled: array of modeled pdf
+        #     :return:            scalar of calculated distance
+        #     """
+        #     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+        #     dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
+        #     return dist
+        #
+        # def distance_between_pdf_L1log(pdf_modeled, key):
+        #     """Calculate statistical distance between two pdf as
+        #     the Kullback-Leibler (KL) divergence (no symmetry).
+        #     :param pdf_modeled: array of modeled pdf
+        #     :return:            scalar of calculated distance
+        #     """
+        #     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+        #     dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
+        #     return dist
+        #
+        # def distance_between_pdf_L2(pdf_modeled, key):
+        #     """Calculate statistical distance between two pdf as
+        #     the Kullback-Leibler (KL) divergence (no symmetry).
+        #     :param pdf_modeled: array of modeled pdf
+        #     :return:            scalar of calculated distance
+        #     """
+        #     dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
+        #     return dist
+        #
+        # def distance_between_pdf_L2log(pdf_modeled, key):
+        #     """Calculate statistical distance between two pdf.
+        #     :param pdf_modeled: array of modeled pdf
+        #     :return:            scalar of calculated distance
+        #     """
+        #     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
+        #     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
+        #     # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
+        #     return dist
