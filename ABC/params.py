@@ -17,7 +17,7 @@ logging.basicConfig(filename='ABC_log.log', filemode='w',
 
 prof = cProfile.Profile()
 ########################################################################################################################
-TINY = 1e-07
+TINY = 1e-06
 TINY_log = np.log(TINY)
 ########################################################################################################################
 # Path to data
@@ -55,9 +55,10 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 20
-N_params = 3
-N_params_in_task = 1  # only 0, 1 or 2
+N_each = 2
+N_params = 2
+N_params_in_task = 0  # only 0, 1 or 2
+
 N_total = N_each**N_params
 # step = int(65000/2) #floor((32+256)*1024/8/N_each)-100  # 32KB L1 cache, 256KB L2 cache
 # print('step = ', step)
@@ -81,5 +82,5 @@ params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 4          # Number of processes
+N_proc = 1          # Number of processes
 ########################################################################################################################

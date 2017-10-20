@@ -225,7 +225,6 @@ def distance_between_pdf_KL(pdf_modeled, key):
 
 def distance_between_pdf_L1log(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
@@ -234,25 +233,55 @@ def distance_between_pdf_L1log(pdf_modeled, key):
     return dist
 
 
-def distance_between_pdf_L2(pdf_modeled, key):
-    """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
+def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf.
+    :param pdf_modeled:
+    :param key:
+    :param axis:
+    :return:
     """
-    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
+    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2, axis=axis)
+    return dist
+
+def distance_between_pdf_L2(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf.
+    :param pdf_modeled:
+    :param key:
+    :param axis:
+    :return:
+    """
+    dist = np.sqrt(np.sum((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2, axis=axis))
     return dist
 
 
-def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
+def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf.
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
+    np.savetxt('pdf_' + str(key) + str(N_params_in_task) + '.out', pdf_modeled)
+
     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
+    np.savetxt('log_' + str(key) + str(N_params_in_task) + '.out', log_modeled)
+    # plt.plot(g.TEST_sp.log_tau_pdf_true[key], label='true')
+    # plt.plot(log_modeled[0], label='modeled')
+    # plt.plot(log_modeled[1], label='modeled')
+    # plt.title(key)
+    # plt.legend(loc=0)
+    # plt.show()
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis)
     return dist
 
+def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf.
+    :param pdf_modeled:
+    :param key:
+    :param axis:
+    :return:
+    """
+    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
+    dist = np.sqrt(np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis))
+    return dist
 
 def work_function(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -260,10 +289,12 @@ def work_function(C):
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
     tau = g.TEST_Model.Reynolds_stresses_from_C(C)
+
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)[0]
-        dist += distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
+        d = distance_between_pdf_LSElog(pdf_modeled=pdf, key=key, axis=0)
+        dist += d
     # if dist <= g.eps:
     result = C[:]
     result.append(dist)
@@ -281,7 +312,7 @@ def work_function_improved(C):
     # end = time()
     # print('Time for everything', end - start)
 
-    result = g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_L2log)
+    result = g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_LSElog)
     return result
 
 

@@ -14,7 +14,7 @@ class NonlinearModel(object):
         num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
         self.num_of_params = num_param[str(order)]
         if order == 2 and USE_C3 == 0:
-            self.num_of_params = 3
+            self.num_of_params = 2
         logging.debug('Number of parameters = ' + str(self.num_of_params))
         if HOMOGENEOUS:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
@@ -301,7 +301,9 @@ class NonlinearModel(object):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
             tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 1)][i].flatten())
             pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
+            d = dist_func(pdf_modeled=pdf, key=i)
             dist += dist_func(pdf_modeled=pdf, key=i)
+
         # Check for each parameter if it is accepted
         a = [0.0] * (N_params + 1)  # allocate memory
         a[:(N_params - N_params_in_task)] = [c for c in C]
