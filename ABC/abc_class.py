@@ -26,9 +26,9 @@ class ABC(object):
         self.C_final_dist = []
         self.C_final_joint = []
         if ORDER == 1 or N_params_in_task == 0:
-            self.work_func = work_function
+            self.work_func = work_function_single_value
         elif N_params_in_task == 1 or N_params_in_task == 2:
-            self.work_func = work_function_improved
+            self.work_func = work_function_multiple_values
         logging.info('Number of samples per interval = {}'.format(N_each))
         logging.info('Number of parameters per task = {}'.format(N_params_in_task))
 
@@ -62,8 +62,8 @@ class ABC(object):
             for i in range(n):
                 C[i, :] = utils.uniform_grid(i)
             C[0] = -2*C[0]**2
-            permitation = itertools.product(*C)
-            C_array = list(map(list, permitation))
+            permutation = itertools.product(*C)
+            C_array = list(map(list, permutation))
         return C_array
 
     def main_loop(self):
@@ -89,10 +89,9 @@ class ABC(object):
         else:
             self.accepted = np.array([chunk[:N_params] for item in result for chunk in item])
             self.dist = np.array([chunk[-1] for item in result for chunk in item])
-        # print(self.accepted.shape)
         self.accepted[:, 0] = np.sqrt(-self.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
-        np.savetxt('accepted_'+str(N_params_in_task)+'.out', self.accepted)
-        np.savetxt('dist_'+str(N_params_in_task)+'.out', self.dist)
+        # np.savetxt('accepted_'+str(N_params_in_task)+'.out', self.accepted)
+        # np.savetxt('dist_'+str(N_params_in_task)+'.out', self.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(self.accepted),
                                                                 round(len(self.accepted)/self.N*100, 2)))
 
@@ -134,6 +133,7 @@ class ABC(object):
             self.C_final_dist = self.accepted[minim, :]
             logging.info('Minimum distance is {} in: {}'.format(self.dist[minim], self.C_final_dist))
 
+            # Uncomment to make figure for each marginal pdf
             # for i in range(self.num_of_params):
             #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
             #     plt.xlabel(params_names[i])
@@ -158,13 +158,12 @@ class ABC(object):
                     elif i < j:
                         ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, j))
                         ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
-                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, normed=1, cmap=cmap,
+                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, cmap=cmap,
                                    range=[C_limits[j], C_limits[i]])
+
             fig.tight_layout()
-            # plt.legend(loc=0)
             plt.show()
             # del fig
-
 
     def plot_scatter(self):
         if len(self.accepted) == 0:
@@ -209,9 +208,9 @@ class ABC(object):
         del fig, axarr
         gc.collect()
 
-
-
-
+########################################################################################################################
+## Distance functions
+########################################################################################################################
 def distance_between_pdf_KL(pdf_modeled, key):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
@@ -254,22 +253,29 @@ def distance_between_pdf_L2(pdf_modeled, key, axis=1):
     return dist
 
 
-def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
+def distance_between_pdf_LSElog(pdf_modeled, key):
     """Calculate statistical distance between two pdf.
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
-    np.savetxt('pdf_' + str(key) + str(N_params_in_task) + '.out', pdf_modeled)
+    dist = np.zeros(N_each)
+    for i in range(N_each):
+        log_modeled = np.log(pdf_modeled[i], out=np.empty_like(pdf_modeled[i]).fill(TINY_log),
+                             where=pdf_modeled[i] > TINY)
+        if np.isnan(np.sum(log_modeled)):
+            print('log_modeled: nan is detected ')
+        dist[i] = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
 
+    return dist
+
+
+def distance_between_pdf_LSElog_single(pdf_modeled, key):
+    """Calculate statistical distance between two pdf.
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
-    np.savetxt('log_' + str(key) + str(N_params_in_task) + '.out', log_modeled)
-    # plt.plot(g.TEST_sp.log_tau_pdf_true[key], label='true')
-    # plt.plot(log_modeled[0], label='modeled')
-    # plt.plot(log_modeled[1], label='modeled')
-    # plt.title(key)
-    # plt.legend(loc=0)
-    # plt.show()
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
     return dist
 
 def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
@@ -282,8 +288,10 @@ def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
     dist = np.sqrt(np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis))
     return dist
-
-def work_function(C):
+########################################################################################################################
+## Distance functions
+########################################################################################################################
+def work_function_single_value(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
@@ -293,27 +301,18 @@ def work_function(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)[0]
-        d = distance_between_pdf_LSElog(pdf_modeled=pdf, key=key, axis=0)
+        d = distance_between_pdf_LSElog_single(pdf_modeled=pdf, key=key)
         dist += d
     # if dist <= g.eps:
     result = C[:]
     result.append(dist)
     return result
 
-def work_function_improved(C):
+def work_function_multiple_values(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
-    # C_end = utils.uniform_grid(N_params - 1)  # Sample last parameter (create np.array)
-    # result = []
-    # start = time()
-    # dist = g.TEST_Model.Reynolds_stresses_from_C_Nonlin_2_improved_step(C, C_end, dist_func=distance_between_pdf_L2log)
-    # end = time()
-    # print('Time for everything', end - start)
-
-    result = g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_LSElog)
-    return result
-
+    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_LSElog)
 
 

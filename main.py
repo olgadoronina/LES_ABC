@@ -42,6 +42,17 @@ def main():
     logging.info('Create TEST class')
     g.TEST = data.Data(TEST_data, TEST_delta)
     del LES_data, TEST_data
+
+    logging.info('Strain tensors')
+
+
+    # # g.HIT.strain_tensor()
+    # g.LES.strain_tensor()
+    # g.TEST.strain_tensor()
+    # g.LES_sp.A = utils.sparse_dict(g.LES.A, M)
+    # g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
+    # plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
+
     ####################################################################################################################
     # logging.info('Plotting velocity fields for DNS, LES and TEST scale')
     # map_bounds = np.linspace(np.min(g.LES.field['v'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 10)
@@ -59,19 +70,19 @@ def main():
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N=N_each**N_params, M=M, eps=eps, order=ORDER)
     abc.main_loop()
-    np.savez('./ABC/plots/accepted.npz', calc_final_C=abc.accepted, dist=abc.dist)
+    np.savez('./ABC/plots/accepted.npz', C=abc.accepted, dist=abc.dist)
     logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
     #########################
-    # abc.accepted = np.load('./ABC/plots/accepted.npz')['c']
+    # abc.accepted = np.load('./ABC/plots/accepted.npz')['C']
     # abc.dist = np.load('./ABC/plots/accepted.npz')['dist']
     # new_eps = 190
     # abc.accepted = abc.accepted[abc.dist < new_eps]
     # abc.dist = abc.dist[abc.dist < new_eps]
     # print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
-    #########################
+    # #########################
 
-    # abc.calc_final_C()
+    abc.calc_final_C()
     abc.plot_scatter()
     abc.plot_marginal_pdf()
     # abc.plot_compare_tau('TEST')

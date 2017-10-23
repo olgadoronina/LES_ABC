@@ -168,30 +168,6 @@ def tau_abc(Cs_abc):
     gc.collect()
 
 
-def C_scatter(Cs_accepted, dist,  Cs_failed = None, label=None):
-
-    if Cs_failed is not None:
-        plt.scatter(Cs_failed[:, 0], Cs_failed[:, 1], color='red')
-        plt.axhline(y=eps, color='r', linestyle='--')
-        # plt.axis(xmin=C_limits[0, 0], xmax=C_limits[0, 1])
-    # else:
-    if label == r'$C_s$':
-        plt.axis(xmin=0.18, xmax=0.3, ymax=50)
-    elif label == r'$C_2$':
-        plt.axis(xmin=C_limits[1, 0], xmax=C_limits[1, 1], ymax=75)
-    elif label == r'$C_4$':
-        plt.axis(xmin=C_limits[3, 0], xmax=C_limits[3, 1], ymax=75)
-    else:
-        plt.axis(xmin=C_limits[2, 0], xmax=C_limits[2, 1], ymax=75)
-    plt.scatter(Cs_accepted, dist, color='blue')
-    if label==None:
-        plt.xlabel(r'$C_s$')
-    plt.xlabel(label)
-    plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
-    plt.show()
-    gc.collect()
-
-
 def S_compare(field, axarr, titles, label, color):
     for ind, i in enumerate(['uu', 'uv', 'uw']):
         data = field[i].flatten()
