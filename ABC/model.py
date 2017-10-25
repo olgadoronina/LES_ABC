@@ -11,6 +11,7 @@ class NonlinearModel(object):
     def __init__(self, data, order):
 
         self.order = order
+        self.M = data.field['uu'].shape[0]
         num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
         self.num_of_params = num_param[str(order)]
         if order == 2 and USE_C3 == 0:
@@ -252,7 +253,7 @@ class NonlinearModel(object):
         """
         tau = dict()
         for i in self.elements_in_tensor:
-            tau[i] = np.zeros((M, M, M))
+            tau[i] = np.zeros((self.M, self.M, self.M))
             for j in range(N_params):
                 tau[i] += C[j] * self.Tensor[str(j)][i]
         return tau

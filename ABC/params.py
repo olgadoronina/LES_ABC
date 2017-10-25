@@ -17,7 +17,7 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 
 prof = cProfile.Profile()
 ########################################################################################################################
-TINY = 1e-06
+TINY = 1e-07
 TINY_log = np.log(TINY)
 ########################################################################################################################
 # Path to data
@@ -54,8 +54,8 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 60
-N_params = 3
+N_each = 40
+N_params = 4
 N_params_in_task = 1  # only 0, 1 or 2
 
 N_total = N_each**N_params
@@ -64,11 +64,11 @@ N_total = N_each**N_params
 
 M = 64          # number of training points
 ORDER = 2       # order of eddy-viscosity model
-USE_C3 = 0
+USE_C3 = 1
 eps = 50      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
-domain = [-2.1, 2.1]  # for pdf comparison
+domain = [-1.1, 1.1]  # for pdf comparison
 # Sample limits
 C_limits = np.zeros((10, 2))
 C_limits[0] = [0.1, 0.3]

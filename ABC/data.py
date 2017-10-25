@@ -92,6 +92,7 @@ class DataSparse(object):
 
         # True pdf for distance calculation
         tau_true = data.Reynolds_stresses_from_DNS()
+        self.tau_true = tau_true
         self.tau_pdf_true = dict()
         self.log_tau_pdf_true = dict()
         for key, value in tau_true.items():
