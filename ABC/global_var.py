@@ -1,5 +1,3 @@
-import ABC.params as params
-
 # Global variables
 HIT = None
 LES = None

@@ -32,6 +32,7 @@ class ABC(object):
         logging.info('Number of samples per interval = {}'.format(N_each))
         logging.info('Number of parameters per task = {}'.format(N_params_in_task))
 
+
     def form_C_array_random(self):
         """Create list of lists of N parameters uniformly distributed on given interval
         :return: list of lists of sampled parameters
@@ -144,15 +145,15 @@ class ABC(object):
             cmaplist[0] = ('white')  # force the first color entry to be grey
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 
-            fig = plt.figure(figsize=(9, 9))
+            fig = plt.figure(figsize=(10, 10))
             for i in range(self.num_of_params):
                 for j in range(self.num_of_params):
                     if i == j:
                         x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=N_each, range=C_limits[i])
                         ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, i))
-                        plt.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey',
+                        ax.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey',
                                  range=C_limits[i])
-                        plt.plot(x, y)
+                        ax.plot(x, y)
                         ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1])
                         ax.set_xlabel(params_names[i])
                     elif i < j:
@@ -161,20 +162,26 @@ class ABC(object):
                         plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, cmap=cmap,
                                    range=[C_limits[j], C_limits[i]])
 
-            fig.tight_layout()
+            fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
+            # fig1 = plt.gcf()
             plt.show()
-            # del fig
+            fig.savefig('marginal.pdf')
+            del fig
 
     def plot_scatter(self):
         if len(self.accepted) == 0:
             logging.warning('No accepted values')
         else:
             for i in range(self.num_of_params):
-                plt.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=eps+1)
-                plt.scatter(self.accepted[:, i], self.dist, color='blue')
-                plt.xlabel(params_names[i])
-                plt.ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+                fig = plt.figure()
+                ax = plt.axes()
+                ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=eps+1)
+                ax.scatter(self.accepted[:, i], self.dist, color='blue')
+                ax.set_xlabel(params_names[i])
+                ax.set_ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+                # fig1 = plt.gcf()
                 plt.show()
+                fig.savefig(params_names[i]+'.eps')
             gc.collect()
 
     def plot_compare_tau(self, scale='LES'):
@@ -214,14 +221,17 @@ class ABC(object):
         axarr[0].set_yscale('log', nonposy='clip')
         fig.tight_layout()
         plt.legend(loc=0)
-        plt.show()
+        # fig1 = plt.gcf()
+        # plt.show()
+        fig.savefig(scale + '.pdf')
         del fig, axarr
         gc.collect()
+
 
 ########################################################################################################################
 ## Distance functions
 ########################################################################################################################
-def distance_between_pdf_KL(pdf_modeled, key):
+def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).
     Function for N_params_in_task > 0
@@ -229,35 +239,25 @@ def distance_between_pdf_KL(pdf_modeled, key):
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
     """
-    dist = np.zeros(N_each)
-    for i in range(N_each):
-        log_modeled = np.log(pdf_modeled[i], out=np.empty_like(pdf_modeled[i]).fill(TINY_log),
-                             where=pdf_modeled[i] > TINY)
-        if np.isnan(np.sum(log_modeled)):
-            print('log_modeled: nan is detected ')
-        dist[i] = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)))
+    log_fill = np.empty_like(pdf_modeled)
+    log_fill.fill(TINY_log)
+    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
+    # if np.isnan(np.sum(log_modeled)):
+    #     print('log_modeled: nan is detected ')
+    dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
     return dist
 
-def distance_between_pdf_KL_single(pdf_modeled, key):
+
+def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
-    Function for N_params_in_task = 0
     :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: scalar of calculated distance
+    :return:            scalar of calculated distance
     """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-    dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
+    log_fill = np.empty_like(pdf_modeled)
+    log_fill.fill(TINY_log)
+    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
+    dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
     return dist
-
-# def distance_between_pdf_L1log(pdf_modeled, key):
-#     """Calculate statistical distance between two pdf as
-#     :param pdf_modeled: array of modeled pdf
-#     :return:            scalar of calculated distance
-#     """
-#     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-#     dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
-#     return dist
 
 
 def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
@@ -270,6 +270,7 @@ def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
     dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2, axis=axis)
     return dist
 
+
 def distance_between_pdf_L2(pdf_modeled, key, axis=1):
     """ Calculate statistical distance between two pdf as sqrt(sum((P1-P2)^2)).
     :param pdf_modeled: array of modeled pdf
@@ -281,46 +282,34 @@ def distance_between_pdf_L2(pdf_modeled, key, axis=1):
     return dist
 
 
-def distance_between_pdf_LSElog(pdf_modeled, key):
+def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
         Function for N_params_in_task > 0
     :param pdf_modeled: array of modeled pdf
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
     """
-    dist = np.zeros(N_each)
-    for i in range(N_each):
-        log_modeled = np.log(pdf_modeled[i], out=np.empty_like(pdf_modeled[i]).fill(TINY_log),
-                             where=pdf_modeled[i] > TINY)
-        if np.isnan(np.sum(log_modeled)):
-            print('log_modeled: nan is detected ')
-        dist[i] = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
-
+    log_fill = np.empty_like(pdf_modeled)
+    log_fill.fill(TINY_log)
+    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
+    # if np.isnan(np.sum(log_modeled)):
+    #     print('log_modeled: nan is detected ')
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
 
-def distance_between_pdf_LSElog_single(pdf_modeled, key):
-    """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
-        Function for N_params_in_task = 0
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: scalar of calculated distance
+def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf.
+    :param pdf_modeled:
+    :param key:
+    :param axis:
+    :return:
     """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
+    log_fill = np.empty_like(pdf_modeled)
+    log_fill.fill(TINY_log)
+    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
+    dist = np.sqrt(np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis))
     return dist
-
-
-# def distance_between_pdf_L2log_single(pdf_modeled, key, axis=1):
-#     """ Calculate statistical distance between two pdf.
-#     :param pdf_modeled:
-#     :param key:
-#     :param axis:
-#     :return:
-#     """
-#     log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(TINY_log), where=pdf_modeled > TINY)
-#     dist = np.sqrt(np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=axis))
-#     return dist
 ########################################################################################################################
 ## Work_functions
 ########################################################################################################################
@@ -334,11 +323,11 @@ def work_function_single_value(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=bins, range=domain, normed=1)[0]
-        d = distance_between_pdf_LSElog_single(pdf_modeled=pdf, key=key)
+        d = distance_between_pdf_LSElog(pdf_modeled=pdf, key=key, axis=0)
         dist += d
-    # if dist <= g.eps:
-    result = C[:]
-    result.append(dist)
+    if dist <= g.eps:
+        result = C[:]
+        result.append(dist)
     return result
 
 def work_function_multiple_values(C):
@@ -346,6 +335,6 @@ def work_function_multiple_values(C):
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
-    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_KL)
+    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_LSElog)
 
 

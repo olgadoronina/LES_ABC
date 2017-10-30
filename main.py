@@ -36,7 +36,6 @@ def main():
                      map_bounds, name='compare_velocity', titles=[r'$DNS$', r'$LES$', r'$TEST$'])
         plt.show()
 
-
     logging.info('Create LES class')
     g.LES = data.Data(LES_data, LES_delta)
     logging.info('Create TEST class')
@@ -69,21 +68,21 @@ def main():
     ####################################################################################################################
     logging.info('ABC algorithm')
     abc = abc_class.ABC(N=N_each**N_params, M=M, eps=eps, order=ORDER)
-    # abc.main_loop()
-    # np.savez('./ABC/plots/accepted.npz', C=abc.accepted, dist=abc.dist)
-    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+    abc.main_loop()
+    np.savez('./ABC/plots/accepted.npz', C=abc.accepted, dist=abc.dist)
+    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
-    ########################
-    abc.accepted = np.load('./ABC/plots/accepted.npz')['C']
-    abc.dist = np.load('./ABC/plots/accepted.npz')['dist']
-    new_eps = 30
-    abc.accepted = abc.accepted[abc.dist < new_eps]
-    abc.dist = abc.dist[abc.dist < new_eps]
-    print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
-    #########################
+    # ########################
+    # abc.accepted = np.load('./ABC/plots/accepted.npz')['C']
+    # abc.dist = np.load('./ABC/plots/accepted.npz')['dist']
+    # new_eps = 40
+    # abc.accepted = abc.accepted[abc.dist < new_eps]
+    # abc.dist = abc.dist[abc.dist < new_eps]
+    # print('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
+    # #########################
 
     abc.calc_final_C()
-    abc.plot_scatter()
+    # abc.plot_scatter()
     abc.plot_marginal_pdf()
     abc.plot_compare_tau('TEST_M')
     abc.plot_compare_tau('TEST')

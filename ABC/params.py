@@ -6,7 +6,7 @@ from time import time, sleep
 import gc
 import random as rand
 import logging
-import cProfile
+# import cProfile
 ########################################################################################################################
 # mpl.style.use(['dark_background','mystyle'])
 mpl.style.use(['mystyle'])
@@ -15,7 +15,7 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 #                     format='%(levelname)s: %(name)s: %(message)s',
 #                     level=logging.DEBUG)
 
-prof = cProfile.Profile()
+# prof = cProfile.Profile()
 ########################################################################################################################
 TINY = 1e-07
 TINY_log = np.log(TINY)
@@ -54,8 +54,8 @@ TEST_delta = 1/TEST_scale
 # abs algorithm
 bins = 100  # for pdf
 num_bin_joint = 20
-N_each = 40
-N_params = 4
+N_each = 20
+N_params = 3
 N_params_in_task = 1  # only 0, 1 or 2
 
 N_total = N_each**N_params
@@ -64,19 +64,30 @@ N_total = N_each**N_params
 
 M = 64          # number of training points
 ORDER = 2       # order of eddy-viscosity model
-USE_C3 = 1
-eps = 50      # acceptance tolerance
+USE_C3 = 0
+eps = 70      # acceptance tolerance
 ########################################################################################################################
 # Params for abc algorithm
 domain = [-1.1, 1.1]  # for pdf comparison
 # Sample limits
 C_limits = np.zeros((10, 2))
-C_limits[0] = [0.1, 0.3]
-C_limits[1] = [-0.3, 0]
-C_limits[2] = [-0.1, 0.2]
-C_limits[3] = [-0.15, 0.2]
-C_limits[4] = [-0.2, 0.2]
-C_limits[5] = [-0.3, 0.3]
+# # for 4 params:
+# C_limits[0] = [0.0, 0.25]
+# C_limits[1] = [-0.2, 0.2]
+# C_limits[2] = [-0.2, 0.2]
+# C_limits[3] = [-0.2, 0.2]
+#
+# C_limits[4] = [-0.3, 0.3]
+# C_limits[5] = [-0.3, 0.3]
+
+# best
+C_limits[0] = [0.0, 0.25]
+C_limits[1] = [-0.15, 0.15]
+C_limits[2] = [-0.15, 0.15]
+C_limits[3] = [-0.15, 0.15]
+
+C_limits[4] = [-0.3, 0.3]
+C_limits[5] = [-0.15, 0.15]
 params_names = [r'$C_s$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 ########################################################################################################################
 # Parallel regime parameters

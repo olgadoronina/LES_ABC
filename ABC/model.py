@@ -175,7 +175,7 @@ class NonlinearModel(object):
                                 tensor2 += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.R[m + j]
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
-                    tensor1[i + j] /= self.S_mod
+                    tensor1[i + j] /= self.S_mod ** 2
             return tensor1
 
         elif number == 7:
