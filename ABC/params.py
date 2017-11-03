@@ -1,15 +1,15 @@
-from math import *
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from time import time, sleep
-import gc
-import random as rand
 import logging
+from math import *
+
+import matplotlib as mpl
+import numpy as np
+
 # import cProfile
 ########################################################################################################################
 # mpl.style.use(['dark_background','mystyle'])
 mpl.style.use(['mystyle'])
+FIGSHOW = 0
+plot_folder = './ABC/plots/'
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 # logging.basicConfig(filename='ABC_log.log', filemode='w',
 #                     format='%(levelname)s: %(name)s: %(message)s',

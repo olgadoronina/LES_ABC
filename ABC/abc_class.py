@@ -1,12 +1,12 @@
-from ABC.params import *
-import ABC.global_var as g
-import ABC.data as data
-import ABC.utils as utils
-# import ABC.plot as plot
-import ABC.parallel as parallel
-import ABC.model as model
-from tqdm import tqdm
 import itertools
+from time import time
+
+import ABC.data as data
+import ABC.global_var as g
+import ABC.model as model
+import ABC.parallel as parallel
+import ABC.utils as utils
+from ABC.params import *
 
 
 class ABC(object):
@@ -163,9 +163,9 @@ class ABC(object):
                                    range=[C_limits[j], C_limits[i]])
 
             fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
-            # fig1 = plt.gcf()
-            plt.show()
-            fig.savefig('marginal.pdf')
+            if FIGSHOW:
+                plt.show()
+            fig.savefig(plot_folder + 'marginal.pdf')
             del fig
 
     def plot_scatter(self):
@@ -179,9 +179,10 @@ class ABC(object):
                 ax.scatter(self.accepted[:, i], self.dist, color='blue')
                 ax.set_xlabel(params_names[i])
                 ax.set_ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
-                # fig1 = plt.gcf()
-                plt.show()
-                fig.savefig(params_names[i]+'.eps')
+                fig.savefig(plot_folder + params_names[i] + '.pdf')
+                if FIGSHOW:
+                    plt.show()
+                plt.close(fig)
             gc.collect()
 
     def plot_compare_tau(self, scale='LES'):
@@ -221,9 +222,9 @@ class ABC(object):
         axarr[0].set_yscale('log', nonposy='clip')
         fig.tight_layout()
         plt.legend(loc=0)
-        # fig1 = plt.gcf()
-        # plt.show()
-        fig.savefig(scale + '.pdf')
+        if FIGSHOW:
+            plt.show()
+        fig.savefig(plot_folder + scale + '.pdf')
         del fig, axarr
         gc.collect()
 
