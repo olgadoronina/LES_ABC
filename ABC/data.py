@@ -1,5 +1,6 @@
-from ABC.params import *
 import ABC.utils as utils
+from ABC.params import *
+
 
 class Data(object):
 
@@ -97,8 +98,9 @@ class DataSparse(object):
         self.log_tau_pdf_true = dict()
         for key, value in tau_true.items():
             self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
-            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key],
-                                                out=np.empty_like(self.tau_pdf_true[key]).fill(TINY_log),
+            log_fill = np.empty_like(self.tau_pdf_true[key])
+            log_fill.fill(TINY_log)
+            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=log_fill,
                                                 where=self.tau_pdf_true[key] > TINY)
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 

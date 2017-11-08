@@ -7,6 +7,10 @@ from ABC.params import *
 
 
 def main():
+    logging.info('platform {}'.format(sys.platform))
+    logging.info('python {}'.format(sys.version_info))
+    logging.info('64 bit {}'.format(sys.maxsize > 2 ** 32))
+    logging.info('numpy {}'.format(np.__version__))
     ####################################################################################################################
     # Initial data
     ####################################################################################################################
