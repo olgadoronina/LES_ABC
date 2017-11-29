@@ -1,5 +1,5 @@
-from ABC.params import *
-import ABC.utils as utils
+from params import *
+import utils
 
 class Data(object):
 
@@ -24,9 +24,9 @@ class Data(object):
         """
         grad = dict()
         dx = np.divide(lx, N_points)
-        grad['uu'], grad['uv'], grad['uw'] = np.gradient(self.field['u'], dx[0], dx[1], dx[2], edge_order=2)
-        grad['vu'], grad['vv'], grad['vw'] = np.gradient(self.field['v'], dx[0], dx[1], dx[2], edge_order=2)
-        grad['wu'], grad['wv'], grad['ww'] = np.gradient(self.field['w'], dx[0], dx[1], dx[2], edge_order=2)
+        grad['uu'], grad['uv'], grad['uw'] = np.gradient(self.field['u'], dx[0], dx[1], dx[2])
+        grad['vu'], grad['vv'], grad['vw'] = np.gradient(self.field['v'], dx[0], dx[1], dx[2])
+        grad['wu'], grad['wv'], grad['ww'] = np.gradient(self.field['w'], dx[0], dx[1], dx[2])
         return grad
 
     def calc_strain_tensor(self):
@@ -97,16 +97,17 @@ class DataSparse(object):
         self.log_tau_pdf_true = dict()
         for key, value in tau_true.items():
             self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
-            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key],
-                                                out=np.empty_like(self.tau_pdf_true[key]).fill(TINY_log),
-                                                where=self.tau_pdf_true[key] > TINY)
+            where_array = np.array(self.tau_pdf_true[key] > TINY)
+            a = np.empty_like(self.tau_pdf_true[key])
+            a.fill(TINY_log)
+            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=a, where=where_array)
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 
     def sparse_dict(self, data):
 
         def sparse_array(data):
             if data.shape[0] % self.M:
-                print('Error: utils.sparse_dict(): Nonzero remainder')
+                logging.error('Error: utils.sparse_dict(): Nonzero remainder')
             n_th = int(data.shape[0] / self.M)
             sparse_data = data[::n_th, ::n_th, ::n_th].copy()
             return sparse_data

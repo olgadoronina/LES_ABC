@@ -1,11 +1,10 @@
-from ABC.params import *
-import ABC.global_var as g
-import ABC.data as data
-import ABC.utils as utils
+from params import *
+import global_var as g
+import data
+import utils
 # import ABC.plot as plot
-import ABC.parallel as parallel
-import ABC.model as model
-from tqdm import tqdm
+import parallel
+import model
 import itertools
 
 
@@ -58,7 +57,7 @@ class ABC(object):
                 C_array.append([i])
         else:
             if self.N != N_each**N_params:
-                print('Achtung!: cannot manually sample C')
+                logging.warning('Achtung!: cannot manually sample C')
             C = np.ndarray((n, N_each))
             for i in range(n):
                 C[i, :] = utils.uniform_grid(i)
@@ -105,8 +104,8 @@ class ABC(object):
             logging.warning('No accepted values')
         else:
             if self.order == 1:
-                self.C_final_joint = [self.accepted[:, 0][np.argmin(self.dist)]]
-                logging.info('Estimated parameter:{}'.format(self.C_final_joint))
+                self.C_final_dist = [[self.accepted[:, 0][np.argmin(self.dist)]]]
+                logging.info('Estimated parameter:{}'.format(self.C_final_dist[0][0]))
             else:
                 H, edges = np.histogramdd(self.accepted, bins=num_bin_joint)
                 logging.debug('Max number in bin: ' + str(np.max(H)))
@@ -145,28 +144,28 @@ class ABC(object):
             cmaplist[0] = ('white')  # force the first color entry to be grey
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 
-            fig = plt.figure(figsize=(10, 10))
-            for i in range(self.num_of_params):
-                for j in range(self.num_of_params):
-                    if i == j:
-                        x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=N_each, range=C_limits[i])
-                        ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, i))
-                        ax.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey',
-                                 range=C_limits[i])
-                        ax.plot(x, y)
-                        ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1])
-                        ax.set_xlabel(params_names[i])
-                    elif i < j:
-                        ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, j))
-                        ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
-                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, cmap=cmap,
-                                   range=[C_limits[j], C_limits[i]])
-
-            fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
-            # fig1 = plt.gcf()
-            plt.show()
-            fig.savefig('marginal.pdf')
-            del fig
+            # fig = plt.figure(figsize=(10, 10))
+            # for i in range(self.num_of_params):
+            #     for j in range(self.num_of_params):
+            #         if i == j:
+            #             x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=N_each, range=C_limits[i])
+            #             ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, i))
+            #             ax.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey',
+            #                      range=C_limits[i])
+            #             ax.plot(x, y)
+            #             ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1])
+            #             ax.set_xlabel(params_names[i])
+            #         elif i < j:
+            #             ax = plt.subplot2grid((self.num_of_params, self.num_of_params), (i, j))
+            #             ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
+            #             plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, cmap=cmap,
+            #                        range=[C_limits[j], C_limits[i]])
+            #
+            # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
+            # # fig1 = plt.gcf()
+            # plt.show()
+            # fig.savefig('marginal.pdf')
+            # del fig
 
     def plot_scatter(self):
         if len(self.accepted) == 0:
@@ -178,7 +177,7 @@ class ABC(object):
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=eps+1)
                 ax.scatter(self.accepted[:, i], self.dist, color='blue')
                 ax.set_xlabel(params_names[i])
-                ax.set_ylabel(r'$\sum_{i,j}\rho(\widehat{T}_{ij}^{\mathcal{F}},\widehat{T}_{ij})$')
+                ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}^{\mathcal{F}},\mathcal{S}_{ij})$')
                 # fig1 = plt.gcf()
                 plt.show()
                 fig.savefig(params_names[i]+'.eps')
@@ -188,20 +187,20 @@ class ABC(object):
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
         if scale == 'LES':
-            titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
-            if len(self.C_final_joint) == 1:
-                tau_modeled_joint = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C_tau(self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C_tau(self.C_final_dist)
+            titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
+            if len(self.C_final_joint) == 1 and self.num_of_params!=1:
+                tau_modeled_joint = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C(self.C_final_joint[0])
+            tau_modeled_dist = model.NonlinearModel(g.LES, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         if scale == 'TEST_M':
-            titles = [r'$\widetilde{T}_{11}$', r'$\widetilde{T}_{12}$', r'$\widetilde{T}_{13}$']
-            if len(self.C_final_joint) == 1:
-                tau_modeled_joint = model.NonlinearModel(g.TEST_sp, ORDER).Reynolds_stresses_from_C_tau(self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.TEST_sp, ORDER).Reynolds_stresses_from_C_tau(self.C_final_dist)
+            titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
+            if len(self.C_final_joint) == 1 and self.num_of_params!=1:
+                tau_modeled_joint = model.NonlinearModel(g.TEST_sp, ORDER).Reynolds_stresses_from_C(self.C_final_joint[0])
+            tau_modeled_dist = model.NonlinearModel(g.TEST_sp, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         if scale == 'TEST':
-            titles = [r'$\widetilde{T}_{11}$', r'$\widetilde{T}_{12}$', r'$\widetilde{T}_{13}$']
-            if len(self.C_final_joint) == 1:
-                tau_modeled_joint = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C_tau(self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C_tau(self.C_final_dist)
+            titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
+            if len(self.C_final_joint) == 1 and self.num_of_params!=1:
+                tau_modeled_joint = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_joint[0])
+            tau_modeled_dist = model.NonlinearModel(g.TEST, ORDER).Reynolds_stresses_from_C(self.C_final_dist)
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             if scale == 'LES':
                 x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), 100, domain)
@@ -210,7 +209,7 @@ class ABC(object):
             if scale == 'TEST_M':
                 x, y = utils.pdf_from_array_with_x(g.TEST_sp.tau_true[key].flatten(), 100, domain)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
-            if len(self.C_final_joint) == 1:
+            if len(self.C_final_joint) == 1 and self.num_of_params != 1:
                 x, y = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), 100, domain)
                 axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
             x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), 100, domain)
@@ -222,8 +221,8 @@ class ABC(object):
         fig.tight_layout()
         plt.legend(loc=0)
         # fig1 = plt.gcf()
-        # plt.show()
-        fig.savefig(scale + '.pdf')
+        plt.show()
+        # fig.savefig(scale + '.pdf')
         del fig, axarr
         gc.collect()
 
@@ -243,8 +242,10 @@ def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     log_fill.fill(TINY_log)
     log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
     # if np.isnan(np.sum(log_modeled)):
-    #     print('log_modeled: nan is detected ')
-    dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
+    #     logging.warning('log_modeled: nan is detected ')
+    # dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
+    dist= np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])), axis=axis)
+
     return dist
 
 
@@ -293,7 +294,7 @@ def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     log_fill.fill(TINY_log)
     log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > TINY)
     # if np.isnan(np.sum(log_modeled)):
-    #     print('log_modeled: nan is detected ')
+    #   logging.warning('log_modeled: nan is detected ')
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
@@ -328,7 +329,7 @@ def work_function_single_value(C):
     if dist <= g.eps:
         result = C[:]
         result.append(dist)
-    return result
+        return result
 
 def work_function_multiple_values(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)

@@ -15,7 +15,7 @@ class VTK_XML_Serial_Structured:
         self.coord = etree.SubElement(piece, 'Points')
 
     def __str__(self):
-        print(etree.tostring(self.root, pretty_print=True, xml_declaration=True))
+        logging.info(etree.tostring(self.root, pretty_print=True, xml_declaration=True))
 
 
     def coords_to_string(self, X):

@@ -1,10 +1,11 @@
-from ABC.params import *
+from params import *
 from numpy.fft import fftfreq, fft, fftn, ifftn
-import ABC.global_var as g
+import global_var as g
+
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
-    print("{:0>2}:{:05.2f}".format(int(minutes), seconds), '\t', label)
+    logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
 
 
 def read_data():
@@ -91,7 +92,7 @@ def spectral_density(vel_array, fname):
         spect3d += np.real(fft_array * np.conj(fft_array))
 
     x, y = shell_average(spect3d, k)
-    fh = open('./ABC/plots/' + fname + '.spectra', 'w')
+    fh = open('./plots/' + fname + '.spectra', 'w')
     fh.writelines(["%s\n" % item for item in y])
     fh.close()
 
@@ -126,39 +127,3 @@ def uniform_grid(i):
 # imagesc([HIT['u'][:, :, 127], LES['u'].real[:, :, 127], TEST['u'].real[:, :, 127]], map_bounds, 'Fourier_sharp')
 
 
-def distance_between_pdf_KL(pdf_modeled, key):
-    """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-    dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])))
-    return dist
-
-def distance_between_pdf_L1log(pdf_modeled, key):
-    """Calculate statistical distance between two pdf as
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-    dist = 0.5*np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]))
-    return dist
-
-def distance_between_pdf_L2(pdf_modeled, key):
-    """Calculate statistical distance between two pdf as
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key])**2)
-    return dist
-
-def distance_between_pdf_L2log(pdf_modeled, key):
-    """Calculate statistical distance between two pdf.
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-    log_modeled = np.log(pdf_modeled, out=np.empty_like(pdf_modeled).fill(-20), where=pdf_modeled != 0)
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key])**2, axis=1)
-    # dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2)
-    return dist

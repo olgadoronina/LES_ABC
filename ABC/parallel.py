@@ -1,5 +1,4 @@
-from ABC.params import *
-from tqdm import tqdm
+from params import *
 import multiprocessing as mp
 
 
@@ -12,6 +11,7 @@ class Parallel(object):
 
     def run(self, func, tasks):
         if PROGRESSBAR == 1:
+            from tqdm import tqdm
             self.results = []
             with tqdm(total=len(tasks)) as pbar:
                 for i, res in tqdm(enumerate(self.pool.imap_unordered(func, tasks)), desc='ABC algorithm'):
@@ -21,8 +21,9 @@ class Parallel(object):
         elif PROGRESSBAR == 2:
             self.results = self.pool.map_async(func, tasks)
             while not self.results.ready():
-                print("Done {}/{}".format(self.N - self.results._number_left, self.N))
-                sleep(5)
+                done = len(tasks) - self.results._number_left*self.results._chunksize
+                logging.info("Done {}% ({}/{})".format(int(done/len(tasks)*100), done, len(tasks)))
+                sleep(20)
             self.pool.close()
             self.pool.join()
         else:

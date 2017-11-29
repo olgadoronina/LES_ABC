@@ -1,5 +1,6 @@
-from ABC.params import *
-import ABC.global_var as g
+from params import *
+import global_var as g
+import utils
 
 def imagesc(Arrays, map_bounds, name=None, output_dir = './ABC', titles=None):
     cmap = plt.cm.jet  # define the colormap
@@ -33,7 +34,7 @@ def imagesc(Arrays, map_bounds, name=None, output_dir = './ABC', titles=None):
     fig1 = plt.gcf()
     # plt.show()
     if name:
-        fig1.savefig(output_dir+'/plots/' + name + '.eps')
+        fig1.savefig('./plots/' + name + '.eps')
     del ax, im, fig, fig1, cmap
     gc.collect()
 
@@ -112,12 +113,13 @@ def tau_tau_sp(tau, tau_sp):
     del fig, axarr
     gc.collect()
 
-def tau_sp(tau_sp, name=None):
+def plot_tau_pdf(tau, name=None):
+
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
-    titles = [r'$\widetilde{\tau}_{11}$', r'$\widetilde{\tau}_{12}$', r'$\widetilde{\tau}_{13}$']
+    titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
     for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = tau_sp[i].flatten()
-        x, y = utils.pdf_from_array(data, 100, [-1.1, 1.1])
+        data = tau[i].flatten()
+        x, y = utils.pdf_from_array_with_x(data, bins, domain)
         axarr[ind].plot(x, y, 'r', linewidth=2)
         axarr[ind].set_xlabel(titles[ind])
     axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
@@ -190,12 +192,23 @@ def A_compare(field, axarr, titles, M, color):
     axarr[0].axis(xmin=0, xmax=2*pi, ymin=-10, ymax=10)
 
 
-def plot_LES_vel_fields():
-    if not g.LES:
-        logging.warning('Can not plot LES field: g.LES is None')
-    map_bounds = np.linspace(np.min(g.LES.field['u'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 20)
-    imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]], map_bounds,
-                 name='LES_velocities', titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
+def plot_vel_fields(scale='LES'):
+
+    if scale == 'LES':
+        if not g.LES:
+            logging.warning('Can not plot LES field: g.LES is None')
+            return
+        map_bounds = np.linspace(np.min(g.LES.field['u'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 20)
+        imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]], map_bounds,
+                name='LES_velocities', titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
+    elif scale == 'TEST':
+        if not g.TEST:
+            logging.warning('Can not plot LES field: g.LES is None')
+            return
+        map_bounds = np.linspace(np.min(g.TEST.field['u'][:, :, 127]), np.max(g.TEST.field['v'][:, :, 127]), 20)
+        imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]], map_bounds,
+                name='TEST_velocities',
+                titles=[r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$', r'$\widehat{\widetilde{w}}$'])
 
 def plot_compare_filtered_fields():
     if not g.HIT or not g.LES or not g.TEST:

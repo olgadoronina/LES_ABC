@@ -1,9 +1,9 @@
-from ABC.params import *
-import ABC.filter as filter
-import ABC.global_var as g
-import ABC.plot as plot
-import ABC.utils as utils
-import matplotlib.pyplot as plt
+from params import *
+import filter
+import global_var as g
+import plot
+import utils
+# import matplotlib.pyplot as plt
 import timeit
 
 
@@ -38,7 +38,7 @@ class NonlinearModel(object):
             if N_params_in_task > 2 or N_params_in_task < 0:
                 logging.warning(str(N_params_in_task) + ' parameters in one task is not supported.' +
                                 'Using 2 parameters instead')
-        print(str(self.Reynolds_stresses_from_C))
+        logging.info(str(self.Reynolds_stresses_from_C))
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -264,6 +264,7 @@ class NonlinearModel(object):
         :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
+        print(C)
         for i in self.elements_in_tensor:
             tau[i] = C[0] * self.Tensor['0'][i]
         return tau
@@ -371,27 +372,27 @@ class DynamicSmagorinskyModel(object):
             L[k] = L[k[1] + k[0]]
             M[k] = M[k[1] + k[0]]
         trace = L['uu'] + L['vv'] + L['ww']
-        print('trace = ', np.mean(trace))
+        logging.info('trace = ', np.mean(trace))
         for i in ['uu', 'vv', 'ww']:
             L[i] -= 1 / 3 * trace
 
         # logging.debug("Calculate C_s")
         # M_M = np.mean(self.scalar_product(M, M))
-        # print('M_M = ', M_M)
+        # logging.info('M_M = ', M_M)
         # L_M = np.mean(self.scalar_product(L, M))
-        # print('L_M = ', M_M)
+        # logging.info('L_M = ', M_M)
         # C_s_sqr = L_M/M_M
-        # print('Cs^2 = ', C_s_sqr)
+        # logging.info('Cs^2 = ', C_s_sqr)
         # C_s = sqrt(C_s_sqr)
         # logging.debug('C_s from Dynamic model: {}'.format(C_s))
 
         logging.debug("Calculate C_s field")
         M_M = self.scalar_product(M, M)
-        print('M_M = ', np.mean(M_M))
+        logging.info('M_M = ', np.mean(M_M))
         L_M = self.scalar_product(L, M)
-        print('L_M = ', np.mean(L_M))
+        logging.info('L_M = ', np.mean(L_M))
         C_s_sqr = np.divide(L_M, M_M)
-        print('Cs^2 = ', np.mean(C_s_sqr))
+        logging.info('Cs^2 = ', np.mean(C_s_sqr))
         # Ploting ############################
         map_bounds = np.linspace(-1.5, 1.5, 20)
         plot.imagesc([C_s_sqr[:, :, 127]], map_bounds, name='Cs', titles=[r'$C_s$'])

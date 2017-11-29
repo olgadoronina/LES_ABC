@@ -1,7 +1,8 @@
 import numpy.fft as fft
-from ABC.utils import timer
-from ABC.params import *
+from utils import timer
+from params import *
 from numpy.fft import fftfreq, fft, fftn, ifftn
+from time import time
 
 # try: # need to check if there is fftn in pyfftw
 #     from pyfftw.interfaces.numpy_fft import fft, ifft, irfft2, rfft2
@@ -90,7 +91,7 @@ def filter3d(data, scale_k, filename=None):
     fft_filtered.clear()
 
     if filename:
-        print('\nWrite file in ./data/' + filename + '.npz')
+        logging.info('\nWrite file in ./data/' + filename + '.npz')
         file = './data/' + filename + '.npz'
         np.savez(file, **result)
 
@@ -107,8 +108,7 @@ def filter3d_array(array, scale_k):
     return result
 
 def filter3d_array_inFspace(array, scale_k):
-
-    print(array.shape)
+    logging.info(array.shape)
     k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
     kernel = tophat_kernel(k, scale_k)
     fft_filtered = np.multiply(array, kernel)
