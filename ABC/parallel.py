@@ -1,16 +1,19 @@
-from params import *
+import logging
 import multiprocessing as mp
+from time import sleep
 
 
 class Parallel(object):
-    def __init__(self, processes=mp.cpu_count()):
+
+    def __init__(self, N_total, progressbar, processes=mp.cpu_count()):
         self.pool = mp.Pool(processes=processes)
-        self.N = N_each**N_params
+        self.N = N_total
         self.results = None
+        self.bar = progressbar
         logging.info('\n' + str(processes) + " workers")
 
     def run(self, func, tasks):
-        if PROGRESSBAR == 1:
+        if self.bar == 1:
             from tqdm import tqdm
             self.results = []
             with tqdm(total=len(tasks)) as pbar:
@@ -18,7 +21,7 @@ class Parallel(object):
                     self.results.append(res)
                     pbar.update()
             pbar.close()
-        elif PROGRESSBAR == 2:
+        elif self.bar == 2:
             self.results = self.pool.map_async(func, tasks)
             while not self.results.ready():
                 done = len(tasks) - self.results._number_left*self.results._chunksize
@@ -32,9 +35,9 @@ class Parallel(object):
         self.pool.terminate()
 
     def get_results(self):
-        if PROGRESSBAR == 1:
+        if self.bar == 1:
             return [x for x in self.results]
-        if PROGRESSBAR == 2:
+        if self.bar == 2:
             return self.results.get()
         else:
             return self.results

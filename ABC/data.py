@@ -1,32 +1,39 @@
-from params import *
+import logging
+
+import global_var as g
+import numpy as np
 import utils
+
 
 class Data(object):
 
-    def __init__(self, data_dict, delta=0):
+    def __init__(self, data_dict, delta, homogeneous, dx):
         self.field = data_dict
+        self.dx = dx
         self.delta = delta
         self.tau_true = self.Reynolds_stresses_from_DNS()
         self.S = None
         self.S_mod = None
         self.R = None
         self.calc_stresses()
+        if homogeneous:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
+        else:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 
     def calc_stresses(self):
         self.S = self.calc_strain_tensor()
         self.S_mod = self.calc_strain_mod()
-        if ORDER > 1:
-            self.R = self.calc_rotation_tensor()
+        self.R = self.calc_rotation_tensor()
 
     def field_gradient(self):
         """Calculate tensor of gradients of self.field.
         :return:      dictionary of gradient tensor
         """
         grad = dict()
-        dx = np.divide(lx, N_points)
-        grad['uu'], grad['uv'], grad['uw'] = np.gradient(self.field['u'], dx[0], dx[1], dx[2])
-        grad['vu'], grad['vv'], grad['vw'] = np.gradient(self.field['v'], dx[0], dx[1], dx[2])
-        grad['wu'], grad['wv'], grad['ww'] = np.gradient(self.field['w'], dx[0], dx[1], dx[2])
+        grad['uu'], grad['uv'], grad['uw'] = np.gradient(self.field['u'], self.dx[0], self.dx[1], self.dx[2])
+        grad['vu'], grad['vv'], grad['vw'] = np.gradient(self.field['v'], self.dx[0], self.dx[1], self.dx[2])
+        grad['wu'], grad['wv'], grad['ww'] = np.gradient(self.field['w'], self.dx[0], self.dx[1], self.dx[2])
         return grad
 
     def calc_strain_tensor(self):
@@ -79,16 +86,16 @@ class Data(object):
 
 class DataSparse(object):
 
-    def __init__(self, data, n_points):
+    def __init__(self, data, n_points, ):
         logging.info('Sparse data')
         self.M = n_points
         self.delta = data.delta
+        self.elements_in_tensor = data.elements_in_tensor
 
         # Sparse data
         self.field = self.sparse_dict(data.field)
         self.S = self.sparse_dict(data.S)
-        if ORDER > 1:
-            self.R = self.sparse_dict(data.R)
+        self.R = self.sparse_dict(data.R)
 
         # True pdf for distance calculation
         tau_true = data.Reynolds_stresses_from_DNS()
@@ -96,10 +103,10 @@ class DataSparse(object):
         self.tau_pdf_true = dict()
         self.log_tau_pdf_true = dict()
         for key, value in tau_true.items():
-            self.tau_pdf_true[key] = utils.pdf_from_array(value, bins, domain)
-            where_array = np.array(self.tau_pdf_true[key] > TINY)
+            self.tau_pdf_true[key] = utils.pdf_from_array(value, g.bins, g.domain)
+            where_array = np.array(self.tau_pdf_true[key] > g.TINY)
             a = np.empty_like(self.tau_pdf_true[key])
-            a.fill(TINY_log)
+            a.fill(g.TINY_log)
             self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=a, where=where_array)
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 

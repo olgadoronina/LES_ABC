@@ -1,44 +1,40 @@
-from params import *
-import filter
+# from params import *
+# import filter
+import logging
+
 import global_var as g
-import plot
+import numpy as np
 import utils
+
+
+# import plot
+# import utils
 # import matplotlib.pyplot as plt
-import timeit
 
 
 class NonlinearModel(object):
-    def __init__(self, data, order):
+    def __init__(self, data, N):
 
-        self.order = order
         self.M = data.field['uu'].shape[0]
-        num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
-        self.num_of_params = num_param[str(order)]
-        if order == 2 and USE_C3 == 0:
-            self.num_of_params = 3
-        logging.debug('Number of parameters = ' + str(self.num_of_params))
-        if HOMOGENEOUS:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
-        else:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
-
+        self.elements_in_tensor = data.elements_in_tensor
+        self.N = N
         self.S_mod = self.calc_strain_mod(data)
         self.Tensor = dict()
-        for i in range(self.num_of_params):
+        for i in range(N.params):
             self.Tensor[str(i)] = self.calc_tensor(data, number=i)
 
-        if self.num_of_params == 1:
+        if N.params == 1:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
-        elif N_params_in_task == 0:
+        elif N.params_in_task == 0:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_tau
-        elif N_params_in_task == 1:
+        elif N.params_in_task == 1:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
         else:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param2
-            if N_params_in_task > 2 or N_params_in_task < 0:
-                logging.warning(str(N_params_in_task) + ' parameters in one task is not supported.' +
-                                'Using 2 parameters instead')
-        logging.info(str(self.Reynolds_stresses_from_C))
+            if N.params_in_task > 2 or N.params_in_task < 0:
+                logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
+                    N.params_in_task))
+        logging.info('Nonlinear model with {}'.format(self.Reynolds_stresses_from_C.__name__))
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -254,7 +250,7 @@ class NonlinearModel(object):
         tau = dict()
         for i in self.elements_in_tensor:
             tau[i] = np.zeros((self.M, self.M, self.M))
-            for j in range(N_params):
+            for j in range(self.N.params):
                 tau[i] += C[j] * self.Tensor[str(j)][i]
         return tau
 
@@ -264,7 +260,6 @@ class NonlinearModel(object):
         :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
-        print(C)
         for i in self.elements_in_tensor:
             tau[i] = C[0] * self.Tensor['0'][i]
         return tau
@@ -275,20 +270,21 @@ class NonlinearModel(object):
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(N_each)
-        C_last = utils.uniform_grid(N_params - 1)
+        dist = np.zeros(self.N.each)
+        C_last = utils.uniform_grid(self.N.params - 1)
         for i in self.elements_in_tensor:
             # pr.enable()
-            tau = np.zeros(M ** 3)
-            for j in range(N_params - N_params_in_task):
+            tau = np.zeros(self.M ** 3)
+            for j in range(self.N.params - self.N.params_in_task):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
-            tau = np.outer(np.ones(N_each), tau) + np.outer(C_last, self.Tensor[str(N_params - 1)][i].flatten())
-            pdf = utils.pdf_from_array_improved(tau, bins=bins, domain=domain)
+            tau = np.outer(np.ones(self.N.each), tau) + \
+                  np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
+            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain)
             dist += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0] * (N_params + 1)  # allocate memory
-        a[:(N_params - N_params_in_task)] = [c for c in C]
+        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a[:(self.N.params - self.N.N.params_in_task)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
@@ -303,30 +299,30 @@ class NonlinearModel(object):
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(N_each*N_each)
-        C_last = utils.uniform_grid(N_params - 1)
-        C_before_last = utils.uniform_grid(N_params - 2)
+        dist = np.zeros(self.N.each ** 2)
+        C_last = utils.uniform_grid(self.N.params - 1)
+        C_before_last = utils.uniform_grid(self.N.params - 2)
 
         for i in self.elements_in_tensor:
-            tau = np.zeros(M ** 3)
-            for j in range(N_params - N_params_in_task):
+            tau = np.zeros(self.M ** 3)
+            for j in range(self.N.params - self.N.params_in_task):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
             for ind, c1 in enumerate(C_before_last):
                 tau_tmp = tau.copy()
-                tau_tmp += c1 * self.Tensor[str(N_params - 2)][i].flatten()
-                tau_tmp = np.outer(np.ones(N_each), tau_tmp) + \
-                          np.outer(C_last, self.Tensor[str(N_params - 1)][i].flatten())
-                pdf = utils.pdf_from_array_improved(tau_tmp, bins=bins, domain=domain)
-                dist[ind * N_each:(ind + 1) * N_each] += dist_func(pdf_modeled=pdf, key=i)
+                tau_tmp += c1 * self.Tensor[str(self.N.params - 2)][i].flatten()
+                tau_tmp = np.outer(np.ones(self.N.each), tau_tmp) + \
+                          np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
+                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain)
+                dist[ind * self.N.each:(ind + 1) * self.N.each] += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0] * (N_params + 1)  # allocate memory
-        a[:(N_params - 2)] = [c for c in C]
+        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a[:(self.N.params - 2)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
-                a[-3] = C_before_last[ind // N_each]
-                a[-2] = C_last[ind % N_each]
+                a[-3] = C_before_last[ind // self.N.each]
+                a[-2] = C_last[ind % self.N.each]
                 a[-1] = distance
                 result.append(a[:])
         return result

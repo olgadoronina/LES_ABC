@@ -1,6 +1,6 @@
+from numpy.fft import fftfreq, fftn
 from params import *
-from numpy.fft import fftfreq, fft, fftn, ifftn
-import global_var as g
+
 
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
@@ -96,7 +96,8 @@ def spectral_density(vel_array, fname):
     fh.writelines(["%s\n" % item for item in y])
     fh.close()
 
-def uniform_grid(i):
+
+def uniform_grid(i, C_limits, N_each):
 
     C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
