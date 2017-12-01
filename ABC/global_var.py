@@ -1,4 +1,5 @@
 import numpy as np
+
 # Global variables
 
 TINY = 1e-09

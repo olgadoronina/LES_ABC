@@ -1,5 +1,3 @@
-# from params import *
-# import filter
 import logging
 
 import global_var as g
@@ -279,7 +277,7 @@ class NonlinearModel(object):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
             tau = np.outer(np.ones(self.N.each), tau) + \
                   np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain)
+            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain, N_each=self.N.each)
             dist += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
@@ -312,7 +310,7 @@ class NonlinearModel(object):
                 tau_tmp += c1 * self.Tensor[str(self.N.params - 2)][i].flatten()
                 tau_tmp = np.outer(np.ones(self.N.each), tau_tmp) + \
                           np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain)
+                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain, N_each=self.N.each)
                 dist[ind * self.N.each:(ind + 1) * self.N.each] += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted

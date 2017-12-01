@@ -1,4 +1,4 @@
-import global_var as g
+import logging
 import sys
 
 import global_var as g

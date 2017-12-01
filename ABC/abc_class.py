@@ -11,9 +11,6 @@ import numpy as np
 import utils
 
 
-# import model
-
-
 class ABC(object):
 
     def __init__(self, N, C_limits, eps):
