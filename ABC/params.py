@@ -12,6 +12,10 @@ data_folder = './data_input/JohnHopkins/'
 # DATA = 'CU_data'
 # data_folder = './data_input/HIT_DNS_N256/'
 ########################################################################################################################
+# Plotting
+plot_folder = './plots/'
+PLOT_INIT_INFO = 1
+########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
 N_point = 256
@@ -25,7 +29,7 @@ TEST_scale = 15/2/pi
 bins = 100  # for pdf
 domain = [-1.1, 1.1]  # for pdf comparison
 num_bin_joint = 20
-N_each = 1000
+N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2
 M = 64          # number of training points
 ORDER = 1      # order of eddy-viscosity model

@@ -20,7 +20,7 @@ def main():
     # Initial data
     ####################################################################################################################
     initialize = init.Init()
-
+    initialize.plotting()
     initialize.LES_TEST_data()
     initialize.TEST_sparse_data()
     initialize.model_on_sparse_TEST_data()

@@ -1,63 +1,100 @@
-from params import *
+import gc
+import logging
+from math import pi
+
 import global_var as g
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 import utils
 
-def imagesc(Arrays, map_bounds, name=None, output_dir = './ABC', titles=None):
-    cmap = plt.cm.jet  # define the colormap
-    cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
-    cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
-    norm = mpl.colors.BoundaryNorm(map_bounds, cmap.N)
 
-    # fig = plt.figure()
-    axis = [0, 2 * pi, 0, 2 * pi]
-    if not titles:
-        titles = ['DNS data', 'LES filter', 'Test filter']
-    if len(Arrays) > 1:
-        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), figsize=(15, 4))
-        k = 0
-        for ax in axes.flat:
-            im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
-            ax.set_title(titles[k])
-            ax.set_xlabel('x')
-            ax.set_ylabel('y')
-            k += 1
-        cbar_ax = fig.add_axes([0.87, 0.10, 0.017, 0.80])  # ([0.85, 0.15, 0.05, 0.68])
-        fig.subplots_adjust(right=0.85)
-        fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
-    else:
-        fig = plt.figure(figsize=(7, 5))
-        ax = plt.gca()
-        im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
-        fig.tight_layout()
-        plt.colorbar(im, fraction=0.05, pad=0.04)
+class Plot(object):
+    def __init__(self, folder):
+        self.folder = folder
 
-    fig1 = plt.gcf()
-    # plt.show()
-    if name:
-        fig1.savefig('./plots/' + name + '.eps')
-    del ax, im, fig, fig1, cmap
-    gc.collect()
+        self.map_bounds = None
 
+    def imagesc(self, Arrays, map_bounds, titles, name=None):
 
-def histogram(field, bins, pdf=None, label=None, log=False):
-    plt.figure(figsize=(6, 4))
-    plt.hist(field, bins=bins, alpha=0.4, normed=1)
+        cmap = plt.cm.jet  # define the colormap
+        cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+        cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)  # create the new map
+        norm = mpl.colors.BoundaryNorm(map_bounds, cmap.N)
 
-    # h, edges = np.histogram(field, bins=bins, range=[-2,2], normed=1)
-    if pdf:
-        x = np.linspace(min(field), max(field), 100)
-        mu = np.mean(field)
-        sigma = np.std(field)
-        plt.plot(x, stats.norm.pdf(x, mu, sigma), 'r--', linewidth=3, label='Gaussian')
-        plt.legend(loc=0)
-    if log:
-        plt.yscale('log', nonposy='clip')
-    if label:
-        plt.xlabel(label)
-        plt.ylabel('pdf(' + label + ')')
-    plt.axis(xmin=np.min(field), xmax=np.max(field))  # xmax=4xmax = np.max(field)
-    plt.show()
-    gc.collect()
+        axis = [0, 2 * pi, 0, 2 * pi]
+        if len(Arrays) > 1:
+            fig = plt.figure(figsize=(6.5, 3))
+            fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), figsize=(15, 4))
+            k = 0
+            for ax in axes.flat:
+                im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
+                ax.set_title(titles[k])
+                ax.set_xlabel('x')
+                ax.set_ylabel('y')
+                k += 1
+            cbar_ax = fig.add_axes([0.87, 0.10, 0.017, 0.80])  # ([0.85, 0.15, 0.05, 0.68])
+            fig.subplots_adjust(right=0.85)
+            fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
+        else:
+            fig = plt.figure(figsize=(7, 5))
+            ax = plt.gca()
+            im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
+            # fig.tight_layout()
+            plt.colorbar(im, fraction=0.05, pad=0.04)
+
+        if name:
+            fig.savefig(self.folder + name, bbox_inches='tight')
+        del ax, im, fig, cmap
+        gc.collect()
+
+    # def histogram(field, bins, pdf=None, label=None, log=False):
+    #     plt.figure(figsize=(6, 4))
+    #     plt.hist(field, bins=bins, alpha=0.4, normed=1)
+    #
+    #     # h, edges = np.histogram(field, bins=bins, range=[-2,2], normed=1)
+    #     if pdf:
+    #         x = np.linspace(min(field), max(field), 100)
+    #         mu = np.mean(field)
+    #         sigma = np.std(field)
+    #         plt.plot(x, stats.norm.pdf(x, mu, sigma), 'r--', linewidth=3, label='Gaussian')
+    #         plt.legend(loc=0)
+    #     if log:
+    #         plt.yscale('log', nonposy='clip')
+    #     if label:
+    #         plt.xlabel(label)
+    #         plt.ylabel('pdf(' + label + ')')
+    #     plt.axis(xmin=np.min(field), xmax=np.max(field))  # xmax=4xmax = np.max(field)
+    #     plt.show()
+    #     gc.collect()
+
+    ########################################################################################################################
+    # Plot initial data info
+    ########################################################################################################################
+
+    def compare_filter_fields(self, hit_data, les_data, test_data):
+
+        self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127], les_data['v'][:, :, 127]],
+                     self.map_bounds, name='compare_velocity',
+                     titles=[r'$v$', r'$\widetilde{v}$', r'$\widehat{\widetilde{v}}$'])
+
+    def plot_vel_fields(self, scale='LES'):
+
+        if scale == 'LES':
+            if not g.LES:
+                logging.warning('Can not plot LES field: g.LES is None')
+                return
+            self.imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]],
+                         self.map_bounds, name='LES_velocities',
+                         titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
+        elif scale == 'TEST':
+            if not g.TEST:
+                logging.warning('Can not plot LES field: g.LES is None')
+                return
+            self.imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]],
+                         self.map_bounds, name='TEST_velocities',
+                         titles=[r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$',
+                                 r'$\widehat{\widetilde{w}}$'])
 
 
 def T_TEST(T_TEST):
@@ -77,6 +114,7 @@ def T_TEST(T_TEST):
     del ax1, ax2, ax3, fig
     gc.collect()
 
+
 def TS(TS):
     plt.figure(figsize=(5, 5))
     plt.hist(TS.flatten(), bins=500, normed=1, alpha=0.4)
@@ -86,6 +124,7 @@ def TS(TS):
     plt.axis(xmin=-5, xmax=4, ymin=1e-5)
     plt.show()
     gc.collect()
+
 
 def tau_tau_sp(tau, tau_sp):
     fig, axarr = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 8))
@@ -113,31 +152,31 @@ def tau_tau_sp(tau, tau_sp):
     del fig, axarr
     gc.collect()
 
-def plot_tau_pdf(tau, name=None):
 
+def plot_tau_pdf(tau, name=None):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
     titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
     for ind, i in enumerate(['uu', 'uv', 'uw']):
         data = tau[i].flatten()
-        x, y = utils.pdf_from_array_with_x(data, bins, domain)
+        x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
         axarr[ind].plot(x, y, 'r', linewidth=2)
         axarr[ind].set_xlabel(titles[ind])
     axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
     axarr[0].set_ylabel('pdf')
     axarr[0].set_yscale('log', nonposy='clip')
     # fig.tight_layout()
-    fig1 = plt.gcf()
     plt.show()
     if name:
-        fig1.savefig(name + '.eps')
-    del fig, fig1, axarr
+        fig.savefig(name + '.eps')
+    del fig, axarr
     gc.collect()
+
 
 def tau_abc(Cs_abc):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(18, 6))
     titles = [r'$\widehat{T}_{11}$', r'$\widehat{T}_{12}$', r'$\widehat{T}_{13}$']
 
-    x = np.linspace(domain[0], domain[1], bins)
+    x = np.linspace(g.domain[0], g.domain[1], g.bins)
     plots = []
     labels = []
     for ind, i in enumerate(['uu', 'uv', 'uv']):
@@ -160,9 +199,9 @@ def tau_abc(Cs_abc):
     # Shrink current axis's width
     for i in range(3):
         box = axarr[i].get_position()
-        axarr[i].set_position([box.x0, box.y0, box.width*0.9, box.height])
+        axarr[i].set_position([box.x0, box.y0, box.width * 0.9, box.height])
     # Put a legend below current axis
-    plt.legend(loc='upper center', bbox_to_anchor=(1.6, 1.1),  fancybox=True, shadow=True, ncol=2)
+    plt.legend(loc='upper center', bbox_to_anchor=(1.6, 1.1), fancybox=True, shadow=True, ncol=2)
     fig1 = plt.gcf()
     plt.show()
     fig1.savefig('tau_abc.eps')
@@ -182,43 +221,27 @@ def S_compare(field, axarr, titles, label, color):
 
 
 def A_compare(field, axarr, titles, M, color):
-
-    x = np.linspace(0, 2*pi-2*pi/M, M)
+    x = np.linspace(0, 2 * pi - 2 * pi / M, M)
     for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = field[i][int(M/2), int(M/2), :]
+        data = field[i][int(M / 2), int(M / 2), :]
         print(data.shape, x.shape)
         axarr[ind].plot(x, data, 'r', linewidth=2, label=str(M), color=color)
         axarr[ind].set_xlabel(titles[ind])
-    axarr[0].axis(xmin=0, xmax=2*pi, ymin=-10, ymax=10)
+    axarr[0].axis(xmin=0, xmax=2 * pi, ymin=-10, ymax=10)
 
-
-def plot_vel_fields(scale='LES'):
-
-    if scale == 'LES':
-        if not g.LES:
-            logging.warning('Can not plot LES field: g.LES is None')
-            return
-        map_bounds = np.linspace(np.min(g.LES.field['u'][:, :, 127]), np.max(g.LES.field['v'][:, :, 127]), 20)
-        imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]], map_bounds,
-                name='LES_velocities', titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
-    elif scale == 'TEST':
-        if not g.TEST:
-            logging.warning('Can not plot LES field: g.LES is None')
-            return
-        map_bounds = np.linspace(np.min(g.TEST.field['u'][:, :, 127]), np.max(g.TEST.field['v'][:, :, 127]), 20)
-        imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]], map_bounds,
-                name='TEST_velocities',
-                titles=[r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$', r'$\widehat{\widetilde{w}}$'])
 
 def plot_compare_filtered_fields():
     if not g.HIT or not g.LES or not g.TEST:
         logging.warning('Can not plot fields: some of them is None')
     map_bounds = np.linspace(np.min(g.HIT.field['u'][:, :, 127]), np.max(g.HIT.field['u'][:, :, 127]), 20)
-    imagesc([g.HIT.field['u'][:, :, 127], g.LES.field['u'][:, :, 127], g.TEST.field['u'][:, :, 127]], map_bounds, 'fourier_tophat')
+    imagesc([g.HIT.field['u'][:, :, 127], g.LES.field['u'][:, :, 127], g.TEST.field['u'][:, :, 127]], map_bounds,
+            'fourier_tophat')
+
 
 def plot_LES_tau():
     if not g.LES:
         logging.warning('Can not plot LES field: g.LES is None')
     map_bounds = np.linspace(-0.2, 0.2, 10)
-    imagesc([g.LES.tau_true['uu'][:, :, 127], g.LES.tau_true['uv'][:, :, 127], g.LES.tau_true['uw'][:, :, 127]], map_bounds,
-                 name='tau_LES', titles=[r'$\widetilde{\tau_{11}}$', r'$\widetilde{\tau_{12}}$', r'$\widetilde{\tau_{13}}$'])
+    imagesc([g.LES.tau_true['uu'][:, :, 127], g.LES.tau_true['uv'][:, :, 127], g.LES.tau_true['uw'][:, :, 127]],
+            map_bounds,
+            name='tau_LES', titles=[r'$\widetilde{\tau_{11}}$', r'$\widetilde{\tau_{12}}$', r'$\widetilde{\tau_{13}}$'])

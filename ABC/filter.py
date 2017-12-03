@@ -1,8 +1,7 @@
-import numpy.fft as fft
 from utils import timer
-from params import *
-from numpy.fft import fftfreq, fft, fftn, ifftn
-from time import time
+from numpy.fft import fftfreq, fftn, ifftn
+from utils import timer
+
 
 # try: # need to check if there is fftn in pyfftw
 #     from pyfftw.interfaces.numpy_fft import fft, ifft, irfft2, rfft2
@@ -53,7 +52,7 @@ def tophat_kernel(k, limit):
 #
 #     return Ghat
 
-def filter3d(data, scale_k, filename=None):
+def filter3d(data, scale_k, dx, N_points, filename=None):
     """ Tophat filter in Fourier space for dictionary of 3D arrays.
         data - dictionary of numpy arrays;
         scale_k - wave number, which define size of filter."""
