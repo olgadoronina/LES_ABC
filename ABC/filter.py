@@ -1,6 +1,9 @@
-from utils import timer
 from numpy.fft import fftfreq, fftn, ifftn
+import numpy as np
+
+# import global_var as g
 from utils import timer
+from time import time
 
 
 # try: # need to check if there is fftn in pyfftw

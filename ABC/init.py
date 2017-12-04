@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import abc_class
 import data
 import filter
+import utils
 import global_var as g
 import model
 import numpy as np
@@ -51,50 +52,27 @@ class Init(object):
         # mpl.style.use(['dark_background','mystyle'])
         # mpl.style.use(['mystyle'])
 
-        # plt.rcParams['figure.figsize'] = (8, 3)
-        plt.rcParams['font.size'] = 10
-        # plt.rcParams['font.family'] = 'Times New Roman'
-        plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
-
-        plt.rcParams['axes.labelsize'] = plt.rcParams['font.size']
-        plt.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
-        plt.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-        plt.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
-        plt.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
+        # mpl.rcParams['figure.figsize'] = 6.5, 2.2
+        mpl.rcParams['font.size'] = 10
+        mpl.rcParams['font.family'] = 'Times New Roman'
+        mpl.rc('text', usetex=True)
+        mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
+        mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
+        mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
+        mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
+        mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
         # plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
-        plt.rcParams['xtick.major.size'] = 3
-        plt.rcParams['xtick.minor.size'] = 3
-        plt.rcParams['xtick.major.width'] = 1
-        plt.rcParams['xtick.minor.width'] = 1
-        plt.rcParams['ytick.major.size'] = 3
-        plt.rcParams['ytick.minor.size'] = 3
-        plt.rcParams['ytick.major.width'] = 1
-        plt.rcParams['ytick.minor.width'] = 1
-        plt.rcParams['legend.frameon'] = False
+        mpl.rcParams['xtick.major.size'] = 3
+        mpl.rcParams['xtick.minor.size'] = 3
+        mpl.rcParams['xtick.major.width'] = 1
+        mpl.rcParams['xtick.minor.width'] = 1
+        mpl.rcParams['ytick.major.size'] = 3
+        mpl.rcParams['ytick.minor.size'] = 3
+        mpl.rcParams['ytick.major.width'] = 1
+        mpl.rcParams['ytick.minor.width'] = 1
+        mpl.rcParams['legend.frameon'] = False
         # plt.rcParams['legend.loc'] = 'center left'
         plt.rcParams['axes.linewidth'] = 1
-
-        plt.gca().spines['right'].set_color('none')
-        plt.gca().spines['top'].set_color('none')
-        plt.gca().xaxis.set_ticks_position('bottom')
-        plt.gca().yaxis.set_ticks_position('left')
-
-        # plt.style.use('seaborn-white')
-        # plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
-        # plt.rc('text', usetex=True)
-        # plt.rcParams['mathtext.fontset'] = 'custom'
-        # plt.rcParams['mathtext.rm'] = 'Bitstream Vera Sans'
-        # plt.rcParams['mathtext.it'] = 'Bitstream Vera Sans:italic'
-        # plt.rcParams['mathtext.bf'] = 'Bitstream Vera Sans:bold'
-        # # plt.rcParams['font.monospace'] = 'Ubuntu Mono'
-        # plt.rcParams['font.size'] = 18
-        # plt.rcParams['axes.labelsize'] = 18
-        # # plt.rcParams['axes.labelweight'] = 'bold'
-        # plt.rcParams['axes.titlesize'] = 20
-        # plt.rcParams['xtick.labelsize'] = 14
-        # plt.rcParams['ytick.labelsize'] = 14
-        # plt.rcParams['legend.fontsize'] = 16
-        # plt.rcParams['figure.titlesize'] = 22
 
         g.plot = plotting.Plot(params.plot_folder)
 
@@ -137,11 +115,13 @@ class Init(object):
                 for j in ['u', 'v', 'w']:
                     HIT_data[i + j] = np.multiply(HIT_data[i], HIT_data[j])
 
+            utils.spectral_density([HIT_data['u'], HIT_data['v'], HIT_data['w']], dx, params.N_points,
+                                   params.plot_folder + 'DNS')
+
             logging.info('Filter HIT data')
             LES_data = filter.filter3d(data=HIT_data, scale_k=params.LES_scale, dx=dx, N_points=params.N_points)
             TEST_data = filter.filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
-            # utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], 'LES')
-            # utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], 'TEST')
+
             logging.info('Writing files')
             np.savez(params.data_folder + 'LES.npz', **LES_data)
             np.savez(params.data_folder + 'TEST.npz', **TEST_data)
@@ -157,13 +137,21 @@ class Init(object):
         TEST_delta = 1 / params.TEST_scale
         logging.info('Create LES class')
         g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx)
+        utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
+                               params.plot_folder+'LES')
         logging.info('Create TEST class')
         g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx)
+        utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
+                               params.plot_folder + 'TEST')
         del LES_data, TEST_data
 
         if params.PLOT_INIT_INFO:
-            g.plot.plot_vel_fields(scale='LES')
-            g.plot.plot_vel_fields(scale='TEST')
+            g.plot.vel_fields(scale='LES')
+            g.plot.vel_fields(scale='TEST')
+            g.plot.sigma_field(scale='LES')
+            g.plot.sigma_field(scale='TEST')
+            g.plot.sigma_pdf()
+
 
     def TEST_sparse_data(self):
         g.TEST_sp = data.DataSparse(g.TEST, params.M, )

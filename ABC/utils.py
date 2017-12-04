@@ -42,7 +42,7 @@ def baseconvert(x, newbase, number_digits):
         r = [0] + r
     return r
 
-def shell_average(spect3D, k_3d):
+def shell_average(spect3D, N_point, k_3d):
     """ Compute the 1D, shell-averaged, spectrum of the 3D Fourier-space
     variable E3.
     :param E3: 3-dimensional complex or real Fourier-space scalar
@@ -55,8 +55,8 @@ def shell_average(spect3D, k_3d):
     for ind_x, kx in enumerate(k_3d[0]):
         for ind_y, ky in enumerate(k_3d[1]):
             for ind_z, kz in enumerate(k_3d[2]):
-                k_array[i] = round(sqrt(kx**2 + ky**2 + kz**2))
-                F_k[i] = 2*pi*k_array[i]**2*spect3D[ind_x, ind_y, ind_z]
+                k_array[i] = round(np.sqrt(kx**2 + ky**2 + kz**2))
+                F_k[i] = 2*np.pi*k_array[i]**2*spect3D[ind_x, ind_y, ind_z]
                 i += 1
     all_F_k = sorted(list(zip(k_array, F_k)))
 
@@ -73,19 +73,20 @@ def shell_average(spect3D, k_3d):
             n = 1
     return x, y
 
-def spectral_density(vel_array, fname):
+
+def spectral_density(vel_array, dx, N_points, fname):
     """
     Write the 1D power spectral density of var to text file. Method
     assumes a real input in physical space.
     """
-    k = 2*pi*np.array([fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])])
+    k = 2*np.pi*np.array([fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])])
     spect3d = 0
     for array in vel_array:
         fft_array = fftn(array)
         spect3d += np.real(fft_array * np.conj(fft_array))
 
-    x, y = shell_average(spect3d, k)
-    fh = open('./plots/' + fname + '.spectra', 'w')
+    x, y = shell_average(spect3d, N_points[0], k)
+    fh = open(fname + '.spectra', 'w')
     fh.writelines(["%s\n" % item for item in y])
     fh.close()
 

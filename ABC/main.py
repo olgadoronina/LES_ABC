@@ -44,7 +44,7 @@ def main():
     abc = initialize.ABC_algorithm()
     del initialize
 
-    abc.main_loop()
+    # abc.main_loop()
     # np.savez('./plots/accepted.npz', C=abc.accepted, dist=abc.dist)
     # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
@@ -57,14 +57,14 @@ def main():
     # # logging.info('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
     # #########################
     eps = g.eps
-    initialize = init.InitPostProcess(eps)
-    postproc = initialize.postprocessing()
-    postproc.calc_final_C()
-    postproc.plot_scatter()
-    # abc.plot_marginal_pdf()
-    postproc.plot_compare_tau('TEST_M')
-    postproc.plot_compare_tau('TEST')
-    postproc.plot_compare_tau('LES')
+    # initialize = init.InitPostProcess(eps)
+    # postproc = initialize.postprocessing()
+    # postproc.calc_final_C()
+    # postproc.plot_scatter()
+    # # abc.plot_marginal_pdf()
+    # postproc.plot_compare_tau('TEST_M')
+    # postproc.plot_compare_tau('TEST')
+    # postproc.plot_compare_tau('LES')
 
 
     # logging.info('Dynamic Smagorinsky')

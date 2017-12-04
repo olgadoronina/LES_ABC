@@ -1,10 +1,12 @@
 import gc
 import logging
 from math import pi
+import glob, os
 
 import global_var as g
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import utils
 
@@ -24,27 +26,27 @@ class Plot(object):
 
         axis = [0, 2 * pi, 0, 2 * pi]
         if len(Arrays) > 1:
-            fig = plt.figure(figsize=(6.5, 3))
-            fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), figsize=(15, 4))
+            fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(6.5, 2.4))
             k = 0
             for ax in axes.flat:
                 im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
                 ax.set_title(titles[k])
-                ax.set_xlabel('x')
-                ax.set_ylabel('y')
+                ax.set_adjustable('box-forced')
+                ax.set_xlabel(r'$x$')
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(2))
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(2))
                 k += 1
-            cbar_ax = fig.add_axes([0.87, 0.10, 0.017, 0.80])  # ([0.85, 0.15, 0.05, 0.68])
-            fig.subplots_adjust(right=0.85)
+            axes[0].set_ylabel(r'$y$')
+            cbar_ax = fig.add_axes([0.89, 0.18, 0.017, 0.68])  # ([0.85, 0.15, 0.05, 0.68])
+            fig.subplots_adjust(left=0.07, right=0.87, wspace=0.1, bottom=0.05, top=0.98)
             fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
         else:
-            fig = plt.figure(figsize=(7, 5))
+            fig = plt.figure(figsize=(6.5, 5))
             ax = plt.gca()
             im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
-            # fig.tight_layout()
             plt.colorbar(im, fraction=0.05, pad=0.04)
-
         if name:
-            fig.savefig(self.folder + name, bbox_inches='tight')
+            fig.savefig(self.folder + name)
         del ax, im, fig, cmap
         gc.collect()
 
@@ -74,28 +76,84 @@ class Plot(object):
 
     def compare_filter_fields(self, hit_data, les_data, test_data):
 
-        self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127], les_data['v'][:, :, 127]],
+        if not g.HIT or not g.LES or not g.TEST:
+            logging.warning('Can not plot fields: some of them is None')
+        self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127], test_data['v'][:, :, 127]],
                      self.map_bounds, name='compare_velocity',
                      titles=[r'$v$', r'$\widetilde{v}$', r'$\widehat{\widetilde{v}}$'])
 
-    def plot_vel_fields(self, scale='LES'):
+    def vel_fields(self, scale='LES'):
 
         if scale == 'LES':
-            if not g.LES:
-                logging.warning('Can not plot LES field: g.LES is None')
-                return
             self.imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]],
                          self.map_bounds, name='LES_velocities',
                          titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
         elif scale == 'TEST':
-            if not g.TEST:
-                logging.warning('Can not plot LES field: g.LES is None')
-                return
             self.imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]],
                          self.map_bounds, name='TEST_velocities',
                          titles=[r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$',
                                  r'$\widehat{\widetilde{w}}$'])
 
+    def sigma_field(self, scale='LES'):
+
+        map_bounds = np.linspace(-0.2, 0.2, 10)
+        if scale == 'LES':
+            tau = g.LES.tau_true
+            name = 'sigma_LES'
+            titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+
+        elif scale == 'TEST':
+            tau = g.TEST.tau_true
+            name = 'sigma_TEST'
+            titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
+
+        self.imagesc([tau['uu'][:, :, 127], tau['uv'][:, :, 127], tau['uw'][:, :, 127]],
+                     map_bounds, name=name, titles=titles)
+
+    def sigma_pdf(self):
+
+        name = 'sigma_pdf'
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
+        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+        tau = g.LES.tau_true
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            data = tau[i].flatten()
+            x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
+            axarr[ind].plot(x, y, 'r', linewidth=2, label='LES')
+            axarr[ind].set_xlabel(titles[ind])
+        tau = g.TEST.tau_true
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            data = tau[i].flatten()
+            x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
+            axarr[ind].plot(x, y, 'g', linewidth=2, label='test')
+
+        axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+        axarr[0].set_ylabel('pdf')
+        axarr[0].set_yscale('log', nonposy='clip')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
+        fig.savefig(self.folder+name)
+        del fig, axarr
+        gc.collect()
+
+    def spectra(self):
+        os.chdir(self.folder)
+        files = glob.glob("*.spectra")
+        for k in range(len(files)):
+            file = files[k]
+            f = open(file, 'r')
+            label = file[:3]
+            data = np.array(f.readlines()).astype(np.float)
+            x = np.arange(len(data))
+            plt.loglog(x, data, '-', linewidth=3, label=label)
+            y = 7.2e14 * np.power(x, -5 / 3)
+            plt.loglog(x, y, 'r--')
+        plt.title('Spectrum', fontsize=20)
+        plt.ylabel(r'$E$', fontsize=20)
+        plt.xlabel(r'k', fontsize=20)
+        plt.axis(ymin=1e6)
+        plt.legend(loc=0)
+        plt.show()
 
 def T_TEST(T_TEST):
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(10, 5))
@@ -153,23 +211,7 @@ def tau_tau_sp(tau, tau_sp):
     gc.collect()
 
 
-def plot_tau_pdf(tau, name=None):
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
-    titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = tau[i].flatten()
-        x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
-        axarr[ind].plot(x, y, 'r', linewidth=2)
-        axarr[ind].set_xlabel(titles[ind])
-    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
-    axarr[0].set_ylabel('pdf')
-    axarr[0].set_yscale('log', nonposy='clip')
-    # fig.tight_layout()
-    plt.show()
-    if name:
-        fig.savefig(name + '.eps')
-    del fig, axarr
-    gc.collect()
+
 
 
 def tau_abc(Cs_abc):
@@ -188,7 +230,7 @@ def tau_abc(Cs_abc):
     for C_s in Cs_abc:
         tau = g.TEST.Reynolds_stresses_from_Cs(C_s)
         for ind, i in enumerate(['uu', 'uv', 'uv']):
-            x, y = utils.pdf_from_array(tau[i].flatten(), bins, domain)
+            x, y = utils.pdf_from_array(tau[i].flatten(), g.bins, g.domain)
             line = axarr[ind].plot(x, y, linewidth=1, label=r'$C_s \approx\  $' + str(round(C_s, 3)))
             if ind == 0:
                 plots.append(line)
@@ -230,18 +272,7 @@ def A_compare(field, axarr, titles, M, color):
     axarr[0].axis(xmin=0, xmax=2 * pi, ymin=-10, ymax=10)
 
 
-def plot_compare_filtered_fields():
-    if not g.HIT or not g.LES or not g.TEST:
-        logging.warning('Can not plot fields: some of them is None')
-    map_bounds = np.linspace(np.min(g.HIT.field['u'][:, :, 127]), np.max(g.HIT.field['u'][:, :, 127]), 20)
-    imagesc([g.HIT.field['u'][:, :, 127], g.LES.field['u'][:, :, 127], g.TEST.field['u'][:, :, 127]], map_bounds,
-            'fourier_tophat')
 
 
-def plot_LES_tau():
-    if not g.LES:
-        logging.warning('Can not plot LES field: g.LES is None')
-    map_bounds = np.linspace(-0.2, 0.2, 10)
-    imagesc([g.LES.tau_true['uu'][:, :, 127], g.LES.tau_true['uv'][:, :, 127], g.LES.tau_true['uw'][:, :, 127]],
-            map_bounds,
-            name='tau_LES', titles=[r'$\widetilde{\tau_{11}}$', r'$\widetilde{\tau_{12}}$', r'$\widetilde{\tau_{13}}$'])
+
+
