@@ -74,7 +74,7 @@ class Init(object):
         # plt.rcParams['legend.loc'] = 'center left'
         plt.rcParams['axes.linewidth'] = 1
 
-        g.plot = plotting.Plot(params.plot_folder)
+        g.plot = plotting.Plot(params.plot_folder, params.PLOT_INIT_INFO)
 
 
     def LES_TEST_data(self):
@@ -89,7 +89,7 @@ class Init(object):
             LES_data = np.load(loadfile_LES)
             TEST_data = np.load(loadfile_TEST)
 
-            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 10)
+            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
 
         else:  # Filter HIT data
             datafile = dict()
@@ -126,35 +126,30 @@ class Init(object):
             np.savez(params.data_folder + 'LES.npz', **LES_data)
             np.savez(params.data_folder + 'TEST.npz', **TEST_data)
 
-            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 10)
+            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
 
             if params.PLOT_INIT_INFO:
                 g.plot.compare_filter_fields(HIT_data, LES_data, TEST_data)
             del HIT_data
 
-
         LES_delta = 1 / params.LES_scale
         TEST_delta = 1 / params.TEST_scale
         logging.info('Create LES class')
-        g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx)
-        utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
-                               params.plot_folder+'LES')
+        g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
         logging.info('Create TEST class')
-        g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx)
-        utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
-                               params.plot_folder + 'TEST')
+        g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+
+        # if params.PLOT_INIT_INFO:
+        #     logging.info('Calculate spectras')
+        #     utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
+        #                            params.plot_folder+'LES')
+        #     utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
+        #                            params.plot_folder + 'test')
+
         del LES_data, TEST_data
 
-        if params.PLOT_INIT_INFO:
-            g.plot.vel_fields(scale='LES')
-            g.plot.vel_fields(scale='TEST')
-            g.plot.sigma_field(scale='LES')
-            g.plot.sigma_field(scale='TEST')
-            g.plot.sigma_pdf()
-
-
     def TEST_sparse_data(self):
-        g.TEST_sp = data.DataSparse(g.TEST, params.M, )
+        g.TEST_sp = data.DataSparse(g.TEST, params.M)
 
     def model_on_sparse_TEST_data(self):
         g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.N)

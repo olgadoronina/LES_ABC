@@ -25,6 +25,18 @@ def main():
     initialize.TEST_sparse_data()
     initialize.model_on_sparse_TEST_data()
     initialize.parallel()
+
+    if g.plot.plot_info:
+        logging.info('Plot initial data info')
+        # g.plot.vel_fields(scale='LES')
+        # g.plot.vel_fields(scale='TEST')
+        # g.plot.sigma_field(scale='LES')
+        # g.plot.sigma_field(scale='TEST')
+        g.plot.sigma_pdf()
+        g.plot.S_pdf()
+        g.plot.A_compare()
+        # g.plot.spectra()
+
     ####################################################################################################################
     # logging.info('Strain tensors')
     # # g.HIT.strain_tensor()

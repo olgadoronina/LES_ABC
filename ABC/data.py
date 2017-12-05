@@ -7,7 +7,7 @@ import utils
 
 class Data(object):
 
-    def __init__(self, data_dict, delta, homogeneous, dx):
+    def __init__(self, data_dict, delta, homogeneous, dx, info):
         self.field = data_dict
         self.dx = dx
         self.delta = delta
@@ -15,13 +15,16 @@ class Data(object):
         self.S = None
         self.S_mod = None
         self.R = None
-        self.calc_stresses()
+        self.A = None
+        if info:
+            self.A = self.field_gradient()
+        self.calc_strain_and_rotational_tensor()
         if homogeneous:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 
-    def calc_stresses(self):
+    def calc_strain_and_rotational_tensor(self):
         self.S = self.calc_strain_tensor()
         self.S_mod = self.calc_strain_mod()
         self.R = self.calc_rotation_tensor()
@@ -79,16 +82,16 @@ class Data(object):
 
         trace = tensor['uu'] + tensor['vv'] + tensor['ww']
         for i in ['uu', 'vv', 'ww']:
-            tensor[i] -= trace
+            tensor[i] -= 1 / 3 * trace
 
         return tensor
 
 
 class DataSparse(object):
 
-    def __init__(self, data, n_points, ):
+    def __init__(self, data, n_training):
         logging.info('Sparse data')
-        self.M = n_points
+        self.M = n_training
         self.delta = data.delta
         self.elements_in_tensor = data.elements_in_tensor
 
@@ -96,31 +99,33 @@ class DataSparse(object):
         self.field = self.sparse_dict(data.field)
         self.S = self.sparse_dict(data.S)
         self.R = self.sparse_dict(data.R)
+        if data.A:
+            self.A = self.sparse_dict(data.A)
 
         # True pdf for distance calculation
-        tau_true = data.Reynolds_stresses_from_DNS()
-        self.tau_true = tau_true
+        self.tau_true = data.tau_true
         self.tau_pdf_true = dict()
         self.log_tau_pdf_true = dict()
-        for key, value in tau_true.items():
+        for key, value in self.tau_true.items():
             self.tau_pdf_true[key] = utils.pdf_from_array(value, g.bins, g.domain)
             where_array = np.array(self.tau_pdf_true[key] > g.TINY)
             a = np.empty_like(self.tau_pdf_true[key])
             a.fill(g.TINY_log)
             self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=a, where=where_array)
+
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 
-    def sparse_dict(self, data):
+    def sparse_dict(self, data_dict):
 
-        def sparse_array(data):
-            if data.shape[0] % self.M:
+        def sparse_array(data_value):
+            if data_value.shape[0] % self.M:
                 logging.error('Error: utils.sparse_dict(): Nonzero remainder')
-            n_th = int(data.shape[0] / self.M)
-            sparse_data = data[::n_th, ::n_th, ::n_th].copy()
+            n_th = int(data_value.shape[0] / self.M)
+            sparse_data = data_value[::n_th, ::n_th, ::n_th].copy()
             return sparse_data
 
         sparse = dict()
-        for key, value in data.items():
+        for key, value in data_dict.items():
             sparse[key] = sparse_array(value)
         return sparse
 

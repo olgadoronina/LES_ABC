@@ -1,7 +1,7 @@
 import gc
+import glob
 import logging
 from math import pi
-import glob, os
 
 import global_var as g
 import matplotlib as mpl
@@ -12,9 +12,9 @@ import utils
 
 
 class Plot(object):
-    def __init__(self, folder):
+    def __init__(self, folder, plot):
         self.folder = folder
-
+        self.plot_info = plot
         self.map_bounds = None
 
     def imagesc(self, Arrays, map_bounds, titles, name=None):
@@ -96,7 +96,7 @@ class Plot(object):
 
     def sigma_field(self, scale='LES'):
 
-        map_bounds = np.linspace(-0.2, 0.2, 10)
+        map_bounds = np.linspace(-0.2, 0.2, 9)
         if scale == 'LES':
             tau = g.LES.tau_true
             name = 'sigma_LES'
@@ -114,13 +114,17 @@ class Plot(object):
 
         name = 'sigma_pdf'
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
-        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+        titles = [r'$\sigma_{11}/\widehat{\sigma}_{11}$',
+                  r'$\sigma_{12}/\widehat{\sigma}_{12}$',
+                  r'$\sigma_{13}/\widehat{\sigma}_{13}$']
         tau = g.LES.tau_true
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             data = tau[i].flatten()
             x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='LES')
             axarr[ind].set_xlabel(titles[ind])
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+            axarr[ind].yaxis.set_major_locator(ticker.MultipleLocator())
         tau = g.TEST.tau_true
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             data = tau[i].flatten()
@@ -129,48 +133,104 @@ class Plot(object):
 
         axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
         axarr[0].set_ylabel('pdf')
-        axarr[0].set_yscale('log', nonposy='clip')
+        axarr[0].set_yscale('log')
         plt.legend(loc=0)
         fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
         fig.savefig(self.folder+name)
         del fig, axarr
         gc.collect()
 
+    def S_pdf(self):
+
+        name = 'S_pdf'
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
+        titles = [r'$\widetilde{S}_{11}/\widehat{\widetilde{S}}_{11}$',
+                  r'$\widetilde{S}_{12}/\widehat{\widetilde{S}}_{12}$',
+                  r'$\widetilde{S}_{13}/\widehat{\widetilde{S}}_{13}$']
+        strain = g.LES.S
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            data = strain[i].flatten()
+            x, y = utils.pdf_from_array_with_x(data, g.bins, [-2, 2])
+            axarr[ind].plot(x, y, 'r', linewidth=1, label='LES')
+            axarr[ind].set_xlabel(titles[ind])
+        strain = g.TEST.S
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            data = strain[i].flatten()
+            x, y = utils.pdf_from_array_with_x(data, g.bins, [-2, 2])
+            axarr[ind].plot(x, y, 'g', linewidth=1, label='test')
+        strain = g.TEST_sp.S
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            data = strain[i].flatten()
+            x, y = utils.pdf_from_array_with_x(data, g.bins, [-2, 2])
+            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse')
+
+        # axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+        axarr[0].set_ylabel('pdf')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
+        fig.savefig(self.folder + name)
+        del fig, axarr
+        gc.collect()
+
+    def A_compare(self):
+
+        name = 'A_compare'
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
+        titles = [r'$\widetilde{A}_{11}/\widehat{\widetilde{A}}_{11}$',
+                  r'$\widetilde{A}_{12}/\widehat{\widetilde{A}}_{12}$',
+                  r'$\widetilde{A}_{13}/\widehat{\widetilde{A}}_{13}$']
+        deriv = g.LES.A
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            y = deriv[i][:, 128, 128]
+            x = np.linspace(0, 2 * np.pi, 256)
+            axarr[ind].plot(x, y, 'r', linewidth=1, label='LES')
+            axarr[ind].set_xlabel('$x$')
+            axarr[ind].set_title(titles[ind])
+        deriv = g.TEST.A
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            y = deriv[i][:, 128, 128]
+            x = np.linspace(0, 2 * np.pi, 256)
+            axarr[ind].plot(x, y, 'g', linewidth=1, label='test')
+
+        deriv = g.TEST_sp.A
+        for ind, i in enumerate(['uu', 'uv', 'uw']):
+            y = deriv[i][:, int(g.TEST_sp.M / 2), int(g.TEST_sp.M / 2)]
+            x = np.linspace(0, 2 * np.pi, g.TEST_sp.M)
+            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse')
+
+        axarr[0].axis(xmin=0, xmax=2 * np.pi, ymin=-7, ymax=7)
+        axarr[0].set_ylabel('$A_{ij}$')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.08, right=0.95, wspace=0.1, bottom=0.15, top=0.83)
+        fig.savefig(self.folder + name)
+        del fig, axarr
+        gc.collect()
+
     def spectra(self):
-        os.chdir(self.folder)
-        files = glob.glob("*.spectra")
+
+        fig = plt.figure(figsize=(4, 3))
+        ax = plt.gca()
+        files = glob.glob(self.folder + '*.spectra')
+
+        labels = ['DNS', 'LES', 'test']
+
         for k in range(len(files)):
-            file = files[k]
-            f = open(file, 'r')
-            label = file[:3]
+            f = open(files[k], 'r')
             data = np.array(f.readlines()).astype(np.float)
             x = np.arange(len(data))
-            plt.loglog(x, data, '-', linewidth=3, label=label)
-            y = 7.2e14 * np.power(x, -5 / 3)
-            plt.loglog(x, y, 'r--')
-        plt.title('Spectrum', fontsize=20)
-        plt.ylabel(r'$E$', fontsize=20)
-        plt.xlabel(r'k', fontsize=20)
-        plt.axis(ymin=1e6)
+            ax.loglog(x, data, '-', linewidth=2, label=labels[k])
+
+        y = 7.2e14 * np.power(x, -5 / 3)
+        ax.loglog(x, y, 'r--', label=r'$-5/3$ slope')
+        ax.set_title('Spectra')
+        ax.set_ylabel(r'$E$')
+        ax.set_xlabel(r'k')
+        ax.axis(ymin=1e6)
         plt.legend(loc=0)
-        plt.show()
 
-def T_TEST(T_TEST):
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(10, 5))
-    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
-    ax1.hist(T_TEST['uu'].flatten(), bins=100, normed=1, alpha=0.4)
-    ax2.hist(T_TEST['uv'].flatten(), bins=100, normed=1, alpha=0.4)
-    ax3.hist(T_TEST['uw'].flatten(), bins=100, normed=1, alpha=0.4)
+        fig.subplots_adjust(left=0.16, right=0.95, bottom=0.2, top=0.87)
+        fig.savefig(self.folder + 'spectra')
 
-    for ind, ax in enumerate([ax1, ax2, ax3]):
-        ax.set_xlabel(titles[ind])
-    ax1.axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
-    ax1.set_ylabel('pdf')
-    ax3.set_yscale('log', nonposy='clip')
-    fig.tight_layout()
-    plt.show()
-    del ax1, ax2, ax3, fig
-    gc.collect()
 
 
 def TS(TS):
@@ -182,36 +242,6 @@ def TS(TS):
     plt.axis(xmin=-5, xmax=4, ymin=1e-5)
     plt.show()
     gc.collect()
-
-
-def tau_tau_sp(tau, tau_sp):
-    fig, axarr = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 8))
-    titles = [r'$T_{11}$', r'$T_{12}$', r'$T_{13}$']
-
-    axarr[0, 0].hist(tau['uu'].flatten(), bins=50, normed=1, alpha=0.4)
-    axarr[0, 0].set_xlim(xmin=-1.1, xmax=1.1)
-    axarr[0, 0].set_ylim(ymin=1e-5)
-    axarr[0, 0].set_yscale('log', nonposy='clip')
-    axarr[0, 0].set_ylabel(r'pdf of initial')
-    axarr[0, 1].hist(tau['uv'].flatten(), bins=50, normed=1, alpha=0.4)
-    axarr[0, 2].hist(tau['uw'].flatten(), bins=50, normed=1, alpha=0.4)
-    axarr[1, 0].hist(tau_sp['uu'].flatten(), bins=20, normed=1, alpha=0.4)
-    axarr[1, 0].set_ylabel('pdf of sparse')
-    axarr[1, 1].hist(tau_sp['uv'].flatten(), bins=20, normed=1, alpha=0.4)
-    axarr[1, 2].hist(tau_sp['uw'].flatten(), bins=20, normed=1, alpha=0.4)
-
-    for ind, ax in enumerate([axarr[1, 0], axarr[1, 1], axarr[1, 2]]):
-        ax.set_xlabel(titles[ind])
-
-    fig.tight_layout()
-    plt.setp([a.get_xticklabels() for a in axarr[0, :]], visible=False)
-    plt.setp([a.get_yticklabels() for a in axarr[:, 1]], visible=False)
-    plt.show()
-    del fig, axarr
-    gc.collect()
-
-
-
 
 
 def tau_abc(Cs_abc):
