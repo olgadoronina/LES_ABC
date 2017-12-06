@@ -124,7 +124,7 @@ class Plot(object):
             axarr[ind].plot(x, y, 'r', linewidth=2, label='LES')
             axarr[ind].set_xlabel(titles[ind])
             axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-            axarr[ind].yaxis.set_major_locator(ticker.MultipleLocator())
+            # axarr[ind].yaxis.set_major_locator(ticker.MultipleLocator())
         tau = g.TEST.tau_true
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             data = tau[i].flatten()
@@ -142,7 +142,7 @@ class Plot(object):
 
     def S_pdf(self):
 
-        name = 'S_pdf'
+        name = 'S_pdf_' + str(g.TEST_sp.M)
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
         titles = [r'$\widetilde{S}_{11}/\widehat{\widetilde{S}}_{11}$',
                   r'$\widetilde{S}_{12}/\widehat{\widetilde{S}}_{12}$',
@@ -162,7 +162,7 @@ class Plot(object):
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             data = strain[i].flatten()
             x, y = utils.pdf_from_array_with_x(data, g.bins, [-2, 2])
-            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse')
+            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse M='+str(g.TEST_sp.M))
 
         # axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
         axarr[0].set_ylabel('pdf')
@@ -174,7 +174,8 @@ class Plot(object):
 
     def A_compare(self):
 
-        name = 'A_compare'
+        name = 'A_compare_'+str(g.TEST_sp.M)
+
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
         titles = [r'$\widetilde{A}_{11}/\widehat{\widetilde{A}}_{11}$',
                   r'$\widetilde{A}_{12}/\widehat{\widetilde{A}}_{12}$',
@@ -182,7 +183,7 @@ class Plot(object):
         deriv = g.LES.A
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             y = deriv[i][:, 128, 128]
-            x = np.linspace(0, 2 * np.pi, 256)
+            x = np.linspace(0, 2 * pi - 2 * pi / 256, 256)
             axarr[ind].plot(x, y, 'r', linewidth=1, label='LES')
             axarr[ind].set_xlabel('$x$')
             axarr[ind].set_title(titles[ind])
@@ -194,14 +195,14 @@ class Plot(object):
 
         deriv = g.TEST_sp.A
         for ind, i in enumerate(['uu', 'uv', 'uw']):
+            x = np.linspace(0, 2 * pi - 2 * pi / g.TEST_sp.M, g.TEST_sp.M)
             y = deriv[i][:, int(g.TEST_sp.M / 2), int(g.TEST_sp.M / 2)]
-            x = np.linspace(0, 2 * np.pi, g.TEST_sp.M)
-            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse')
+            axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse M='+str(g.TEST_sp.M))
 
         axarr[0].axis(xmin=0, xmax=2 * np.pi, ymin=-7, ymax=7)
         axarr[0].set_ylabel('$A_{ij}$')
         plt.legend(loc=0)
-        fig.subplots_adjust(left=0.08, right=0.95, wspace=0.1, bottom=0.15, top=0.83)
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.16, top=0.83)
         fig.savefig(self.folder + name)
         del fig, axarr
         gc.collect()

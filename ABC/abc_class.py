@@ -6,6 +6,7 @@ from time import time
 
 import global_var as g
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import model
 import numpy as np
 import utils
@@ -37,8 +38,10 @@ class ABC(object):
         for i in range(self.N.each ** self.N.params):
             C = []
             for j in range(self.N.params):
-                C.append(rand.uniform(self.C_limits[j][0], self.C_limits[j][1]))
+                c = rand.uniform(self.C_limits[j][0], self.C_limits[j][1])
+                C.append(-2*c**2)
             C_array.append(C)
+
         return C_array
 
     def form_C_array_manual(self):
@@ -84,7 +87,7 @@ class ABC(object):
         else:
             g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
-        g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
+        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
         # np.savetxt('accepted_'+str(N_params_in_task)+'.out', g.accepted)
         # np.savetxt('dist_'+str(N_params_in_task)+'.out', g.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
@@ -105,8 +108,8 @@ def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     log_fill = np.empty_like(pdf_modeled)
     log_fill.fill(g.TINY_log)
     log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
-    # dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
-    dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])), axis=axis)
+    dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
+    # dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])), axis=axis)
 
     return dist
 
@@ -188,7 +191,7 @@ def work_function_single_value(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_LSElog(pdf_modeled=pdf, key=key, axis=0)
+        d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
         dist += d
     if dist <= g.eps:
         result = C[:]
@@ -209,13 +212,14 @@ def work_function_multiple_values(C):
 ########################################################################################################################
 class PostprocessABC(object):
 
-    def __init__(self, C_limits, eps, N):
+    def __init__(self, C_limits, eps, N, folder):
 
         logging.info('Postprocessing')
         if len(g.accepted) == 0:
             logging.error('Oops! No accepted values')
             exit()
         self.N = N
+        self.folder = folder
         if self.N.params != len(g.accepted[0]):
             self.N.params = len(g.accepted[0])
             logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N.params))
@@ -234,7 +238,7 @@ class PostprocessABC(object):
 
         if self.N.params == 1:
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
-            logging.info('Estimated parameter:{}'.format(self.C_final_dist[0][0]))
+            logging.info('Estimated parameter:{}'.format(np.sqrt(-self.C_final_dist[0][0]/2)))
         else:
             H, edges = np.histogramdd(g.accepted, bins=g.num_bin_joint)
             logging.debug('Max number in bin: ' + str(np.max(H)))
@@ -258,60 +262,61 @@ class PostprocessABC(object):
 
         minim = np.argmin(g.dist)
         self.C_final_dist = g.accepted[minim, :]
-        logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], g.C_final_dist))
+        C_final_dist = np.sqrt(-self.C_final_dist[0]/2)
+        logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
 
         # Uncomment to make figure for each marginal pdf
         # for i in range(self.N.params):
         #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
         #     plt.xlabel(params_names[i])
         #     plt.show()
+        if self.N.params > 1:
+            cmap = plt.cm.jet  # define the colormap
+            cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+            cmaplist[0] = ('white')  # force the first color entry to be grey
+            cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 
-        cmap = plt.cm.jet  # define the colormap
-        cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
-        cmaplist[0] = ('white')  # force the first color entry to be grey
-        cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+            fig = plt.figure(figsize=(10, 10))
+            for i in range(self.N.params):
+                for j in range(self.N.params):
+                    if i == j:
+                        x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
+                        ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
+                        ax.hist(self.accepted[:, i], bins=self.N.bin_joint, normed=1, alpha=0.5, color='grey',
+                                range=self.C_limits[i])
+                        ax.plot(x, y)
+                        ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
+                        ax.set_xlabel(self.params_names[i])
+                    elif i < j:
+                        ax = plt.subplot2grid((self.N.params, self.N.params), (i, j))
+                        ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1], ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
+                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=self.N.bin_joint, cmap=cmap,
+                                   range=[self.C_limits[j], self.C_limits[i]])
 
-        # fig = plt.figure(figsize=(10, 10))
-        # for i in range(self.N.params):
-        #     for j in range(self.N.params):
-        #         if i == j:
-        #             x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=N_each, range=C_limits[i])
-        #             ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
-        #             ax.hist(self.accepted[:, i], bins=num_bin_joint, normed=1, alpha=0.5, color='grey',
-        #                      range=C_limits[i])
-        #             ax.plot(x, y)
-        #             ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1])
-        #             ax.set_xlabel(params_names[i])
-        #         elif i < j:
-        #             ax = plt.subplot2grid((self.N.params, self.N.params), (i, j))
-        #             ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
-        #             plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=num_bin_joint, cmap=cmap,
-        #                        range=[C_limits[j], C_limits[i]])
-        #
-        # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
-        # # fig1 = plt.gcf()
-        # plt.show()
-        # fig.savefig('marginal.pdf')
-        # del fig
+            fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
+            fig.savefig(self.folder+'marginal')
+            del fig
 
     def plot_scatter(self):
 
         for i in range(self.N.params):
-            fig = plt.figure()
+            x = g.accepted[:, i]
+            if i == 0:
+                x = np.sqrt(-x/2)
+            fig = plt.figure(figsize=(3.2, 2.8))
             ax = plt.axes()
             ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1], ymax=self.eps + 1)
-            ax.scatter(g.accepted[:, i], g.dist, color='blue')
+            ax.scatter(x, g.dist, color='blue')
             ax.set_xlabel(self.params_names[i])
-            ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}^{\mathcal{F}},\mathcal{S})$')
-            # fig1 = plt.gcf()
-            plt.show()
-            fig.savefig(self.params_names[i] + '.eps')
+            ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
+            ax.set_title('KL distance')
+            fig.subplots_adjust(left=0.19, right=0.95, bottom=0.15, top=0.9)
+            fig.savefig(self.folder + self.params_names[i][1:-1])
         gc.collect()
 
     def plot_compare_tau(self, scale='LES'):
 
-
-        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(15, 6))
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
         if scale == 'LES':
             titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
@@ -336,6 +341,8 @@ class PostprocessABC(object):
             if scale == 'TEST_M':
                 x, y = utils.pdf_from_array_with_x(g.TEST_sp.tau_true[key].flatten(), g.bins, g.domain)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 x, y = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
                 axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
@@ -345,10 +352,8 @@ class PostprocessABC(object):
         axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=1e-5)
         axarr[0].set_ylabel('pdf')
         axarr[0].set_yscale('log', nonposy='clip')
-        fig.tight_layout()
         plt.legend(loc=0)
-        # fig1 = plt.gcf()
-        plt.show()
-        # fig.savefig(scale + '.pdf')
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
+        fig.savefig(self.folder + scale)
         del fig, axarr
         gc.collect()

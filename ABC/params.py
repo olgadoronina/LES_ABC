@@ -1,5 +1,5 @@
 from math import *
-
+import matplotlib as mpl
 import numpy as np
 
 # import cProfile
@@ -14,7 +14,7 @@ data_folder = './data_input/JohnHopkins/'
 ########################################################################################################################
 # Plotting
 plot_folder = './plots/'
-PLOT_INIT_INFO = 1
+PLOT_INIT_INFO = 0
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
@@ -22,6 +22,8 @@ N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 # Filter scales
+# LES_scale = 10
+# TEST_scale = 5
 LES_scale = 30/2/pi
 TEST_scale = 15/2/pi
 ########################################################################################################################
@@ -29,12 +31,12 @@ TEST_scale = 15/2/pi
 bins = 100  # for pdf
 domain = [-1.1, 1.1]  # for pdf comparison
 num_bin_joint = 20
-N_each = 100
+N_each = 1000
 N_params_in_task = 0  # only 0, 1 or 2
-M = 64          # number of training points
+M = 32          # number of training points
 ORDER = 1      # order of eddy-viscosity model
 N_params_force = 0
-eps = 170     # acceptance tolerance
+eps = 150     # acceptance tolerance
 ########################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
@@ -60,3 +62,25 @@ C_limits[5] = [-0.15, 0.15]
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
 N_proc = 4          # Number of processes
 ########################################################################################################################
+
+
+mpl.rcParams['font.size'] = 10
+mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rc('text', usetex=True)
+mpl.rcParams['axes.labelsize'] = mpl.rcParams['font.size']
+mpl.rcParams['axes.titlesize'] = 1.5 * mpl.rcParams['font.size']
+mpl.rcParams['legend.fontsize'] = mpl.rcParams['font.size']
+mpl.rcParams['xtick.labelsize'] = mpl.rcParams['font.size']
+mpl.rcParams['ytick.labelsize'] = mpl.rcParams['font.size']
+# plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
+mpl.rcParams['xtick.major.size'] = 3
+mpl.rcParams['xtick.minor.size'] = 3
+mpl.rcParams['xtick.major.width'] = 1
+mpl.rcParams['xtick.minor.width'] = 1
+mpl.rcParams['ytick.major.size'] = 3
+mpl.rcParams['ytick.minor.size'] = 3
+mpl.rcParams['ytick.major.width'] = 1
+mpl.rcParams['ytick.minor.width'] = 1
+mpl.rcParams['legend.frameon'] = False
+# plt.rcParams['legend.loc'] = 'center left'
+mpl.rcParams['axes.linewidth'] = 1

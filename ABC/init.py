@@ -20,14 +20,18 @@ import plotting
 
 class NPoints():
     def __init__(self):
+        self.bin_joint = params.num_bin_joint
         self.each = params.N_each
-        self.params_in_task = params.N_params_in_task
         self.training = params.M
         if params.N_params_force:  # ignore the order and use this number of params
             self.params = params.N_params_force
         else:
             num_param = {'1': 1, '2': 4, '3': 6, '4': 9, '5': 10}
             self.params = num_param[str(params.ORDER)]
+        if self.params == 1:       # ignore the number and use 0
+            self.params_in_task = 0
+        else:
+            self.params_in_task = params.N_params_in_task
 
 
 class Init(object):
@@ -139,12 +143,19 @@ class Init(object):
         logging.info('Create TEST class')
         g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
 
-        # if params.PLOT_INIT_INFO:
-        #     logging.info('Calculate spectras')
-        #     utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
-        #                            params.plot_folder+'LES')
-        #     utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
-        #                            params.plot_folder + 'test')
+        if params.PLOT_INIT_INFO:
+            logging.info('Calculate spectras')
+            utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
+                                   params.plot_folder+'LES')
+            utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
+                                   params.plot_folder + 'test')
+
+            logging.info('Plot initial data info')
+            g.plot.vel_fields(scale='LES')
+            g.plot.vel_fields(scale='TEST')
+            g.plot.sigma_field(scale='LES')
+            g.plot.sigma_field(scale='TEST')
+            g.plot.sigma_pdf()
 
         del LES_data, TEST_data
 
@@ -172,5 +183,10 @@ class InitPostProcess(object):
         self.N = NPoints()
 
     def postprocessing(self):
-        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N)
+
+
+
+        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder)
         return postproc
+
+
