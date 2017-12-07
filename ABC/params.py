@@ -1,4 +1,5 @@
 from math import *
+
 import matplotlib as mpl
 import numpy as np
 
@@ -22,20 +23,20 @@ N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 # Filter scales
-# LES_scale = 10
-# TEST_scale = 5
-LES_scale = 30/2/pi
-TEST_scale = 15/2/pi
+LES_scale = 10
+TEST_scale = 5
+# LES_scale = 30/2/pi
+# TEST_scale = 15/2/pi
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf
 domain = [-1.1, 1.1]  # for pdf comparison
 num_bin_joint = 20
-N_each = 1000
+N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2
-M = 32          # number of training points
-ORDER = 1      # order of eddy-viscosity model
-N_params_force = 0
+M = 64  # number of training points
+ORDER = 2  # order of eddy-viscosity model
+N_params_force = 3
 eps = 150     # acceptance tolerance
 ########################################################################################################################
 # Sample limits
@@ -60,7 +61,7 @@ C_limits[5] = [-0.15, 0.15]
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 4          # Number of processes
+N_proc = 6  # Number of processes
 ########################################################################################################################
 
 

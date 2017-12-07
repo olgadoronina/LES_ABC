@@ -91,9 +91,8 @@ def spectral_density(vel_array, dx, N_points, fname):
     fh.close()
 
 
-def uniform_grid(i, C_limits, N_each):
-
-    C_tmp = np.linspace(C_limits[i][0], C_limits[i][1], N_each + 1)
+def uniform_grid(C_limits, N_each):
+    C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
     return C_tmp
 

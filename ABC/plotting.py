@@ -233,7 +233,6 @@ class Plot(object):
         fig.savefig(self.folder + 'spectra')
 
 
-
 def TS(TS):
     plt.figure(figsize=(5, 5))
     plt.hist(TS.flatten(), bins=500, normed=1, alpha=0.4)
@@ -281,26 +280,6 @@ def tau_abc(Cs_abc):
     del fig, axarr
     gc.collect()
 
-
-def S_compare(field, axarr, titles, label, color):
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = field[i].flatten()
-        x, y = utils.pdf_from_array(data, 100, [-1.1, 1.1])
-        axarr[ind].plot(x, y, 'r', linewidth=2, label=label, color=color)
-        axarr[ind].set_xlabel(titles[ind])
-    axarr[0].axis(xmin=-1.1, xmax=1.1)
-    axarr[0].set_ylabel('pdf')
-    # axarr[0].set_yscale('log', nonposy='clip')
-
-
-def A_compare(field, axarr, titles, M, color):
-    x = np.linspace(0, 2 * pi - 2 * pi / M, M)
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = field[i][int(M / 2), int(M / 2), :]
-        print(data.shape, x.shape)
-        axarr[ind].plot(x, data, 'r', linewidth=2, label=str(M), color=color)
-        axarr[ind].set_xlabel(titles[ind])
-    axarr[0].axis(xmin=0, xmax=2 * pi, ymin=-10, ymax=10)
 
 
 

@@ -19,6 +19,7 @@ import plotting
 
 
 class NPoints():
+
     def __init__(self):
         self.bin_joint = params.num_bin_joint
         self.each = params.N_each
@@ -32,7 +33,7 @@ class NPoints():
             self.params_in_task = 0
         else:
             self.params_in_task = params.N_params_in_task
-
+        self.total = self.each ** self.params
 
 class Init(object):
 
@@ -163,7 +164,7 @@ class Init(object):
         g.TEST_sp = data.DataSparse(g.TEST, params.M)
 
     def model_on_sparse_TEST_data(self):
-        g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.N)
+        g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.N, self.C_limits)
 
     def parallel(self):
         if self.N_proc > 1:
@@ -183,10 +184,7 @@ class InitPostProcess(object):
         self.N = NPoints()
 
     def postprocessing(self):
-
-
-
-        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder)
+        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder, params.num_bin_joint)
         return postproc
 
 

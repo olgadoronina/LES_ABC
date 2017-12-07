@@ -24,7 +24,7 @@ class ABC(object):
         self.eps = eps
         self.C_array = self.form_C_array_manual()
 
-        if N.params or N.params_in_task == 0:
+        if N.params == 1 or N.params_in_task == 0:
             self.work_func = work_function_single_value
         else:
             self.work_func = work_function_multiple_values
@@ -58,8 +58,8 @@ class ABC(object):
         else:
             C = np.ndarray((self.N.params, self.N.each))
             for i in range(self.N.params):
-                C[i, :] = utils.uniform_grid(i)
-            C[0] = -2*C[0]**2
+                C[i, :] = utils.uniform_grid(self.C_limits[i], self.N.each)
+            C[0] = -2 * C[0] ** 2
             permutation = itertools.product(*C)
             C_array = list(map(list, permutation))
         return C_array
@@ -150,7 +150,6 @@ def distance_between_pdf_L2(pdf_modeled, key, axis=1):
 
 def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
-        Function for N_params_in_task > 0
     :param pdf_modeled: array of modeled pdf
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
@@ -158,8 +157,6 @@ def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     log_fill = np.empty_like(pdf_modeled)
     log_fill.fill(g.TINY_log)
     log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
-    # if np.isnan(np.sum(log_modeled)):
-    #   logging.warning('log_modeled: nan is detected ')
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
@@ -204,7 +201,7 @@ def work_function_multiple_values(C):
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
-    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_LSElog)
+    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_KL)
 
 
 ########################################################################################################################
@@ -212,13 +209,14 @@ def work_function_multiple_values(C):
 ########################################################################################################################
 class PostprocessABC(object):
 
-    def __init__(self, C_limits, eps, N, folder):
+    def __init__(self, C_limits, eps, N, folder, num_bin_joint):
 
         logging.info('Postprocessing')
         if len(g.accepted) == 0:
             logging.error('Oops! No accepted values')
             exit()
         self.N = N
+        self.num_bin_joint = num_bin_joint
         self.folder = folder
         if self.N.params != len(g.accepted[0]):
             self.N.params = len(g.accepted[0])
@@ -237,10 +235,18 @@ class PostprocessABC(object):
         """
 
         if self.N.params == 1:
+            # C_final_dist only
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
             logging.info('Estimated parameter:{}'.format(np.sqrt(-self.C_final_dist[0][0]/2)))
         else:
-            H, edges = np.histogramdd(g.accepted, bins=g.num_bin_joint)
+            # C_final_dist
+            minim = np.argmin(g.dist)
+            self.C_final_dist = g.accepted[minim, :]
+            C_final_dist = self.C_final_dist
+            C_final_dist[0] = np.sqrt(-self.C_final_dist[0] / 2)
+            logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
+            # C_final_joint
+            H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint)
             logging.debug('Max number in bin: ' + str(np.max(H)))
             logging.debug('Mean number in bin: ' + str(np.mean(H)))
             edges = np.array(edges)
@@ -260,16 +266,17 @@ class PostprocessABC(object):
 
     def plot_marginal_pdf(self):
 
-        minim = np.argmin(g.dist)
-        self.C_final_dist = g.accepted[minim, :]
-        C_final_dist = np.sqrt(-self.C_final_dist[0]/2)
-        logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
+        # minim = np.argmin(g.dist)
+        # self.C_final_dist = g.accepted[minim, :]
+        # C_final_dist = np.sqrt(-self.C_final_dist[0]/2)
+        # logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
 
         # Uncomment to make figure for each marginal pdf
         # for i in range(self.N.params):
         #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
         #     plt.xlabel(params_names[i])
         #     plt.show()
+
         if self.N.params > 1:
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
@@ -280,9 +287,9 @@ class PostprocessABC(object):
             for i in range(self.N.params):
                 for j in range(self.N.params):
                     if i == j:
-                        x, y = utils.pdf_from_array_with_x(self.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
+                        x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
-                        ax.hist(self.accepted[:, i], bins=self.N.bin_joint, normed=1, alpha=0.5, color='grey',
+                        ax.hist(g.accepted[:, i], bins=self.num_bin_joint, normed=1, alpha=0.5, color='grey',
                                 range=self.C_limits[i])
                         ax.plot(x, y)
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
@@ -290,10 +297,10 @@ class PostprocessABC(object):
                     elif i < j:
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, j))
                         ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1], ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
-                        plt.hist2d(self.accepted[:, j], self.accepted[:, i], bins=self.N.bin_joint, cmap=cmap,
+                        plt.hist2d(g.accepted[:, j], g.accepted[:, i], bins=self.num_bin_joint, cmap=cmap,
                                    range=[self.C_limits[j], self.C_limits[i]])
 
-            fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
+            # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
             fig.savefig(self.folder+'marginal')
             del fig
 
@@ -321,18 +328,21 @@ class PostprocessABC(object):
             titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.LES, self.N).Reynolds_stresses_from_C(self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.LES, self.N).Reynolds_stresses_from_C(self.C_final_dist)
+            tau_modeled_dist = model.NonlinearModel(g.LES, self.N, self.C_limits).Reynolds_stresses_from_C(
+                self.C_final_dist)
         if scale == 'TEST_M':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.TEST_sp, self.N).Reynolds_stresses_from_C(
                     self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.TEST_sp, self.N).Reynolds_stresses_from_C(self.C_final_dist)
+            tau_modeled_dist = model.NonlinearModel(g.TEST_sp, self.N, self.C_limits).Reynolds_stresses_from_C(
+                self.C_final_dist)
         if scale == 'TEST':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.TEST, self.N).Reynolds_stresses_from_C(self.C_final_joint[0])
-            tau_modeled_dist = model.NonlinearModel(g.TEST, self.N).Reynolds_stresses_from_C(self.C_final_dist)
+            tau_modeled_dist = model.NonlinearModel(g.TEST, self.N, self.C_limits).Reynolds_stresses_from_C(
+                self.C_final_dist)
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             if scale == 'LES':
                 x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), g.bins, g.domain)

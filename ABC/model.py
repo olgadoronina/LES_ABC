@@ -11,11 +11,12 @@ import utils
 
 
 class NonlinearModel(object):
-    def __init__(self, data, N):
+    def __init__(self, data, N, C_limits):
 
         self.M = data.field['uu'].shape[0]
         self.elements_in_tensor = data.elements_in_tensor
         self.N = N
+        self.C_limits = C_limits
         self.S_mod = self.calc_strain_mod(data)
         self.Tensor = dict()
         for i in range(N.params):
@@ -269,7 +270,7 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N.each)
-        C_last = utils.uniform_grid(self.N.params - 1)
+        C_last = utils.uniform_grid(self.C_limits(self.N.params - 1), self.N.each)
         for i in self.elements_in_tensor:
             # pr.enable()
             tau = np.zeros(self.M ** 3)
@@ -422,4 +423,5 @@ class DynamicSmagorinskyModel(object):
         for i in self.elements_in_tensor:
             tau[i] = -2 * (Cs * g.LES.delta) ** 2 * self.Tensor_1[i]
         return tau
+
 

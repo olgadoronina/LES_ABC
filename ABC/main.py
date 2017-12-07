@@ -53,24 +53,25 @@ def main():
     abc = initialize.ABC_algorithm()
     del initialize
 
-    abc.main_loop()
-    np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
-    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+    # abc.main_loop()
+    # np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
+    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
     # ########################
-    # # abc.accepted = np.load('./plots/accepted.npz')['C']
-    # # abc.dist = np.load('./plots/accepted.npz')['dist']
-    # # new_eps = 40
-    # # abc.accepted = abc.accepted[abc.dist < new_eps]
-    # # abc.dist = abc.dist[abc.dist < new_eps]
-    # # logging.info('accepted {} values ({}%)'.format(len(abc.accepted), round(len(abc.accepted) / abc.N * 100, 2)))
+    g.accepted = np.load('./plots/accepted.npz')['C']
+    g.dist = np.load('./plots/accepted.npz')['dist']
+    new_eps = 40
+    g.accepted = g.accepted[g.dist < new_eps]
+    g.dist = g.dist[g.dist < new_eps]
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
     # #########################
-    eps = g.eps
+    # eps = g.eps
+    eps = new_eps
     initialize = init.InitPostProcess(eps)
     postproc = initialize.postprocessing()
     postproc.calc_final_C()
     postproc.plot_scatter()
-    # abc.plot_marginal_pdf()
+    postproc.plot_marginal_pdf()
     postproc.plot_compare_tau('TEST_M')
     postproc.plot_compare_tau('TEST')
     postproc.plot_compare_tau('LES')
