@@ -87,7 +87,7 @@ class ABC(object):
         else:
             g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
-        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
+        g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)  # return back to standard Cs (-2*Cs^2)
         # np.savetxt('accepted_'+str(N_params_in_task)+'.out', g.accepted)
         # np.savetxt('dist_'+str(N_params_in_task)+'.out', g.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
@@ -243,7 +243,7 @@ class PostprocessABC(object):
             minim = np.argmin(g.dist)
             self.C_final_dist = g.accepted[minim, :]
             C_final_dist = self.C_final_dist
-            C_final_dist[0] = np.sqrt(-self.C_final_dist[0] / 2)
+            # C_final_dist[0] = np.sqrt(-C_final_dist[0] / 2)
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             # C_final_joint
             H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint)
@@ -266,24 +266,21 @@ class PostprocessABC(object):
 
     def plot_marginal_pdf(self):
 
-        # minim = np.argmin(g.dist)
-        # self.C_final_dist = g.accepted[minim, :]
-        # C_final_dist = np.sqrt(-self.C_final_dist[0]/2)
-        # logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
-
         # Uncomment to make figure for each marginal pdf
         # for i in range(self.N.params):
         #     plt.hist(self.accepted[:, i], bins=N_each, normed=1, range=C_limits[i])
         #     plt.xlabel(params_names[i])
         #     plt.show()
 
+        # accepted = g.accepted
+        # accepted[:, 0] = np.sqrt(accepted[:, 0]/2)
         if self.N.params > 1:
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
             cmaplist[0] = ('white')  # force the first color entry to be grey
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 
-            fig = plt.figure(figsize=(10, 10))
+            fig = plt.figure(figsize=(6.5, 6.5))
             for i in range(self.N.params):
                 for j in range(self.N.params):
                     if i == j:
@@ -299,7 +296,7 @@ class PostprocessABC(object):
                         ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1], ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
                         plt.hist2d(g.accepted[:, j], g.accepted[:, i], bins=self.num_bin_joint, cmap=cmap,
                                    range=[self.C_limits[j], self.C_limits[i]])
-
+            fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
             # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
             fig.savefig(self.folder+'marginal')
             del fig
@@ -308,8 +305,9 @@ class PostprocessABC(object):
 
         for i in range(self.N.params):
             x = g.accepted[:, i]
-            if i == 0:
-                x = np.sqrt(-x/2)
+            # if i == 0:
+            #     print(x)
+            #     x = np.sqrt(-x/2)
             fig = plt.figure(figsize=(3.2, 2.8))
             ax = plt.axes()
             ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1], ymax=self.eps + 1)
@@ -323,26 +321,28 @@ class PostprocessABC(object):
 
     def plot_compare_tau(self, scale='LES'):
 
+        C_final_dist_new = self.C_final_dist
+        C_final_dist_new[0] = -2 * C_final_dist_new[0] ** 2
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
         if scale == 'LES':
             titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.LES, self.N).Reynolds_stresses_from_C(self.C_final_joint[0])
             tau_modeled_dist = model.NonlinearModel(g.LES, self.N, self.C_limits).Reynolds_stresses_from_C(
-                self.C_final_dist)
+                C_final_dist_new)
         if scale == 'TEST_M':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.TEST_sp, self.N).Reynolds_stresses_from_C(
                     self.C_final_joint[0])
             tau_modeled_dist = model.NonlinearModel(g.TEST_sp, self.N, self.C_limits).Reynolds_stresses_from_C(
-                self.C_final_dist)
+                C_final_dist_new)
         if scale == 'TEST':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
             if len(self.C_final_joint) == 1 and self.N.params != 1:
                 tau_modeled_joint = model.NonlinearModel(g.TEST, self.N).Reynolds_stresses_from_C(self.C_final_joint[0])
             tau_modeled_dist = model.NonlinearModel(g.TEST, self.N, self.C_limits).Reynolds_stresses_from_C(
-                self.C_final_dist)
+                C_final_dist_new)
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             if scale == 'LES':
                 x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), g.bins, g.domain)
@@ -367,3 +367,10 @@ class PostprocessABC(object):
         fig.savefig(self.folder + scale)
         del fig, axarr
         gc.collect()
+
+    def plot_eps(self):
+
+        for i in range(self.N.params):
+            x = g.accepted[:, i]
+            m, h = utils.mean_confidence_interval(x, confidence=0.95)
+            print(i, m, h)

@@ -60,21 +60,24 @@ def main():
     # ########################
     g.accepted = np.load('./plots/accepted.npz')['C']
     g.dist = np.load('./plots/accepted.npz')['dist']
-    new_eps = 40
-    g.accepted = g.accepted[g.dist < new_eps]
-    g.dist = g.dist[g.dist < new_eps]
-    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
-    # #########################
-    # eps = g.eps
-    eps = new_eps
-    initialize = init.InitPostProcess(eps)
-    postproc = initialize.postprocessing()
-    postproc.calc_final_C()
-    postproc.plot_scatter()
-    postproc.plot_marginal_pdf()
-    postproc.plot_compare_tau('TEST_M')
-    postproc.plot_compare_tau('TEST')
-    postproc.plot_compare_tau('LES')
+    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+
+    for new_eps in [40, 30, 20]:
+        g.accepted = g.accepted[g.dist < new_eps]
+        g.dist = g.dist[g.dist < new_eps]
+        logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+        # #########################
+        # eps = g.eps
+        eps = new_eps
+        initialize = init.InitPostProcess(eps)
+        postproc = initialize.postprocessing()
+        postproc.plot_eps()
+        postproc.calc_final_C()
+        # postproc.plot_scatter()
+        # postproc.plot_marginal_pdf()
+        # postproc.plot_compare_tau('TEST_M')
+        # postproc.plot_compare_tau('TEST')
+    # postproc.plot_compare_tau('LES')
 
 
     # logging.info('Dynamic Smagorinsky')

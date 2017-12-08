@@ -1,6 +1,8 @@
 import logging
 
 import numpy as np
+import scipy as sp
+import scipy.stats
 from numpy.fft import fftfreq, fftn
 
 
@@ -23,9 +25,11 @@ def pdf_from_array_improved(array, bins, domain, N_each):
         pdf[i, :] = np.histogram(array[i, :], bins=bins, range=domain, normed=1)[0]
     return pdf
 
+
 def pdf_from_array(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
+
 
 def baseconvert(x, newbase, number_digits):
     """Converts given number x, from base 10 to base 'newbase'
@@ -41,6 +45,7 @@ def baseconvert(x, newbase, number_digits):
     for i in range(number_digits-len(r)):
         r = [0] + r
     return r
+
 
 def shell_average(spect3D, N_point, k_3d):
     """ Compute the 1D, shell-averaged, spectrum of the 3D Fourier-space
@@ -95,6 +100,15 @@ def uniform_grid(C_limits, N_each):
     C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
     return C_tmp
+
+
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, s = np.mean(a), np.std(a)
+    print(m, s)
+    h = s / np.sqrt(n) * sp.stats.t._ppf((1 + confidence) / 2., n - 1)
+    return m, h
 
 
 # import scipy.ndimage as ndimage
