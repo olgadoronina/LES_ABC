@@ -21,21 +21,21 @@ def main():
     ####################################################################################################################
     initialize = init.Init()
     initialize.plotting()
-    initialize.LES_TEST_data()
-    initialize.TEST_sparse_data()
-    initialize.model_on_sparse_TEST_data()
-    initialize.parallel()
+    # initialize.LES_TEST_data()
+    # initialize.TEST_sparse_data()
+    # initialize.model_on_sparse_TEST_data()
+    # initialize.parallel()
 
-    if g.plot.plot_info:
-        logging.info('Plot initial data info')
-        # g.plot.vel_fields(scale='LES')
-        # g.plot.vel_fields(scale='TEST')
-        # g.plot.sigma_field(scale='LES')
-        # g.plot.sigma_field(scale='TEST')
-        # g.plot.sigma_pdf()
-        g.plot.S_pdf()
-        g.plot.A_compare()
-        g.plot.spectra()
+    # if g.plot.plot_info:
+    #     logging.info('Plot initial data info')
+    #     # g.plot.vel_fields(scale='LES')
+    #     # g.plot.vel_fields(scale='TEST')
+    #     # g.plot.sigma_field(scale='LES')
+    #     # g.plot.sigma_field(scale='TEST')
+    #     # g.plot.sigma_pdf()
+    #     g.plot.S_pdf()
+    #     g.plot.A_compare()
+    #     g.plot.spectra()
 
     ####################################################################################################################
     # logging.info('Strain tensors')
@@ -58,25 +58,26 @@ def main():
     # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
     # ########################
+
     g.accepted = np.load('./plots/accepted.npz')['C']
     g.dist = np.load('./plots/accepted.npz')['dist']
     g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+    new_eps = 18
+    g.accepted = g.accepted[g.dist < new_eps]
+    g.dist = g.dist[g.dist < new_eps]
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+    # # #########################
+        # # eps = g.eps
 
-    for new_eps in [40, 30, 20]:
-        g.accepted = g.accepted[g.dist < new_eps]
-        g.dist = g.dist[g.dist < new_eps]
-        logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
-        # #########################
-        # eps = g.eps
-        eps = new_eps
-        initialize = init.InitPostProcess(eps)
-        postproc = initialize.postprocessing()
-        postproc.plot_eps()
-        postproc.calc_final_C()
-        # postproc.plot_scatter()
-        # postproc.plot_marginal_pdf()
-        # postproc.plot_compare_tau('TEST_M')
-        # postproc.plot_compare_tau('TEST')
+    eps = new_eps
+    initialize = init.InitPostProcess(eps)
+    postproc = initialize.postprocessing()
+    postproc.calc_final_C()
+    # postproc.plot_marginal_pdf()
+    postproc.plot_eps()
+    #     postproc.plot_scatter()
+    # postproc.plot_compare_tau('TEST_M')
+    # postproc.plot_compare_tau('TEST')
     # postproc.plot_compare_tau('LES')
 
 

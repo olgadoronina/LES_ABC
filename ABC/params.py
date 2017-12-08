@@ -1,5 +1,4 @@
 from math import *
-
 import matplotlib as mpl
 import numpy as np
 
@@ -18,7 +17,7 @@ plot_folder = './plots/'
 PLOT_INIT_INFO = 0
 ########################################################################################################################
 # Initial case parameters
-HOMOGENEOUS = 1    # Use symmetry of tau tensor
+HOMOGENEOUS = 0    # Use symmetry of tau tensor
 N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
@@ -34,13 +33,14 @@ domain = [-1.1, 1.1]  # for pdf comparison
 num_bin_joint = 20
 N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2
-M = 64  # number of training points
-ORDER = 2  # order of eddy-viscosity model
-N_params_force = 3
-eps = 150     # acceptance tolerance
+M = 64          # number of training points
+ORDER = 1      # order of eddy-viscosity model
+N_params_force = 0
+eps = 30    # acceptance tolerance
 ########################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
+# C_limits[0] = [0.0, 0.4]
 # # for 4 params:
 # C_limits[0] = [0.0, 0.25]
 # C_limits[1] = [-0.2, 0.2]
@@ -61,7 +61,7 @@ C_limits[5] = [-0.15, 0.15]
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6  # Number of processes
+N_proc = 4          # Number of processes
 ########################################################################################################################
 
 
@@ -82,6 +82,6 @@ mpl.rcParams['ytick.major.size'] = 3
 mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1
 mpl.rcParams['ytick.minor.width'] = 1
-mpl.rcParams['legend.frameon'] = False
+# mpl.rcParams['legend.frameon'] = False
 # plt.rcParams['legend.loc'] = 'center left'
 mpl.rcParams['axes.linewidth'] = 1

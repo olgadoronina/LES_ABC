@@ -21,6 +21,7 @@ import plotting
 class NPoints():
 
     def __init__(self):
+
         self.bin_joint = params.num_bin_joint
         self.each = params.N_each
         self.training = params.M
@@ -75,7 +76,7 @@ class Init(object):
         mpl.rcParams['ytick.minor.size'] = 3
         mpl.rcParams['ytick.major.width'] = 1
         mpl.rcParams['ytick.minor.width'] = 1
-        mpl.rcParams['legend.frameon'] = False
+        # mpl.rcParams['legend.frameon'] = False
         # plt.rcParams['legend.loc'] = 'center left'
         plt.rcParams['axes.linewidth'] = 1
 
@@ -170,7 +171,6 @@ class Init(object):
         if self.N_proc > 1:
             g.par_process = parallel.Parallel(processes=self.N_proc, N_total=self.N.each ** self.N.params,
                                               progressbar=params.PROGRESSBAR)
-
     def ABC_algorithm(self):
 
         abc_init = abc_class.ABC(N=self.N, C_limits=self.C_limits, eps=params.eps)
@@ -184,7 +184,7 @@ class InitPostProcess(object):
         self.N = NPoints()
 
     def postprocessing(self):
-        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder, params.num_bin_joint)
+        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder)
         return postproc
 
 

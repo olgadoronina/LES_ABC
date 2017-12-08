@@ -209,14 +209,14 @@ def work_function_multiple_values(C):
 ########################################################################################################################
 class PostprocessABC(object):
 
-    def __init__(self, C_limits, eps, N, folder, num_bin_joint):
+    def __init__(self, C_limits, eps, N, folder):
 
         logging.info('Postprocessing')
         if len(g.accepted) == 0:
             logging.error('Oops! No accepted values')
             exit()
         self.N = N
-        self.num_bin_joint = num_bin_joint
+        self.num_bin_joint = N.bin_joint
         self.folder = folder
         if self.N.params != len(g.accepted[0]):
             self.N.params = len(g.accepted[0])
@@ -284,11 +284,15 @@ class PostprocessABC(object):
             for i in range(self.N.params):
                 for j in range(self.N.params):
                     if i == j:
+                        mean = np.mean(g.accepted[:, i])
                         x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
+                        max = x[np.argmax(y)]
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
                         ax.hist(g.accepted[:, i], bins=self.num_bin_joint, normed=1, alpha=0.5, color='grey',
                                 range=self.C_limits[i])
                         ax.plot(x, y)
+                        ax.axvline(mean, linestyle='--', color='g', label='mean')
+                        ax.axvline(max, linestyle='--', color='r', label='max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
@@ -296,6 +300,7 @@ class PostprocessABC(object):
                         ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1], ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
                         plt.hist2d(g.accepted[:, j], g.accepted[:, i], bins=self.num_bin_joint, cmap=cmap,
                                    range=[self.C_limits[j], self.C_limits[i]])
+            plt.legend(loc='lower left', bbox_to_anchor=(-2.5, 0.35), fancybox=True, shadow=True)
             fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
             # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
             fig.savefig(self.folder+'marginal')
@@ -369,8 +374,78 @@ class PostprocessABC(object):
         gc.collect()
 
     def plot_eps(self):
+        num_eps = 6
+        eps = np.linspace(15, 40, num_eps)
 
+        eps = np.append(8.877, eps)
+
+        C_mean = np.empty((self.N.params, num_eps))
+        C_max = np.empty_like(C_mean)
+        C_std = np.empty((self.N.params, num_eps))
+        C_h = np.empty((self.N.params, num_eps))
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for ind, new_eps in enumerate(eps):
+            g.accepted = np.load('./plots/accepted.npz')['C']
+            g.dist = np.load('./plots/accepted.npz')['dist']
+            g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+
+            g.accepted = g.accepted[g.dist < new_eps]
+            g.dist = g.dist[g.dist < new_eps]
+            logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) /
+                                                                                  (self.N.each**self.N.params) * 100, 2)))
+            for i in range(self.N.params):
+                data = g.accepted[:, i]
+                C_std[i, ind] = np.std(data)
+                C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
+
+                x, y = utils.pdf_from_array_with_x(data, bins=self.N.each, range=self.C_limits[i])
+                C_max[i, ind] = x[np.argmax(y)]
+                axarr[i].plot(x, y, label=r'$\epsilon = {}$'.format(new_eps))
+                axarr[i].set_xlabel(self.params_names[i])
+
+        axarr[0].set_ylabel('marginal pdf')
+        # Put a legend below current axis
+        legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
+        frame = legend.get_frame()
+        frame.set_alpha(1)
+        fig.subplots_adjust(left=0.08, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
+        fig.savefig(self.folder + 'eps_marginal')
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
         for i in range(self.N.params):
-            x = g.accepted[:, i]
-            m, h = utils.mean_confidence_interval(x, confidence=0.95)
-            print(i, m, h)
+            axarr[i].plot(eps, C_mean[i], 'b.-', label='mean')
+            axarr[i].plot(eps, C_max[i], 'g.-', label='max')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+        axarr[0].set_ylabel(r'$C_i$')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(self.folder + 'eps_plot')
+
+
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N.params):
+            axarr[i].plot(eps, C_std[i], 'b.-')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        axarr[0].set_ylabel(r'std($C_i$)')
+        fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(self.folder + 'eps_std')
+
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N.params):
+            axarr[i].plot(eps, C_h[i], 'b.-')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        axarr[0].set_ylabel(r'$95\%$ confident interval')
+        fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(self.folder + 'eps_h')
+
