@@ -17,7 +17,7 @@ plot_folder = './plots/'
 PLOT_INIT_INFO = 0
 ########################################################################################################################
 # Initial case parameters
-HOMOGENEOUS = 0    # Use symmetry of tau tensor
+HOMOGENEOUS = 1    # Use symmetry of tau tensor
 N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
@@ -36,7 +36,10 @@ N_params_in_task = 0  # only 0, 1 or 2
 M = 64          # number of training points
 ORDER = 1      # order of eddy-viscosity model
 N_params_force = 0
-eps = 30    # acceptance tolerance
+eps = 25    # acceptance tolerance
+########################################################################################################################
+MCMC = 0
+PMC = 1
 ########################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
@@ -60,8 +63,8 @@ C_limits[4] = [-0.3, 0.3]
 C_limits[5] = [-0.15, 0.15]
 ########################################################################################################################
 # Parallel regime parameters
-PROGRESSBAR = 1     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 4          # Number of processes
+PROGRESSBAR = 0     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+N_proc = 1          # Number of processes
 ########################################################################################################################
 
 

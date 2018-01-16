@@ -16,6 +16,7 @@ import numpy as np
 import parallel
 import params
 import plotting
+import postprocess
 
 
 class NPoints():
@@ -25,6 +26,7 @@ class NPoints():
         self.bin_joint = params.num_bin_joint
         self.each = params.N_each
         self.training = params.M
+        self.proc = params.N_proc
         if params.N_params_force:  # ignore the order and use this number of params
             self.params = params.N_params_force
         else:
@@ -184,7 +186,7 @@ class InitPostProcess(object):
         self.N = NPoints()
 
     def postprocessing(self):
-        postproc = abc_class.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder)
+        postproc = postprocess.PostprocessABC(params.C_limits, self.eps, self.N, params.plot_folder)
         return postproc
 
 

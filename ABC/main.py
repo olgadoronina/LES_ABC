@@ -21,10 +21,10 @@ def main():
     ####################################################################################################################
     initialize = init.Init()
     initialize.plotting()
-    # initialize.LES_TEST_data()
-    # initialize.TEST_sparse_data()
-    # initialize.model_on_sparse_TEST_data()
-    # initialize.parallel()
+    initialize.LES_TEST_data()
+    initialize.TEST_sparse_data()
+    initialize.model_on_sparse_TEST_data()
+    initialize.parallel()
 
     # if g.plot.plot_info:
     #     logging.info('Plot initial data info')
@@ -52,37 +52,34 @@ def main():
     ####################################################################################################################
     abc = initialize.ABC_algorithm()
     del initialize
-
-    # abc.main_loop()
-    # np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
-    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+    abc.main_loop()
+    np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
+    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
     # ########################
 
-    g.accepted = np.load('./plots/accepted.npz')['C']
-    g.dist = np.load('./plots/accepted.npz')['dist']
-    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
-    new_eps = 18
-    g.accepted = g.accepted[g.dist < new_eps]
-    g.dist = g.dist[g.dist < new_eps]
-    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+    # g.accepted = np.load('./plots/accepted.npz')['C']
+    # g.dist = np.load('./plots/accepted.npz')['dist']
+    # # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+    # # new_eps = 18
+    # # g.accepted = g.accepted[g.dist < new_eps]
+    # # g.dist = g.dist[g.dist < new_eps]
+    # logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
     # # #########################
-        # # eps = g.eps
+    eps = g.eps
 
-    eps = new_eps
+    # eps = new_eps
     initialize = init.InitPostProcess(eps)
     postproc = initialize.postprocessing()
     postproc.calc_final_C()
-    # postproc.plot_marginal_pdf()
-    postproc.plot_eps()
-    #     postproc.plot_scatter()
-    # postproc.plot_compare_tau('TEST_M')
-    # postproc.plot_compare_tau('TEST')
-    # postproc.plot_compare_tau('LES')
+    postproc.plot_marginal_pdf()
+    # postproc.plot_eps()
+    postproc.plot_scatter()
+    # postproc.scatter_animation()
+    postproc.plot_compare_tau('TEST_M')
+    postproc.plot_compare_tau('TEST')
+    postproc.plot_compare_tau('LES')
 
 
-    # logging.info('Dynamic Smagorinsky')
-    # SmagorinskyModel = model.DynamicSmagorinskyModel()
-    # logging.info(SmagorinskyModel.calculate_Cs_dynamic())
 if __name__ == '__main__':
     main()
