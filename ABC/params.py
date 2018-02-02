@@ -6,7 +6,7 @@ import numpy as np
 # prof = cProfile.Profile()
 ########################################################################################################################
 # Path to data
-LOAD = 1          # Load filtered data or filter from DNS
+LOAD = 0          # Load filtered data or filter from DNS
 DATA = 'JHU_data'
 data_folder = './data_input/JohnHopkins/'
 # DATA = 'CU_data'
@@ -14,7 +14,7 @@ data_folder = './data_input/JohnHopkins/'
 ########################################################################################################################
 # Plotting
 plot_folder = './plots/'
-PLOT_INIT_INFO = 0
+PLOT_INIT_INFO = 1
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
@@ -22,10 +22,10 @@ N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
 lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
 # Filter scales
+# LES_scale = 10
+# TEST_scale = 5
 LES_scale = 10
-TEST_scale = 5
-# LES_scale = 30/2/pi
-# TEST_scale = 15/2/pi
+TEST_scale = None
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf
@@ -39,7 +39,7 @@ N_params_force = 0
 eps = 25    # acceptance tolerance
 ########################################################################################################################
 MCMC = 0
-PMC = 1
+PMC = 0
 ########################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))

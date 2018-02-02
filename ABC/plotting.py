@@ -7,6 +7,7 @@ import global_var as g
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import pickle
 import numpy as np
 import utils
 
@@ -46,7 +47,7 @@ class Plot(object):
             im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
             plt.colorbar(im, fraction=0.05, pad=0.04)
         if name:
-            fig.savefig(self.folder + name)
+            pickle.dump(ax, open(self.folder + name, 'wb'))
         del ax, im, fig, cmap
         gc.collect()
 
@@ -76,11 +77,16 @@ class Plot(object):
 
     def compare_filter_fields(self, hit_data, les_data, test_data):
 
-        if not g.HIT or not g.LES or not g.TEST:
-            logging.warning('Can not plot fields: some of them is None')
-        self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127], test_data['v'][:, :, 127]],
-                     self.map_bounds, name='compare_velocity',
-                     titles=[r'$v$', r'$\widetilde{v}$', r'$\widehat{\widetilde{v}}$'])
+        # if not g.HIT or not g.LES or not g.TEST:
+        #     logging.warning('Can not plot fields: some of them is None')
+        if test_data:
+            self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127], test_data['v'][:, :, 127]],
+                         self.map_bounds, name='compare_velocity',
+                         titles=[r'$v$', r'$\widetilde{v}$', r'$\widehat{\widetilde{v}}$'])
+        else:
+            self.imagesc([hit_data['v'][:, :, 127], les_data['v'][:, :, 127]],
+                         self.map_bounds, name='compare_velocity',
+                         titles=[r'$v$', r'$\widetilde{v}$'])
 
     def vel_fields(self, scale='LES'):
 

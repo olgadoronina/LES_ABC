@@ -2,9 +2,9 @@ import logging
 
 import matplotlib as mpl
 
-mpl.use('pdf')
+# mpl.use('pdf')
 import matplotlib.pyplot as plt
-
+import pickle
 
 import abc_class
 import data
@@ -51,6 +51,9 @@ class Init(object):
         self.N_proc = params.N_proc
         self.N = NPoints()
 
+        self.LES_scale = params.LES_scale
+        self.TEST_scale = params.TEST_scale
+
         logging.info('Number of parameters = {}'.format(self.N.params))
         logging.info('Number of samples per interval = {}'.format(self.N.each))
         logging.info('Number of parameters per task = {}\n'.format(self.N.params_in_task))
@@ -61,6 +64,8 @@ class Init(object):
         # mpl.style.use(['mystyle'])
 
         # mpl.rcParams['figure.figsize'] = 6.5, 2.2
+        plt.rcParams['figure.autolayout'] = True
+
         mpl.rcParams['font.size'] = 10
         mpl.rcParams['font.family'] = 'Times New Roman'
         mpl.rc('text', usetex=True)
@@ -81,7 +86,6 @@ class Init(object):
         # mpl.rcParams['legend.frameon'] = False
         # plt.rcParams['legend.loc'] = 'center left'
         plt.rcParams['axes.linewidth'] = 1
-
         g.plot = plotting.Plot(params.plot_folder, params.PLOT_INIT_INFO)
 
 
@@ -128,30 +132,42 @@ class Init(object):
 
             logging.info('Filter HIT data')
             LES_data = filter.filter3d(data=HIT_data, scale_k=params.LES_scale, dx=dx, N_points=params.N_points)
-            TEST_data = filter.filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
-
-            logging.info('Writing files')
+            TEST_data = None
+            logging.info('Writing file')
             np.savez(params.data_folder + 'LES.npz', **LES_data)
-            np.savez(params.data_folder + 'TEST.npz', **TEST_data)
+            if self.TEST_scale:
+                TEST_data = filter.filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
+                logging.info('Writing file')
+                np.savez(params.data_folder + 'TEST.npz', **TEST_data)
 
             g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
 
             if params.PLOT_INIT_INFO:
                 g.plot.compare_filter_fields(HIT_data, LES_data, TEST_data)
-            del HIT_data
+            if self.TEST_scale:
+                del HIT_data
 
-        LES_delta = 1 / params.LES_scale
-        TEST_delta = 1 / params.TEST_scale
-        logging.info('Create LES class')
-        g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
-        logging.info('Create TEST class')
-        g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+        if self.TEST_scale:
+            LES_delta = 1 / params.LES_scale
+            TEST_delta = 1 / params.TEST_scale
+            logging.info('Create LES class')
+            g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            logging.info('Create TEST class')
+            g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+        else:
+            DNS_delta = params.lx[0]
+            TEST_delta = 1 / params.LES_scale
+            logging.info('Create LES class')
+            g.LES = data.Data(HIT_data, DNS_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            logging.info('Create TEST class')
+            g.TEST = data.Data(LES_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
 
         if params.PLOT_INIT_INFO:
-            logging.info('Calculate spectras')
+            logging.info('Calculate spectra')
             utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
                                    params.plot_folder+'LES')
-            utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
+            if self.TEST_scale:
+                utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
                                    params.plot_folder + 'test')
 
             logging.info('Plot initial data info')

@@ -7,6 +7,23 @@ import numpy as np
 
 
 def main():
+
+
+    #
+    # # Plot simple sinus function
+    # fig_handle = plt.figure()
+    # x = np.linspace(0, 2 * np.pi)
+    # y = np.sin(x)
+    # plt.plot(x, y)
+    #
+    # # Save figure handle to disk
+    # pl.dump(fig_handle, open('sinus.pickle', 'wb'))
+    # Load figure from disk and display
+    # fig_handle = pl.load(open('sinus.pickle', 'rb'))
+    # plt.show()
+
+
+
     logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
     # logging.basicConfig(filename='ABC_log.log', filemode='w',
     #                     format='%(levelname)s: %(name)s: %(message)s',
