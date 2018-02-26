@@ -28,7 +28,10 @@ class ABC(object):
             self.work_func = work_function_MCMC
         elif params.MCMC == 2:  # IMCMC
             logging.info('ABC algorithm: IMCMC')
-            self.C_array = self.form_C_array_manual()
+            if params.sweep:
+                self.C_array = self.form_C_array_parameter_sweep()
+            else:
+                self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
             self.work_func = work_function_MCMC
             self.calibration = calibration_function_single_value
@@ -70,6 +73,36 @@ class ABC(object):
     #         C_array.append(C)
     #
     #     return C_array
+
+
+    def form_C_array_parameter_sweep(self):
+        """ Create list of lists of N parameters.
+            :return: list of lists of sampled parameters
+            """
+        C_array = []
+        h_array = []
+        for i in range(params.n_sweeps):
+            # 1. Draw C uniformly from [-1; 1]^m
+            x = np.random.uniform(-1, 1, size=self.N.params)
+            # 2. pick a random direction
+            u = np.random.normal(0, 1, size=self.N.params)
+            u = u/np.linalg.norm(u)     # unit vector
+            # 3. Compute h_min and h_max
+            ind_pos = np.where(u >= 0)
+            ind_neg = np.where(u < 0)
+            h_min = np.max(np.append((1-x[ind_neg])/u[ind_neg], (-1-x[ind_pos])/u[ind_pos]))
+            h_max = np.min(np.append((1-x[ind_pos])/u[ind_pos], (-1-x[ind_neg])/u[ind_neg]))
+            delta_h = (h_max - h_min) / self.N.each
+            # 4. Compute parameters points
+            for j in range(self.N.each):
+                h = h_min + j * delta_h
+                h_array.append(h)
+                C_array.append(list(utils.unnormalize_params(x + h*u)))
+
+        np.savez('./plots/sweep_h.npz', h=h_array[:])
+        logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_h.npz')
+
+        return list(C_array)
 
     def form_C_array_manual(self):
         """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
@@ -127,6 +160,12 @@ class ABC(object):
 
         if self.N.params_in_task > 0:
             S_init = [chunk[:] for item in S_init for chunk in item]
+
+        if params.sweep:
+            S_init = np.array(S_init)
+            np.savez('./plots/sweep_params.npz', C=S_init[:,:-1], dist=S_init[:, -1])
+            logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
+            exit()
 
         S_init.sort(key=lambda x: x[-1])
         S_init = np.array(S_init)

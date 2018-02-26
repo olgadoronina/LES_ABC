@@ -308,3 +308,25 @@ class PostprocessABC(object):
             anim = animation.FuncAnimation(fig, animate, init_func=init,
                                            frames=len(g.dist), interval=60, blit=True)
             anim.save(self.folder+'basic_animation.mp4', fps=1, extra_args=['-vcodec', 'libx264'])
+
+    def sweep_params(self, filename_h, n):
+
+
+        # x = utils.normalize_params(g.accepted[:, :])
+        h = np.load(filename_h)['h']
+        n_rows = 4
+        N = self.N.each
+        n_columns = int(np.ceil(n/n_rows))
+        print(n_rows, n_columns)
+        fig = plt.figure(figsize=(9, 9))
+        for i in range(n):
+            ax = plt.subplot2grid((n_rows, n_columns), (i//n_rows, i%n_rows))
+            # ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
+            ax.plot(h[i*N:(i+1)*N], g.dist[i*N:(i+1)*N], color='blue')
+            ax.set_xlabel('h' + str(i))
+            ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
+            # ax.set_title('KL distance')
+        fig.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.95, hspace=0.15)
+        print('done')
+        fig.savefig(self.folder + 'sweep')
+        del fig

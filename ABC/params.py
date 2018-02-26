@@ -32,15 +32,18 @@ bins = 100  # for pdf
 domain = [-1.1, 1.1]  # for pdf comparison
 num_bin_joint = 10
 N_each = 100
-N_params_in_task = 2  # only 0, 1 or 2
+N_params_in_task = 0  # only 0, 1 or 2
 M = 64          # number of training points
 ORDER = 3       # order of eddy-viscosity model
 N_params_force = 6
 eps = 25    # acceptance tolerance
 ########################################################################################################################
+sweep = 1  # parameter sweep study
+n_sweeps = 16
+########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
 N_total = 200000
-N_calibration = 10**6  # recommended 10^p, where p is number of params
+N_calibration = 100**6  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits

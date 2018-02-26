@@ -34,18 +34,18 @@ def main():
     abc = initialize.ABC_algorithm()
     del initialize
     abc.main_loop()
-    np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
-    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
-
-    initialize = init.InitPostProcess(g.eps, g.C_limits)
-    postproc = initialize.postprocessing()
-    postproc.calc_final_C()
-    postproc.plot_marginal_pdf()
-    # # postproc.plot_eps()
-    # # postproc.plot_scatter()
-    # # postproc.scatter_animation()
-    postproc.plot_compare_tau('TEST_M')
-    postproc.plot_compare_tau('TEST')
+    # np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
+    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+    #
+    # initialize = init.InitPostProcess(g.eps, g.C_limits)
+    # postproc = initialize.postprocessing()
+    # postproc.calc_final_C()
+    # postproc.plot_marginal_pdf()
+    # # # postproc.plot_eps()
+    # # # postproc.plot_scatter()
+    # # # postproc.scatter_animation()
+    # postproc.plot_compare_tau('TEST_M')
+    # postproc.plot_compare_tau('TEST')
 
 
     # postproc.plot_compare_tau('LES')

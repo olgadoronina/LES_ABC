@@ -1,5 +1,5 @@
 import logging
-
+import global_var as g
 import numpy as np
 import scipy as sp
 import scipy.stats
@@ -108,6 +108,17 @@ def mean_confidence_interval(data, confidence=0.95):
     m, s = np.mean(a), np.std(a)
     h = s / np.sqrt(n) * sp.stats.t._ppf((1 + confidence) / 2., n - 1)
     return m, h
+
+def normalize_params(C):
+    """
+    Normalize given parameters to -1<C<1 hypercube.
+    :param C: given parameters
+    :return: normalized parameters
+    """
+    return 2*(C - g.C_limits[:, 0])/(g.C_limits[:, 1] - g.C_limits[:, 0]) - 1
+
+def unnormalize_params(C):
+    return 0.5*(C+1)*(g.C_limits[:, 1] - g.C_limits[:, 0]) + g.C_limits[:, 0]
 
 
 # import scipy.ndimage as ndimage

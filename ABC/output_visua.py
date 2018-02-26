@@ -9,9 +9,15 @@ import global_var as g
 import init
 import numpy as np
 
+
+sweep = 1
+
+
 filename = './plots/accepted.npz'
 # filename = './plots/calibration.npz'
-
+if sweep:
+    filename = './plots/sweep_params.npz'
+    filename_h = './plots/sweep_h.npz'
 
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
@@ -25,9 +31,10 @@ logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
 ####################################################################################################################
 initialize = init.Init()
 initialize.plotting()
-initialize.LES_TEST_data()
-initialize.TEST_sparse_data()
-initialize.model_on_sparse_TEST_data()
+if not sweep:
+    initialize.LES_TEST_data()
+    initialize.TEST_sparse_data()
+    initialize.model_on_sparse_TEST_data()
 
     # if g.plot.plot_info:
     # #     logging.info('Plot initial data info')
@@ -53,12 +60,15 @@ initialize.model_on_sparse_TEST_data()
 ####################################################################################################################
 # ABC algorithm
 ####################################################################################################################
-abc = initialize.ABC_algorithm()
-del initialize
+    abc = initialize.ABC_algorithm()
+    del initialize
 
 # ########################
 g.accepted = np.load(filename)['C']
 g.dist = np.load(filename)['dist']
+
+
+
 # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
 # new_eps = 25
 # g.accepted = g.accepted[g.dist < new_eps]
@@ -75,14 +85,18 @@ eps = g.eps
 # eps = new_eps
 initialize = init.InitPostProcess(eps, params.C_limits)
 postproc = initialize.postprocessing()
-postproc.calc_final_C()
-postproc.plot_marginal_pdf()
-# # postproc.plot_eps()
-# postproc.plot_scatter()
-# # postproc.scatter_animation()
-postproc.plot_compare_tau(scale='TEST_M', MCMC=2)
-postproc.plot_compare_tau(scale='TEST', MCMC=2)
-# postproc.plot_compare_tau('LES')
+if sweep:
+    n = params.n_sweeps
+    postproc.sweep_params(filename_h, n)
+else:
+    postproc.calc_final_C()
+    postproc.plot_marginal_pdf()
+    # # postproc.plot_eps()
+    # postproc.plot_scatter()
+    # # postproc.scatter_animation()
+    postproc.plot_compare_tau(scale='TEST_M', MCMC=2)
+    postproc.plot_compare_tau(scale='TEST', MCMC=2)
+    # postproc.plot_compare_tau('LES')
 
 
 
