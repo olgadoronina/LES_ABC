@@ -12,22 +12,17 @@ class Data(object):
         self.dx = dx
         self.delta = delta
         self.tau_true = self.Reynolds_stresses_from_DNS()
-        self.S = None
-        self.S_mod = None
-        self.R = None
+        self.S = self.calc_strain_tensor()
+        self.S_mod = self.calc_strain_mod()
+        self.R = self.calc_rotation_tensor()
         self.A = None
         if info:
             self.A = self.field_gradient()
-        self.calc_strain_and_rotational_tensor()
         if homogeneous:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 
-    def calc_strain_and_rotational_tensor(self):
-        self.S = self.calc_strain_tensor()
-        self.S_mod = self.calc_strain_mod()
-        self.R = self.calc_rotation_tensor()
 
     def field_gradient(self):
         """Calculate tensor of gradients of self.field.
@@ -40,7 +35,7 @@ class Data(object):
         return grad
 
     def calc_strain_tensor(self):
-        """Calculate strain tensor S_ij = (du_i/dx_j+du_j/dx_i) of given field.
+        """Calculate strain tensor S_ij = 1/2(du_i/dx_j+du_j/dx_i) of given field.
         :return:      dictionary of strain tensor
         """
         A = self.field_gradient()
@@ -51,7 +46,7 @@ class Data(object):
         return tensor
 
     def calc_rotation_tensor(self):
-        """Calculate rotation tensor R_ij = (du_i/dx_j-du_j/dx_i) of given field.
+        """Calculate rotation tensor R_ij = 1/2(du_i/dx_j-du_j/dx_i) of given field.
         :return:       dictionary of rotation tensor
         """
         A = self.field_gradient()
@@ -72,7 +67,9 @@ class Data(object):
         return np.sqrt(S_mod_sqr)
 
     def Reynolds_stresses_from_DNS(self):
-        """Calculate Reynolds stresses using DNS data.
+        """Calculate deviatoric part of Reynolds stresses using DNS data.
+            tau_ij = \tilde{u_iu_j} - \tilde{u_i}\tilde{u_j}
+            sigma_ij = tau_ij - 1/3 tau_kk*delta_ij
         :return:     dictionary of Reynolds stresses tensor
         """
         tensor = dict()
@@ -90,6 +87,7 @@ class Data(object):
 class DataSparse(object):
 
     def __init__(self, data, n_training):
+
         logging.info('Sparse data')
         self.M = n_training
         self.delta = data.delta
@@ -119,7 +117,7 @@ class DataSparse(object):
 
         def sparse_array(data_value):
             if data_value.shape[0] % self.M:
-                logging.error('Error: utils.sparse_dict(): Nonzero remainder')
+                logging.warning('Error: DataSparse.sparse_dict(): Nonzero remainder')
             n_th = int(data_value.shape[0] / self.M)
             sparse_data = data_value[::n_th, ::n_th, ::n_th].copy()
             return sparse_data

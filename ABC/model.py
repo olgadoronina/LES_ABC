@@ -11,7 +11,7 @@ import utils
 
 
 class NonlinearModel(object):
-    def __init__(self, data, N, C_limits):
+    def __init__(self, data, N, C_limits, MCMC):
 
         self.M = data.field['uu'].shape[0]
         self.elements_in_tensor = data.elements_in_tensor
@@ -24,10 +24,10 @@ class NonlinearModel(object):
 
         if N.params == 1:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
-        elif N.params_in_task == 0:
+        elif N.params_in_task == 0 or MCMC:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_tau
         elif N.params_in_task == 1:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin
+            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param1
         else:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param2
             if N.params_in_task > 2 or N.params_in_task < 0:
@@ -78,7 +78,6 @@ class NonlinearModel(object):
 
         elif number == 2:
             # Calculate tensor Delta^2*(S_ikS_kj - 1/3{S_ikS_ki}delta_ij) for given field
-
             tensor = dict()
             S_S_inv = 0
             for i in ['u', 'v', 'w']:
@@ -97,7 +96,6 @@ class NonlinearModel(object):
 
         elif number == 3:
             # Calculate tensor Delta^2(R_ikR_kj - 1/3{R_ikR_ki}delta_ij) for given field
-
             tensor = dict()
             R_R_inv = 0
             for i in ['u', 'v', 'w']:
@@ -115,8 +113,7 @@ class NonlinearModel(object):
             return tensor
 
         elif number == 4:
-            # Calculate tensor Delta^2(R_ikS_klSlj - S_ikS_klRlj) for given field
-
+            # Calculate tensor Delta^2/S_mod (R_ikS_klSlj - S_ikS_klRlj) for given field
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
@@ -132,7 +129,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 5:
-            # Calculate tensor Delta^2(R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
+            # Calculate tensor Delta^2/S_mod (R_ikR_klSlj + S_ikR_klRlj - 2/3 {S_ikR_klRli}*delta_ij) for given field
 
             tensor1 = dict()
             S_R_R_inv = 0
@@ -156,8 +153,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 6:
-            # Calculate tensor Delta^2(R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
-
+            # Calculate tensor Delta^2/S_mod^2 (R_ikS_klR_lm_Rmj - R_ikR_klS_lmR_mj) for given field
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
@@ -174,7 +170,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 7:
-            # Calculate tensor Delta^2(S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
+            # Calculate tensor Delta^2/S_mod^2 (S_ikR_klS_lm_Smj - S_ikS_klR_lmS_mj)  for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -192,7 +188,7 @@ class NonlinearModel(object):
             return tensor1
 
         elif number == 8:
-            # Calculate tensor Delta^2(R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
+            # Calculate tensor Delta^2/S_mod^2 (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
 
             tensor1 = dict()
             S2_R2_inv = 0
@@ -211,12 +207,14 @@ class NonlinearModel(object):
                                 tensor1[i + j] += data.R[i + k] * data.R[k + l] * data.S[l + m] * data.S[m + j]
                                 tensor2 += data.S[i + k] * data.S[k + l] * data.R[l + m] * data.R[m + j]
                     tensor1[i + j] += tensor2
+                    if i == j:
+                        tensor1[i + j] -= 2/3*S2_R2_inv
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
             return tensor1
 
         elif number == 9:
-            # Calculate tensor Delta^2(RS^2R^2 - R^2S^2R) for given field
+            # Calculate tensor Delta^2/S_mod^3 (RS^2R^2 - R^2S^2R) for given field
 
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
@@ -263,14 +261,14 @@ class NonlinearModel(object):
             tau[i] = C[0] * self.Tensor['0'][i]
         return tau
 
-    def Reynolds_stresses_from_C_Nonlin(self, C, dist_func):
+    def Reynolds_stresses_from_C_Nonlin_param1(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.
         :param C: list of constant parameters [C0, ..., C(n-1)]
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N.each)
-        C_last = utils.uniform_grid(self.C_limits(self.N.params - 1), self.N.each)
+        C_last = utils.uniform_grid(self.C_limits[self.N.params - 1], self.N.each)
         for i in self.elements_in_tensor:
             # pr.enable()
             tau = np.zeros(self.M ** 3)
@@ -283,7 +281,7 @@ class NonlinearModel(object):
 
         # Check for each parameter if it is accepted
         a = [0.0] * (self.N.params + 1)  # allocate memory
-        a[:(self.N.params - self.N.N.params_in_task)] = [c for c in C]
+        a[:(self.N.params - self.N.params_in_task)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
@@ -299,8 +297,9 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N.each ** 2)
-        C_last = utils.uniform_grid(self.N.params - 1)
-        C_before_last = utils.uniform_grid(self.N.params - 2)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
+        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N.each)
+        print(len(C_last), len(C_before_last))
 
         for i in self.elements_in_tensor:
             tau = np.zeros(self.M ** 3)
@@ -316,16 +315,82 @@ class NonlinearModel(object):
 
         # Check for each parameter if it is accepted
         a = [0.0] * (self.N.params + 1)  # allocate memory
-        a[:(self.N.params - 2)] = [c for c in C]
-        result = []
+        a[: -3] = [c for c in C]
+        result = [0.0]*self.N.each
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
                 a[-3] = C_before_last[ind // self.N.each]
                 a[-2] = C_last[ind % self.N.each]
                 a[-1] = distance
-                result.append(a[:])
+                result[ind] = a[:]
         return result
 
+    def Reynolds_stresses_from_C_calibration1(self, C, dist_func):
+        """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.
+        :param C: list of constant parameters [C0, ..., C(n-1)]
+        :param dist_func: function used to calculate statistical distance
+        :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
+        """
+        dist = np.zeros(self.N.each)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
+        for i in self.elements_in_tensor:
+            tau = np.zeros(self.M ** 3)
+            for j in range(self.N.params - self.N.params_in_task):
+                tau += C[j] * self.Tensor[str(j)][i].flatten()
+            tau = np.outer(np.ones(self.N.each), tau) + \
+                  np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
+            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain, N_each=self.N.each)
+            dist += dist_func(pdf_modeled=pdf, key=i)
+
+        # Check for each parameter if it is accepted
+        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a[:-self.N.params_in_task] = [c for c in C]
+        result = []
+        for ind, distance in enumerate(dist):
+            a[-2] = C_last[ind]
+            a[-1] = distance
+            result.append(a[:])
+        return result
+
+
+    def Reynolds_stresses_from_C_calibration2(self, C, dist_func):
+        """ Calculate Reynolds stresses using eddy-viscosity model with 2 parameters in task.
+        :param C: list of constant parameters [C0, ..., C(n-2)]
+        :param dist_func: function used to calculate statistical distance
+        :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
+        """
+        dist = np.zeros(self.N.each ** 2)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
+        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N.each)
+
+        for i in self.elements_in_tensor:
+            tau = np.zeros(self.M ** 3)
+            for j in range(self.N.params - self.N.params_in_task):
+                tau += C[j] * self.Tensor[str(j)][i].flatten()
+            for ind, c1 in enumerate(C_before_last):
+                tau_tmp = tau.copy()
+                tau_tmp += c1 * self.Tensor[str(self.N.params - 2)][i].flatten()
+                tau_tmp = np.tile(tau_tmp, (self.N.each, 1)) + \
+                          np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
+                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain, N_each=self.N.each)
+                dist[ind * self.N.each:(ind + 1) * self.N.each] += dist_func(pdf_modeled=pdf, key=i)
+
+        # result = np.empty((self.N.each**2, self.N.params + 1))
+        # result[:, :-3] = np.tile(C, (self.N.each**2, 1))
+        # result[:, -3] = np.repeat(C_before_last, self.N.each)
+        # result[:, -2] = np.tile(C_last, self.N.each)
+        # result[:, -1] = dist
+        # result = result.tolist()
+
+        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a[: -3] = [c for c in C]
+        result = [0.0] * self.N.each**2
+        for ind, distance in enumerate(dist):
+            a[-3] = C_before_last[ind // self.N.each]
+            a[-2] = C_last[ind % self.N.each]
+            a[-1] = distance
+            result[ind] = a[:]
+        return result
 
 ####################################################################################################################
 # Reynolds_stresses_from_C

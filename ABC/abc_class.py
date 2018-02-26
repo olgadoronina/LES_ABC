@@ -12,9 +12,8 @@ class ABC(object):
 
     def __init__(self, N, C_limits, eps):
 
-        logging.info('ABC algorithm')
         self.N = N
-        self.N_total = N.each ** N.params
+        # self.N_total = N.each ** N.params
         self.M = N.training
         self.C_limits = C_limits
         self.eps = eps
@@ -22,15 +21,22 @@ class ABC(object):
         if params.PMC:
             self.work_func = work_function_PMC
             self.main_loop = self.main_loop_PMC
-        elif params.MCMC == 1:
+        elif params.MCMC == 1:  # MCMC
+            logging.info('ABC algorithm: MCMC')
             self.C_array = self.form_C_array_initial_for_MCMC()
             self.main_loop = self.main_loop_MCMC
             self.work_func = work_function_MCMC
-        elif params.MCMC == 2:
+        elif params.MCMC == 2:  # IMCMC
+            logging.info('ABC algorithm: IMCMC')
+            self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
-            self.work_func = work_function_IMCMC
+            self.work_func = work_function_MCMC
+            self.calibration = calibration_function_single_value
+            if self.N.params_in_task > 0:
+                self.calibration = calibration_function_multiple_values
 
-        else:
+        else:                   # Uniform
+            logging.info('ABC algorithm: Uniform grid sampling')
             self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_uniform
             if N.params == 1 or N.params_in_task == 0:
@@ -41,25 +47,14 @@ class ABC(object):
     def form_C_array_initial_for_MCMC(self):
 
         C_array = []
-        for j in range(self.N.proc):
-            print('N_proc', j )
-            while len(C_array) <= j:
-                C = []
-                for i in range(self.N.params):
-                    C.append(rand.uniform(self.C_limits[i][0], self.C_limits[i][1]))
-                C[0] = -2 * C[0] ** 2
-                # Generate data D
-                print('C_initial', C)
-                tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-                # Calculate distance rho(pdf(D), pdf(D'))
-                dist = 0
-                for key in g.TEST_Model.elements_in_tensor:
-                    pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-                    d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
-                    dist += d
-                print(dist)
-                if dist <= g.eps:
-                    C_array.append(C)
+
+        while len(C_array) <= self.N.proc:
+            C = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+            C_start = work_function_single_value(list(C))
+            if C_start:
+                C_array.append(C_start[:-1])
+                logging.info('C_start = {}'.format(C_start[:-1]))
+
         return C_array
 
     # def form_C_array_random(self):
@@ -88,13 +83,15 @@ class ABC(object):
             for i in C1:
                 C_array.append([i])
         else:
-            C = np.ndarray((self.N.params, self.N.each))
-            for i in range(self.N.params):
+            C = np.ndarray((self.N.params-self.N.params_in_task, self.N.each))
+            for i in range(self.N.params-self.N.params_in_task):
                 C[i, :] = utils.uniform_grid(self.C_limits[i], self.N.each)
             C[0] = -2 * C[0] ** 2
             permutation = itertools.product(*C)
             C_array = list(map(list, permutation))
+        logging.debug('Form C_array manually: {} samples\n'.format(len(C_array)))
         return C_array
+
 
     def main_loop_PMC(self):
         start = time()
@@ -108,20 +105,52 @@ class ABC(object):
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
 
     def main_loop_IMCMC(self):
-        start = time()
-        result = self.work_func()
-        end = time()
-        utils.timer(start, end, 'Time ')
-        g.accepted = np.array([C[:self.N.params] for C in result if C])
-        g.dist = np.array([C[-1] for C in result if C])
-        g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
-        print(g.accepted[:, 0])
-        logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
+
+        # Calibration step
+        x = 0.10
+        logging.info('Calibration step with {} samples'.format(len(self.C_array)))
+        logging.info('x = {}'.format(x))
+        start_calibration = time()
+        S_init = []
+        if g.par_process:
+            g.par_process.run(func=self.calibration, tasks=self.C_array)
+            S_init = g.par_process.get_results()
+        else:
+            from tqdm import tqdm
+            with tqdm(total=self.N.calibration) as pbar:
+                for C in self.C_array:
+                    S_init.append(self.calibration(C))
+                    pbar.update()
+            pbar.close()
+        end_calibration = time()
+        utils.timer(start_calibration, end_calibration, 'Time of calibration step')
+
+        if self.N.params_in_task > 0:
+            S_init = [chunk[:] for item in S_init for chunk in item]
+
+        S_init.sort(key=lambda x: x[-1])
+        S_init = np.array(S_init)
+
+        g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
+        logging.info('eps after calibration step = {}'.format(g.eps))
+        S_init = S_init[np.where(S_init[:, -1] < g.eps)]
+        # result = np.array(S_init[:int(x*n)])
+        g.std = np.std(S_init[:, :-1], axis=0)
+        logging.info('std for each parameter after calibration step: {}'.format(g.std))
+        # Randomly choose starting points for Markov chains
+        C_start = (S_init[np.random.choice(S_init.shape[0], self.N.proc, replace=False), :-1])
+        np.set_printoptions(precision=3)
+        logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
+        self.C_array = C_start.tolist()
+        np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:,-1])
+        logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
+        ####################################################################################################################
+        # Markov chains
+        self.main_loop_MCMC()
 
     def main_loop_MCMC(self):
         start = time()
         if g.par_process:
-            print('n proc = {}'.format(self.N.proc))
             g.par_process.run(func=self.work_func, tasks=self.C_array)
             result = g.par_process.get_results()
             end = time()
@@ -181,7 +210,7 @@ def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     log_fill = np.empty_like(pdf_modeled)
     log_fill.fill(g.TINY_log)
     log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
-    dist= np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
+    dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
     # dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])), axis=axis)
 
     return dist
@@ -251,6 +280,26 @@ def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
+def calibration_function_single_value(C):
+    """ Calibration function for IMCMC algorithm
+        Accept all sampled values.
+    :param C: list of sampled parameters
+    :return:  list[bool, Cs, dist], where bool=True, if values are accepted
+    """
+    tau = g.TEST_Model.Reynolds_stresses_from_C(C)
+    dist = 0
+    for key in g.TEST_Model.elements_in_tensor:
+        pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
+        d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
+        dist += d
+    result = C[:]
+    result.append(dist)
+    return result
+
+
+def calibration_function_multiple_values(C):
+    return g.TEST_Model.Reynolds_stresses_from_C_calibration2(C, distance_between_pdf_KL)
+
 def work_function_single_value(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
     :param C: list of sampled parameters
@@ -279,13 +328,12 @@ def work_function_multiple_values(C):
 
 def work_function_MCMC(C_init):
 
-    N_params = len(C_init)
-    print('N_params', N_params)
-    N = 2*int(1e5/params.N_proc)
-    var = np.empty(N_params)
-    var[0] = (-2*params.C_limits[0][0]**2 - (-2*params.C_limits[0][1]**2)) / 20
-    var[1] = (params.C_limits[1][1]-params.C_limits[1][0]) / 10
-    var[2] = (params.C_limits[2][1] - params.C_limits[2][0]) / 30
+    N_params = g.N.params
+    N = g.N.chain
+    std = g.std
+
+    C_limits = g.C_limits
+
     result = []
 
     ####################################################################################################################
@@ -310,117 +358,30 @@ def work_function_MCMC(C_init):
         a.append(dist)
         result.append(a)
         pbar.update()
-
+    ####################################################################################################################
         # Markov Chain
         counter = 0
         for i in range(1, N):
-            flag = 0
+            while True:
+                while True:
+                    c = np.random.normal(result[-1][:-1], std)
+                    if c[0] < 0:
+                    # if False in np.less(C_limits[:, 0], c) or False in np.less(c, C_limits[:, 1]):
+                        break
+                # c = np.random.normal(result[-1][:-1], std)
+                dist = calc_dist(c)
 
-            while flag == 0:
-                C = []
-                for j in range(N_params):
-                    c_in_range = 0
-                    while not c_in_range:
-                        c = rand.gauss(result[-1][j], var[j])
-                        if (j == 0 and (params.C_limits[0][0] < np.sqrt(-c/2) < params.C_limits[0][1])) \
-                                or (params.C_limits[j][0] < c < params.C_limits[j][1]):
-                            C.append(c)
-                            c_in_range = 1
-                dist = calc_dist(C)
-                counter += 1
                 if dist <= g.eps:
-                    a = C[:]
+                    a = list(c[:])
                     a.append(dist)
                     result.append(a)
-                    flag = 1
                     pbar.update()
+                    break
         pbar.close()
     logging.debug('Number of model and distance evaluations: {}'.format(counter))
     return result
-
-def work_function_IMCMC():
-
-    N_params = 3
-    C_limits = params.C_limits
-    print('N_params', N_params)
-
-    N = int(1e5)
-    n = 10000
-    x = 0.10
-
-    result = []
-
-    ####################################################################################################################
-    def calc_dist(C):
-        # Generate data D
-        tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-        # Calculate distance rho(pdf(D), pdf(D'))
-        dist = 0
-        for key in g.TEST_Model.elements_in_tensor:
-            pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-            d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
-            dist += d
-        return dist
-    ####################################################################################################################
-    # first iteration
-    S_init = []
-    from tqdm import tqdm
-    with tqdm(total=n) as pbar:
-        for i in range(n):
-            C = []
-            for i in range(N_params):
-                C.append(rand.uniform(C_limits[i][0], C_limits[i][1]))
-            C[0] = -2 * C[0] ** 2
-            dist = calc_dist(C)
-            a = C[:]
-            a.append(dist)
-            S_init.append(a)
-            pbar.update()
-        pbar.close()
-
-    S_init.sort(key=lambda x: x[-1])
-    S_init = np.array(S_init)
-    eps = np.percentile(S_init, q=int(x*100), axis=0)[-1]
-    print('eps = ', eps)
-    S_init = S_init[np.where(S_init[:, -1] < eps)]
-    # result = np.array(S_init[:int(x*n)])
-    std = np.empty(N_params)
-    c_start = []
-    for i in range(N_params):
-        std[i] = np.std(S_init[:, i])
-        c_start.append(np.random.choice(S_init[:, i]))
-    print(np.sqrt(-c_start[0]/2))
-    print(std)
-    ####################################################################################################################
-    # Markov Chain
-    with tqdm(total=N) as pbar:
-        counter = 0
-        for i in range(1, N):
-            flag = 0
-            while flag == 0:
-                C = []
-                for j in range(N_params):
-                    c_in_range = 0
-                    while not c_in_range:
-                        c = rand.gauss(c_start[j], std[j])
-                        if (j == 0 and (params.C_limits[0][0] < np.sqrt(-c/2) < params.C_limits[0][1])) \
-                                or (params.C_limits[j][0] < c < params.C_limits[j][1]):
-                            C.append(c)
-                            c_in_range = 1
-
-                dist = calc_dist(C)
-                counter += 1
-                if dist <= eps:
-                    a = C[:]
-                    a.append(dist)
-                    result.append(a)
-                    flag = 1
-                    pbar.update()
-        pbar.close()
-    logging.debug('Number of model and distance evaluations: {}'.format(counter))
-    return result
-
-
+#
+#
 ############
 #
 ############

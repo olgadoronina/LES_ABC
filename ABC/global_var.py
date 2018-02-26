@@ -13,11 +13,14 @@ TEST_sp = None
 TEST_Model = None
 
 eps = None
+std = None
+C_limits = None
 par_process = None
 plot = None
 
 bins = None
 domain = None
+N = None
 
 accepted = None
 dist = None

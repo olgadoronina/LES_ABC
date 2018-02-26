@@ -47,7 +47,8 @@ class Plot(object):
             im = ax.imshow(Arrays[0].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest")
             plt.colorbar(im, fraction=0.05, pad=0.04)
         if name:
-            pickle.dump(ax, open(self.folder + name, 'wb'))
+            # pickle.dump(ax, open(self.folder + name, 'wb'))
+            fig.savefig(self.folder + name)
         del ax, im, fig, cmap
         gc.collect()
 
@@ -88,54 +89,71 @@ class Plot(object):
                          self.map_bounds, name='compare_velocity',
                          titles=[r'$v$', r'$\widetilde{v}$'])
 
-    def vel_fields(self, scale='LES'):
+    def vel_fields(self, scale='LES', dns=None):
 
         if scale == 'LES':
+            if dns:
+                titles = [r'$u$', r'$v$', r'$w$']
+            else:
+                titles = [r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$']
             self.imagesc([g.LES.field['u'][:, :, 127], g.LES.field['v'][:, :, 127], g.LES.field['w'][:, :, 127]],
-                         self.map_bounds, name='LES_velocities',
-                         titles=[r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$'])
+                         self.map_bounds, name='LES_velocities', titles=titles)
         elif scale == 'TEST':
+            if dns:
+                titles = [r'$\widetilde{u}$', r'$\widetilde{v}$', r'$\widetilde{w}$']
+            else:
+                titles = [r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$', r'$\widehat{\widetilde{w}}$']
             self.imagesc([g.TEST.field['u'][:, :, 127], g.TEST.field['v'][:, :, 127], g.TEST.field['w'][:, :, 127]],
-                         self.map_bounds, name='TEST_velocities',
-                         titles=[r'$\widehat{\widetilde{u}}$', r'$\widehat{\widetilde{v}}$',
-                                 r'$\widehat{\widetilde{w}}$'])
+                         self.map_bounds, name='TEST_velocities', titles=titles)
 
-    def sigma_field(self, scale='LES'):
+    def sigma_field(self, scale='LES', dns=None):
 
         map_bounds = np.linspace(-0.2, 0.2, 9)
         if scale == 'LES':
-            tau = g.LES.tau_true
-            name = 'sigma_LES'
-            titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
-
+            if not dns:
+                tau = g.LES.tau_true
+                name = 'sigma_LES'
+                titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+                self.imagesc([tau['uu'][:, :, 127], tau['uv'][:, :, 127], tau['uw'][:, :, 127]],
+                            map_bounds, name=name, titles=titles)
         elif scale == 'TEST':
             tau = g.TEST.tau_true
             name = 'sigma_TEST'
-            titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
+            if dns:
+                titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+            else:
+                titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
 
-        self.imagesc([tau['uu'][:, :, 127], tau['uv'][:, :, 127], tau['uw'][:, :, 127]],
-                     map_bounds, name=name, titles=titles)
+            self.imagesc([tau['uu'][:, :, 127], tau['uv'][:, :, 127], tau['uw'][:, :, 127]],
+                        map_bounds, name=name, titles=titles)
 
-    def sigma_pdf(self):
+    def sigma_pdf(self, dns=None):
 
         name = 'sigma_pdf'
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
-        titles = [r'$\sigma_{11}/\widehat{\sigma}_{11}$',
-                  r'$\sigma_{12}/\widehat{\sigma}_{12}$',
-                  r'$\sigma_{13}/\widehat{\sigma}_{13}$']
-        tau = g.LES.tau_true
-        for ind, i in enumerate(['uu', 'uv', 'uw']):
-            data = tau[i].flatten()
-            x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
-            axarr[ind].plot(x, y, 'r', linewidth=2, label='LES')
-            axarr[ind].set_xlabel(titles[ind])
-            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-            # axarr[ind].yaxis.set_major_locator(ticker.MultipleLocator())
+        if dns:
+            titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+            labels = ['DNS', 'LES']
+        else:
+            titles = [r'$\sigma_{11},\ \widehat{\sigma}_{11}$',
+                    r'$\sigma_{12},\ \widehat{\sigma}_{12}$',
+                    r'$\sigma_{13},\ \widehat{\sigma}_{13}$']
+            labels = ['LES', 'test']
+        if not dns:
+            tau = g.LES.tau_true
+            for ind, i in enumerate(['uu', 'uv', 'uw']):
+                data = tau[i].flatten()
+                x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
+                axarr[ind].plot(x, y, 'r', linewidth=2, label=labels[0])
+                axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                # axarr[ind].yaxis.set_major_locator(ticker.MultipleLocator())
+
         tau = g.TEST.tau_true
         for ind, i in enumerate(['uu', 'uv', 'uw']):
             data = tau[i].flatten()
             x, y = utils.pdf_from_array_with_x(data, g.bins, g.domain)
-            axarr[ind].plot(x, y, 'g', linewidth=2, label='test')
+            axarr[ind].plot(x, y, 'g', linewidth=2, label=labels[1])
+            axarr[ind].set_xlabel(titles[ind])
 
         axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
         axarr[0].set_ylabel('pdf')

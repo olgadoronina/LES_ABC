@@ -6,7 +6,7 @@ import numpy as np
 # prof = cProfile.Profile()
 ########################################################################################################################
 # Path to data
-LOAD = 0          # Load filtered data or filter from DNS
+LOAD = 1          # Load filtered data or filter from DNS
 DATA = 'JHU_data'
 data_folder = './data_input/JohnHopkins/'
 # DATA = 'CU_data'
@@ -14,7 +14,7 @@ data_folder = './data_input/JohnHopkins/'
 ########################################################################################################################
 # Plotting
 plot_folder = './plots/'
-PLOT_INIT_INFO = 1
+PLOT_INIT_INFO = 0
 ########################################################################################################################
 # Initial case parameters
 HOMOGENEOUS = 1    # Use symmetry of tau tensor
@@ -30,17 +30,19 @@ TEST_scale = None
 # abs algorithm
 bins = 100  # for pdf
 domain = [-1.1, 1.1]  # for pdf comparison
-num_bin_joint = 20
+num_bin_joint = 10
 N_each = 100
-N_params_in_task = 0  # only 0, 1 or 2
+N_params_in_task = 2  # only 0, 1 or 2
 M = 64          # number of training points
-ORDER = 1      # order of eddy-viscosity model
-N_params_force = 0
+ORDER = 3       # order of eddy-viscosity model
+N_params_force = 6
 eps = 25    # acceptance tolerance
 ########################################################################################################################
-MCMC = 0
+MCMC = 2    # 1 = MCMC; 2 = IMCMC
+N_total = 200000
+N_calibration = 10**6  # recommended 10^p, where p is number of params
 PMC = 0
-########################################################################################################################
+#######################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
 # C_limits[0] = [0.0, 0.4]
@@ -54,17 +56,28 @@ C_limits = np.zeros((10, 2))
 # C_limits[5] = [-0.3, 0.3]
 
 # best
-C_limits[0] = [0.15, 0.30]
-# C_limits[0] = [0.0, 0.25]
+# C_limits[0] = [0.0, 0.30]
+C_limits[0] = [0.0, 0.25]
 C_limits[1] = [-0.15, 0.15]
 C_limits[2] = [-0.15, 0.15]
 C_limits[3] = [-0.15, 0.15]
-C_limits[4] = [-0.3, 0.3]
-C_limits[5] = [-0.15, 0.15]
+C_limits[4] = [-0.8, 0.5]
+C_limits[5] = [-0.3, 0.3]
+
+
+################################
+var = np.empty(6)
+var[0] = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2)) / 20
+var[1] = (C_limits[1][1] - C_limits[1][0]) / 20
+var[2] = (C_limits[2][1] - C_limits[2][0]) / 20
+var[3] = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2)) / 20
+var[4] = (C_limits[1][1] - C_limits[1][0]) / 20
+var[5] = (C_limits[2][1] - C_limits[2][0]) / 20
+
 ########################################################################################################################
 # Parallel regime parameters
-PROGRESSBAR = 0     # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 1          # Number of processes
+PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+N_proc = 6          # Number of processes
 ########################################################################################################################
 
 

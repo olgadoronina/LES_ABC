@@ -6,33 +6,45 @@ from time import sleep
 class Parallel(object):
 
     def __init__(self, N_total, progressbar, processes=mp.cpu_count()):
-        self.pool = mp.Pool(processes=processes)
+        self.proc = processes
         self.N = N_total
         self.results = None
         self.bar = progressbar
-        logging.info('\n' + str(processes) + " workers")
+        logging.info('Parallel regime: {} workers'.format(processes))
 
     def run(self, func, tasks):
+
+        pool = mp.Pool(processes=self.proc)
         if self.bar == 1:
+            logging.debug('Progress bar with tqdm package')
             from tqdm import tqdm
             self.results = []
             with tqdm(total=len(tasks)) as pbar:
-                for i, res in tqdm(enumerate(self.pool.imap_unordered(func, tasks)), desc='ABC algorithm'):
+                for i, res in tqdm(enumerate(pool.imap_unordered(func, tasks)), desc='ABC algorithm'):
                     self.results.append(res)
                     pbar.update()
             pbar.close()
         elif self.bar == 2:
+            logging.debug('Printing progress')
             self.results = self.pool.map_async(func, tasks)
             while not self.results.ready():
                 done = len(tasks) - self.results._number_left*self.results._chunksize
                 logging.info("Done {}% ({}/{})".format(int(done/len(tasks)*100), done, len(tasks)))
                 sleep(20)
-            self.pool.close()
-            self.pool.join()
+            pool.close()
+            pool.join()
         else:
+            logging.debug('No progress bar')
             self.results = self.pool.map(func, tasks)
-            self.pool.close()
-        self.pool.terminate()
+            pool.close()
+        pool.terminate()
+
+    # def run_processes(self, func, tasks):
+    #     jobs = []
+    #     for C in tasks:
+    #         p = mp.Process(target=func, args=(C,))
+    #         jobs.append(p)
+    #         p.start()
 
     def get_results(self):
         if self.bar == 1:

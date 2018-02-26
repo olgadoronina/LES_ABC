@@ -1,5 +1,6 @@
 import logging
 import sys
+import utils
 
 import global_var as g
 import init
@@ -7,22 +8,6 @@ import numpy as np
 
 
 def main():
-
-
-    #
-    # # Plot simple sinus function
-    # fig_handle = plt.figure()
-    # x = np.linspace(0, 2 * np.pi)
-    # y = np.sin(x)
-    # plt.plot(x, y)
-    #
-    # # Save figure handle to disk
-    # pl.dump(fig_handle, open('sinus.pickle', 'wb'))
-    # Load figure from disk and display
-    # fig_handle = pl.load(open('sinus.pickle', 'rb'))
-    # plt.show()
-
-
 
     logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
     # logging.basicConfig(filename='ABC_log.log', filemode='w',
@@ -43,27 +28,6 @@ def main():
     initialize.model_on_sparse_TEST_data()
     initialize.parallel()
 
-    # if g.plot.plot_info:
-    #     logging.info('Plot initial data info')
-    #     # g.plot.vel_fields(scale='LES')
-    #     # g.plot.vel_fields(scale='TEST')
-    #     # g.plot.sigma_field(scale='LES')
-    #     # g.plot.sigma_field(scale='TEST')
-    #     # g.plot.sigma_pdf()
-    #     g.plot.S_pdf()
-    #     g.plot.A_compare()
-    #     g.plot.spectra()
-
-    ####################################################################################################################
-    # logging.info('Strain tensors')
-    # # g.HIT.strain_tensor()
-    # g.LES.strain_tensor()
-    # g.TEST.strain_tensor()
-    # g.LES_sp.A = utils.sparse_dict(g.LES.A, M)
-    # g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
-    # plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
-    ####################################################################################################################
-
     ####################################################################################################################
     # ABC algorithm
     ####################################################################################################################
@@ -73,29 +37,18 @@ def main():
     np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
     logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
-    # ########################
-
-    # g.accepted = np.load('./plots/accepted.npz')['C']
-    # g.dist = np.load('./plots/accepted.npz')['dist']
-    # # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
-    # # new_eps = 18
-    # # g.accepted = g.accepted[g.dist < new_eps]
-    # # g.dist = g.dist[g.dist < new_eps]
-    # logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
-    # # #########################
-    eps = g.eps
-
-    # eps = new_eps
-    initialize = init.InitPostProcess(eps)
+    initialize = init.InitPostProcess(g.eps, g.C_limits)
     postproc = initialize.postprocessing()
     postproc.calc_final_C()
     postproc.plot_marginal_pdf()
-    # postproc.plot_eps()
-    postproc.plot_scatter()
-    # postproc.scatter_animation()
+    # # postproc.plot_eps()
+    # # postproc.plot_scatter()
+    # # postproc.scatter_animation()
     postproc.plot_compare_tau('TEST_M')
     postproc.plot_compare_tau('TEST')
-    postproc.plot_compare_tau('LES')
+
+
+    # postproc.plot_compare_tau('LES')
 
 
 if __name__ == '__main__':
