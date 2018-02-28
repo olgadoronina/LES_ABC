@@ -34,16 +34,16 @@ num_bin_joint = 10
 N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2
 M = 64          # number of training points
-ORDER = 3       # order of eddy-viscosity model
-N_params_force = 6
+ORDER = 5       # order of eddy-viscosity model
+N_params_force = 10
 eps = 25    # acceptance tolerance
 ########################################################################################################################
 sweep = 1  # parameter sweep study
-n_sweeps = 16
+n_sweeps = 16*5
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
 N_total = 200000
-N_calibration = 100**6  # recommended 10^p, where p is number of params
+N_calibration = 100**10  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
@@ -66,6 +66,10 @@ C_limits[2] = [-0.15, 0.15]
 C_limits[3] = [-0.15, 0.15]
 C_limits[4] = [-0.8, 0.5]
 C_limits[5] = [-0.3, 0.3]
+C_limits[6] = [-1, 1]
+C_limits[7] = [-1, 1]
+C_limits[8] = [-1, 1]
+C_limits[9] = [-1, 1]
 
 
 ################################

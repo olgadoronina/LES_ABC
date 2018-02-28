@@ -7,10 +7,11 @@ import global_var as g
 import params
 import numpy as np
 import utils
+import sweep_params
 
 class ABC(object):
 
-    def __init__(self, N, C_limits, eps):
+    def __init__(self, N, C_limits, eps, C_array=None):
 
         self.N = N
         # self.N_total = N.each ** N.params
@@ -29,7 +30,7 @@ class ABC(object):
         elif params.MCMC == 2:  # IMCMC
             logging.info('ABC algorithm: IMCMC')
             if params.sweep:
-                self.C_array = self.form_C_array_parameter_sweep()
+                self.C_array = sweep_params.random_sweep(self.N)
             else:
                 self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
@@ -74,35 +75,6 @@ class ABC(object):
     #
     #     return C_array
 
-
-    def form_C_array_parameter_sweep(self):
-        """ Create list of lists of N parameters.
-            :return: list of lists of sampled parameters
-            """
-        C_array = []
-        h_array = []
-        for i in range(params.n_sweeps):
-            # 1. Draw C uniformly from [-1; 1]^m
-            x = np.random.uniform(-1, 1, size=self.N.params)
-            # 2. pick a random direction
-            u = np.random.normal(0, 1, size=self.N.params)
-            u = u/np.linalg.norm(u)     # unit vector
-            # 3. Compute h_min and h_max
-            ind_pos = np.where(u >= 0)
-            ind_neg = np.where(u < 0)
-            h_min = np.max(np.append((1-x[ind_neg])/u[ind_neg], (-1-x[ind_pos])/u[ind_pos]))
-            h_max = np.min(np.append((1-x[ind_pos])/u[ind_pos], (-1-x[ind_neg])/u[ind_neg]))
-            delta_h = (h_max - h_min) / self.N.each
-            # 4. Compute parameters points
-            for j in range(self.N.each):
-                h = h_min + j * delta_h
-                h_array.append(h)
-                C_array.append(list(utils.unnormalize_params(x + h*u)))
-
-        np.savez('./plots/sweep_h.npz', h=h_array[:])
-        logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_h.npz')
-
-        return list(C_array)
 
     def form_C_array_manual(self):
         """ Create list of lists of N parameters manually(make grid) uniformly distributed on given interval
