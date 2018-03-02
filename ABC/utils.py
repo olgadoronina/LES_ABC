@@ -11,8 +11,6 @@ def timer(start, end, label):
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
 
-
-
 def pdf_from_array_with_x(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     x = (edges[1:] + edges[:-1]) / 2

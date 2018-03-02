@@ -18,10 +18,7 @@ class Data(object):
         self.A = None
         if info:
             self.A = self.field_gradient()
-        if homogeneous:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
-        else:
-            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
+
 
 
     def field_gradient(self):
@@ -91,7 +88,6 @@ class DataSparse(object):
         logging.info('Sparse data')
         self.M = n_training
         self.delta = data.delta
-        self.elements_in_tensor = data.elements_in_tensor
 
         # Sparse data
         self.field = self.sparse_dict(data.field)

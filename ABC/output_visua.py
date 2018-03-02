@@ -10,15 +10,16 @@ import init
 import numpy as np
 
 
-sweep = 1
+sweep = 0
+calibration = 0
 
-
-filename = './plots/accepted.npz'
-# filename = './plots/calibration.npz'
-if sweep:
+if calibration:
+    filename = './plots/calibration.npz'
+elif sweep:
     filename = './plots/sweep_params.npz'
     filename_h = './plots/sweep_h.npz'
-
+else:
+    filename = './plots/accepted.npz'
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 
@@ -68,8 +69,9 @@ g.accepted = np.load(filename)['C']
 g.dist = np.load(filename)['dist']
 
 
+if calibration:
+    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
 
-# g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
 # new_eps = 25
 # g.accepted = g.accepted[g.dist < new_eps]
 # g.dist = g.dist[g.dist < new_eps]
@@ -83,7 +85,11 @@ eps = g.eps
 # C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
 # print(C_limits[:3])
 # eps = new_eps
-initialize = init.InitPostProcess(eps, params.C_limits)
+C_limits = np.zeros((10, 2))
+C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+initialize = init.InitPostProcess(eps, C_limits)
 postproc = initialize.postprocessing()
 if sweep:
     n = params.n_sweeps

@@ -11,13 +11,17 @@ import utils
 
 
 class NonlinearModel(object):
-    def __init__(self, data, N, C_limits, MCMC):
+    def __init__(self, data, homogeneous, N, C_limits, MCMC):
 
         self.M = data.field['uu'].shape[0]
-        self.elements_in_tensor = data.elements_in_tensor
         self.N = N
         self.C_limits = C_limits
         self.S_mod = self.calc_strain_mod(data)
+        if homogeneous:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
+        else:
+            self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
+
         self.Tensor = dict()
         for i in range(N.params):
             self.Tensor[str(i)] = self.calc_tensor(data, number=i)
@@ -33,6 +37,9 @@ class NonlinearModel(object):
             if N.params_in_task > 2 or N.params_in_task < 0:
                 logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
                     N.params_in_task))
+
+
+
         logging.info('Nonlinear model with {}'.format(self.Reynolds_stresses_from_C.__name__))
 
     def calc_strain_mod(self, data):

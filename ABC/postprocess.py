@@ -160,13 +160,13 @@ class PostprocessABC(object):
         # create pdfs
         if scale == 'LES':
             titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.LES, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.LES, 1, self.N, self.C_limits, MCMC)
         if scale == 'TEST_M':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.TEST_sp, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.TEST_sp, 1, self.N, self.C_limits, MCMC)
         if scale == 'TEST':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.TEST, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.TEST, 1, self.N, self.C_limits, MCMC)
 
         if C_final_joint:
             tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint)

@@ -34,9 +34,9 @@ def main():
     abc = initialize.ABC_algorithm()
     del initialize
     abc.main_loop()
-    # np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
-    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
-    #
+    np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
+    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+
     # initialize = init.InitPostProcess(g.eps, g.C_limits)
     # postproc = initialize.postprocessing()
     # postproc.calc_final_C()

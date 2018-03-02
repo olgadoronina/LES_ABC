@@ -29,10 +29,11 @@ class ABC(object):
             self.work_func = work_function_MCMC
         elif params.MCMC == 2:  # IMCMC
             logging.info('ABC algorithm: IMCMC')
-            if params.sweep:
-                self.C_array = sweep_params.random_sweep(self.N)
-            else:
-                self.C_array = self.form_C_array_manual()
+            if self.N.each > 0:
+                if params.sweep:
+                    self.C_array = sweep_params.random_sweep(self.N)
+                else:
+                    self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
             self.work_func = work_function_MCMC
             self.calibration = calibration_function_single_value
@@ -111,49 +112,61 @@ class ABC(object):
 
     def main_loop_IMCMC(self):
 
-        # Calibration step
-        x = 0.10
-        logging.info('Calibration step with {} samples'.format(len(self.C_array)))
-        logging.info('x = {}'.format(x))
-        start_calibration = time()
-        S_init = []
-        if g.par_process:
-            g.par_process.run(func=self.calibration, tasks=self.C_array)
-            S_init = g.par_process.get_results()
+        if g.N.each > 0:    # Run calibration step
+            logging.info('Calibration step with {} samples'.format(len(self.C_array)))
+
+            start_calibration = time()
+            S_init = []
+            if g.par_process:
+                g.par_process.run(func=self.calibration, tasks=self.C_array)
+                S_init = g.par_process.get_results()
+            else:
+                from tqdm import tqdm
+                with tqdm(total=self.N.calibration) as pbar:
+                    for C in self.C_array:
+                        S_init.append(self.calibration(C))
+                        pbar.update()
+                pbar.close()
+            end_calibration = time()
+            utils.timer(start_calibration, end_calibration, 'Time of calibration step')
+
+            if self.N.params_in_task > 0:
+                S_init = [chunk[:] for item in S_init for chunk in item]
+
+            if params.sweep:
+                np.savez('./plots/sweep_params.npz', C=np.array(S_init)[:, :-1], dist=np.array(S_init)[:, -1])
+                logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
+                exit()
+            else:
+                np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
+                logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
+
         else:
-            from tqdm import tqdm
-            with tqdm(total=self.N.calibration) as pbar:
-                for C in self.C_array:
-                    S_init.append(self.calibration(C))
-                    pbar.update()
-            pbar.close()
-        end_calibration = time()
-        utils.timer(start_calibration, end_calibration, 'Time of calibration step')
+            S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
 
-        if self.N.params_in_task > 0:
-            S_init = [chunk[:] for item in S_init for chunk in item]
-
-        if params.sweep:
-            S_init = np.array(S_init)
-            np.savez('./plots/sweep_params.npz', C=S_init[:,:-1], dist=S_init[:, -1])
-            logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
-            exit()
-
-        S_init.sort(key=lambda x: x[-1])
+        x = 0.1
+        phi = 1     # for range update
+        logging.info('x = {}'.format(x))
+        S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
-
         g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
         logging.info('eps after calibration step = {}'.format(g.eps))
+
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
         # result = np.array(S_init[:int(x*n)])
         g.std = np.std(S_init[:, :-1], axis=0)
-        logging.info('std for each parameter after calibration step: {}'.format(g.std))
+        logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
+        for i in range(g.N.params):
+            g.C_limits[i] = phi*[np.min(S_init[:, i]), np.max(S_init[:, i])]
+        logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
+
         # Randomly choose starting points for Markov chains
         C_start = (S_init[np.random.choice(S_init.shape[0], self.N.proc, replace=False), :-1])
         np.set_printoptions(precision=3)
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
-        np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:,-1])
+
+        np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
         logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
         ####################################################################################################################
         # Markov chains
@@ -173,7 +186,6 @@ class ABC(object):
             g.accepted = np.array([C[:self.N.params] for C in result if C])
             g.dist = np.array([C[-1] for C in result if C])
         utils.timer(start, end, 'Time ')
-
         g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
 
@@ -295,7 +307,7 @@ def calibration_function_single_value(C):
     """ Calibration function for IMCMC algorithm
         Accept all sampled values.
     :param C: list of sampled parameters
-    :return:  list[bool, Cs, dist], where bool=True, if values are accepted
+    :return:  list[Cs, dist]
     """
     tau = g.TEST_Model.Reynolds_stresses_from_C(C)
     dist = 0
@@ -339,12 +351,10 @@ def work_function_multiple_values(C):
 
 def work_function_MCMC(C_init):
 
-    N_params = g.N.params
     N = g.N.chain
-    std = g.std
-
     C_limits = g.C_limits
 
+    std = g.std
     result = []
 
     ####################################################################################################################
@@ -376,12 +386,12 @@ def work_function_MCMC(C_init):
             while True:
                 while True:
                     c = np.random.normal(result[-1][:-1], std)
-                    if c[0] < 0:
-                    # if False in np.less(C_limits[:, 0], c) or False in np.less(c, C_limits[:, 1]):
+                    # if c[0] < 0:
+                    if not (False in np.less(C_limits[:, 0], c) or False in np.less(c, C_limits[:, 1])):
                         break
                 # c = np.random.normal(result[-1][:-1], std)
                 dist = calc_dist(c)
-
+                counter += 1
                 if dist <= g.eps:
                     a = list(c[:])
                     a.append(dist)
@@ -389,10 +399,9 @@ def work_function_MCMC(C_init):
                     pbar.update()
                     break
         pbar.close()
-    logging.debug('Number of model and distance evaluations: {}'.format(counter))
+    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
     return result
-#
-#
+
 ############
 #
 ############

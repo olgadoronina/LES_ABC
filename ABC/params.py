@@ -11,39 +11,43 @@ DATA = 'JHU_data'
 data_folder = './data_input/JohnHopkins/'
 # DATA = 'CU_data'
 # data_folder = './data_input/HIT_DNS_N256/'
-########################################################################################################################
 # Plotting
 plot_folder = './plots/'
 PLOT_INIT_INFO = 0
+
 ########################################################################################################################
 # Initial case parameters
-HOMOGENEOUS = 1    # Use symmetry of tau tensor
 N_point = 256
 N_points = [N_point, N_point, N_point]      # number of points
-lx = [2 * pi, 2 * pi, 2 * pi]   # domain size
+lx = [2 * pi, 2 * pi, 2 * pi]               # domain size
 # Filter scales
 # LES_scale = 10
 # TEST_scale = 5
 LES_scale = 10
 TEST_scale = None
+M = 64                                      # number of training points (sparse data)
+########################################################################################################################
+# Model parameters
+HOMOGENEOUS = 1     # Use symmetry of tau tensor
+ORDER = 2           # order of eddy-viscosity model
+N_params_force = 3
+########################################################################################################################
+# Sampling
+N_each = 100
+N_params_in_task = 2  # only 0, 1 or 2
 ########################################################################################################################
 # abs algorithm
-bins = 100  # for pdf
+bins = 100  # for pdf comparison
 domain = [-1.1, 1.1]  # for pdf comparison
-num_bin_joint = 10
-N_each = 100
-N_params_in_task = 0  # only 0, 1 or 2
-M = 64          # number of training points
-ORDER = 5       # order of eddy-viscosity model
-N_params_force = 10
+num_bin_joint = 20
 eps = 25    # acceptance tolerance
 ########################################################################################################################
-sweep = 1  # parameter sweep study
+sweep = 0  # parameter sweep study
 n_sweeps = 16*5
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 200000
-N_calibration = 100**10  # recommended 10^p, where p is number of params
+N_total = 10000
+N_calibration = 60**3  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
@@ -60,11 +64,11 @@ C_limits = np.zeros((10, 2))
 
 # best
 # C_limits[0] = [0.0, 0.30]
-C_limits[0] = [0.0, 0.25]
-C_limits[1] = [-0.15, 0.15]
-C_limits[2] = [-0.15, 0.15]
-C_limits[3] = [-0.15, 0.15]
-C_limits[4] = [-0.8, 0.5]
+C_limits[0] = [0.0, 0.3]
+C_limits[1] = [-0.5, 0.5]
+C_limits[2] = [-0.2, 0.2]
+C_limits[3] = [-0.2, 0.2]
+C_limits[4] = [-1, 1]
 C_limits[5] = [-0.3, 0.3]
 C_limits[6] = [-1, 1]
 C_limits[7] = [-1, 1]

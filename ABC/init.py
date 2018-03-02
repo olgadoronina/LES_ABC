@@ -79,9 +79,12 @@ class Init(object):
             g.std = np.sqrt(params.var[:self.N.params])
             logging.info('Number of accepted samples per MCMC chain = {}\n'.format(self.N.chain))
         elif params.MCMC == 2:
-            logging.info('Number samples on calibration step = {}'.format(self.N.calibration))
-            logging.info('Number of samples in each dimension on calibration step = {}'.format(self.N.each))
-            logging.info('Number of parameters per task on calibration step = {}\n'.format(self.N.params_in_task))
+            if self.N.each > 0:
+                logging.info('Number samples on calibration step = {}'.format(self.N.calibration))
+                logging.info('Number of samples in each dimension on calibration step = {}'.format(self.N.each))
+                logging.info('Number of parameters per task on calibration step = {}\n'.format(self.N.params_in_task))
+            else:
+                logging.info('Download calibration data')
             logging.info('Number of accepted samples per MCMC chain = {}\n'.format(self.N.chain))
         else:
             logging.info('Number of samples per interval = {}'.format(self.N.each))
@@ -220,7 +223,7 @@ class Init(object):
         g.TEST_sp = data.DataSparse(g.TEST, params.M)
 
     def model_on_sparse_TEST_data(self):
-        g.TEST_Model = model.NonlinearModel(g.TEST_sp, self.N, self.C_limits, params.MCMC)
+        g.TEST_Model = model.NonlinearModel(g.TEST_sp, params.HOMOGENEOUS, self.N, self.C_limits, params.MCMC)
 
     def parallel(self):
         if self.N.proc > 1:
