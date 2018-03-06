@@ -29,25 +29,25 @@ M = 64                                      # number of training points (sparse 
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 2           # order of eddy-viscosity model
-N_params_force = 3
+ORDER = 3           # order of eddy-viscosity model
+N_params_force = 6
 ########################################################################################################################
 # Sampling
-N_each = 100
+N_each = 10
 N_params_in_task = 2  # only 0, 1 or 2
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
 domain = [-1.1, 1.1]  # for pdf comparison
-num_bin_joint = 20
+num_bin_joint = 10
 eps = 25    # acceptance tolerance
 ########################################################################################################################
 sweep = 0  # parameter sweep study
 n_sweeps = 16*5
 ########################################################################################################################
-MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 10000
-N_calibration = 60**3  # recommended 10^p, where p is number of params
+MCMC = 0    # 1 = MCMC; 2 = IMCMC
+N_total = 200000
+N_calibration = 10**6  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
@@ -69,7 +69,7 @@ C_limits[1] = [-0.5, 0.5]
 C_limits[2] = [-0.2, 0.2]
 C_limits[3] = [-0.2, 0.2]
 C_limits[4] = [-1, 1]
-C_limits[5] = [-0.3, 0.3]
+C_limits[5] = [-0.5, 0.5]
 C_limits[6] = [-1, 1]
 C_limits[7] = [-1, 1]
 C_limits[8] = [-1, 1]

@@ -166,11 +166,13 @@ class ABC(object):
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
 
+        S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
         logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
         ####################################################################################################################
         # Markov chains
         self.main_loop_MCMC()
+        # g.accepted = np.vstack((g.accepted, S_init))
 
     def main_loop_MCMC(self):
         start = time()
@@ -399,6 +401,7 @@ def work_function_MCMC(C_init):
                     pbar.update()
                     break
         pbar.close()
+    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
     return result
 
@@ -495,7 +498,7 @@ def work_function_PMC():
         W = W/np.sum(W)
 
         # new covariance
-        Cov = 2 * np.std(S[:,0]) * W
+        Cov = 2 * np.std(S[:, 0]) * W
         print(Cov)
         # set next step
         result.append(S)

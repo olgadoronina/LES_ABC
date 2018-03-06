@@ -12,6 +12,7 @@ import numpy as np
 
 sweep = 0
 calibration = 0
+IMCMC = 1
 
 if calibration:
     filename = './plots/calibration.npz'
@@ -19,6 +20,8 @@ elif sweep:
     filename = './plots/sweep_params.npz'
     filename_h = './plots/sweep_h.npz'
 else:
+    if IMCMC:
+        filename_calibration = './plots/calibration.npz'
     filename = './plots/accepted.npz'
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
@@ -36,6 +39,72 @@ if not sweep:
     initialize.LES_TEST_data()
     initialize.TEST_sparse_data()
     initialize.model_on_sparse_TEST_data()
+    abc = initialize.ABC_algorithm()
+    del initialize
+
+# ########################
+g.accepted = np.load(filename)['C']
+g.dist = np.load(filename)['dist']
+if IMCMC:
+    S_init = np.load(filename_calibration)['C']
+    S_dist = np.load(filename_calibration)['dist']
+    S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)
+g.accepted = np.vstack((g.accepted, S_init))
+
+if calibration:
+    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+    C_limits = params.C_limits
+    num_bin_joint = 10
+else:
+    num_bin_joint = 10
+    C_limits = np.zeros((10, 2))
+    C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+    C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+    C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+    C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+    C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
+    C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
+# # # #########################
+eps = g.eps
+# eps = new_eps
+initialize = init.InitPostProcess(eps, C_limits, num_bin_joint)
+postproc = initialize.postprocessing()
+
+if sweep:
+    n = params.n_sweeps
+    postproc.sweep_params(filename_h, n)
+else:
+    postproc.calc_final_C()
+    postproc.plot_marginal_pdf()
+
+if not sweep and not calibration:
+    # # postproc.plot_eps()
+    # postproc.plot_scatter()
+    # # postproc.scatter_animation()
+    postproc.plot_compare_tau(scale='TEST_M', MCMC=2)
+    postproc.plot_compare_tau(scale='TEST', MCMC=2)
+    # postproc.plot_compare_tau('LES')
+
+# new_eps = 25
+# g.accepted = g.accepted[g.dist < new_eps]
+# g.dist = g.dist[g.dist < new_eps]
+# logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # if g.plot.plot_info:
     # #     logging.info('Plot initial data info')
@@ -57,81 +126,6 @@ if not sweep:
     # g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
     # plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
     ####################################################################################################################
-
-####################################################################################################################
-# ABC algorithm
-####################################################################################################################
-    abc = initialize.ABC_algorithm()
-    del initialize
-
-# ########################
-g.accepted = np.load(filename)['C']
-g.dist = np.load(filename)['dist']
-
-
-if calibration:
-    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
-
-# new_eps = 25
-# g.accepted = g.accepted[g.dist < new_eps]
-# g.dist = g.dist[g.dist < new_eps]
-# logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
-# # # #########################
-eps = g.eps
-
-# C_limits = np.zeros((10, 2))
-# C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-# C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-# C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-# print(C_limits[:3])
-# eps = new_eps
-C_limits = np.zeros((10, 2))
-C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-initialize = init.InitPostProcess(eps, C_limits)
-postproc = initialize.postprocessing()
-if sweep:
-    n = params.n_sweeps
-    postproc.sweep_params(filename_h, n)
-else:
-    postproc.calc_final_C()
-    postproc.plot_marginal_pdf()
-    # # postproc.plot_eps()
-    # postproc.plot_scatter()
-    # # postproc.scatter_animation()
-    postproc.plot_compare_tau(scale='TEST_M', MCMC=2)
-    postproc.plot_compare_tau(scale='TEST', MCMC=2)
-    # postproc.plot_compare_tau('LES')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

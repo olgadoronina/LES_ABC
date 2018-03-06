@@ -101,15 +101,18 @@ class PostprocessABC(object):
                         mean = np.mean(g.accepted[:, i])
                         x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
                         max = x[np.argmax(y)]
-                        print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
+                        # print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
                         self.C_final_marginal[i] = max
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
                         ax.hist(g.accepted[:, i], bins=self.num_bin_joint, normed=1, alpha=0.5, color='grey',
                                 range=self.C_limits[i])
                         ax.plot(x, y)
-                        ax.axvline(mean, linestyle='--', color='g', label='mean')
-                        ax.axvline(max, linestyle='--', color='r', label='max')
-                        ax.axvline(self.C_final_dist[i], linestyle='--', color='b', label='min dist')
+                        # ax.axvline(mean, linestyle='--', color='g', label='mean')
+                        # ax.axvline(max, linestyle='--', color='r', label='max')
+                        ax.axvline(self.C_final_dist[i], linestyle='--', color='g', label='min dist')
+                        if self.C_final_joint:
+                            for C in self.C_final_joint:
+                                ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
@@ -150,9 +153,10 @@ class PostprocessABC(object):
             C_final_dist_new = self.C_final_dist.copy()
         C_final_dist_new[0] = -2 * C_final_dist_new[0] ** 2
         C_final_joint = 0
-        if len(self.C_final_joint) == 1 and self.N.params != 1:
-            C_final_joint = self.C_final_joint[0].copy()
-            C_final_joint[0] = -2 * C_final_joint[0] ** 2
+        if len(self.C_final_joint) < 5 and self.N.params != 1:
+            C_final_joint = self.C_final_joint.copy()
+            for i in range(len(C_final_joint)):
+                C_final_joint[i][0] = -2 * C_final_joint[i][0] ** 2
         C_final_marginal = self.C_final_marginal
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
@@ -169,7 +173,9 @@ class PostprocessABC(object):
             current_model = model.NonlinearModel(g.TEST, 1, self.N, self.C_limits, MCMC)
 
         if C_final_joint:
-            tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint)
+            tau_modeled_joint = np.empty(len(C_final_joint))
+            for i in range(len(C_final_joint)):
+                tau_modeled_joint[i] = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
         tau_modeled_dist = current_model.Reynolds_stresses_from_C_tau(C_final_dist_new)
         tau_modeled_marginal = current_model.Reynolds_stresses_from_C_tau(C_final_marginal)
 
@@ -184,15 +190,16 @@ class PostprocessABC(object):
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
             axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
             # Plot max joint pdf
-            if len(self.C_final_joint) == 1 and self.N.params != 1:
-                x, y = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
-                axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
+            if C_final_joint:
+                for i in range(len(C_final_joint)):
+                    x, y = utils.pdf_from_array_with_x(tau_modeled_joint[i][key].flatten(), g.bins, g.domain)
+                    axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
             # plot min dist pdf
             x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), g.bins, g.domain)
             axarr[ind].plot(x, y, 'g', linewidth=2, label='modeled dist')
-            # plot max marginal
-            x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
-            axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
+            # # plot max marginal
+            # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
+            # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
 
             axarr[ind].set_xlabel(titles[ind])
 

@@ -237,10 +237,11 @@ class Init(object):
 
 class InitPostProcess(object):
 
-    def __init__(self, eps, C_limits):
+    def __init__(self, eps, C_limits, num_bin_joint):
 
         self.eps = eps
         self.N = NPoints()
+        self.N.bin_joint = num_bin_joint
         self.C_limits = C_limits
 
     def postprocessing(self):
