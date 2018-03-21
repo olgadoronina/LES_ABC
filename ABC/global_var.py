@@ -2,7 +2,7 @@ import numpy as np
 
 # Global variables
 
-TINY = 1e-09
+TINY = 1e-05
 TINY_log = np.log(TINY)
 
 HIT = None

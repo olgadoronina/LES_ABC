@@ -25,29 +25,29 @@ lx = [2 * pi, 2 * pi, 2 * pi]               # domain size
 # TEST_scale = 5
 LES_scale = 10
 TEST_scale = None
-M = 64                                      # number of training points (sparse data)
+M = 256                                     # number of training points (sparse data)
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 3           # order of eddy-viscosity model
-N_params_force = 6
+ORDER = 5           # order of eddy-viscosity model
+N_params_force = 0
 ########################################################################################################################
 # Sampling
 N_each = 10
-N_params_in_task = 2  # only 0, 1 or 2
+N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
-domain = [-1.1, 1.1]  # for pdf comparison
+domain = [-0.45, 0.45]  # for pdf comparison
 num_bin_joint = 10
 eps = 25    # acceptance tolerance
 ########################################################################################################################
-sweep = 0  # parameter sweep study
+sweep = 1  # parameter sweep study
 n_sweeps = 16*5
 ########################################################################################################################
-MCMC = 0    # 1 = MCMC; 2 = IMCMC
-N_total = 200000
-N_calibration = 10**6  # recommended 10^p, where p is number of params
+MCMC = 2    # 1 = MCMC; 2 = IMCMC
+N_total = 2*10**5
+N_calibration = 1000**3  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits

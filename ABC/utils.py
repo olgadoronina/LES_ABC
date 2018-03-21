@@ -108,7 +108,11 @@ def mean_confidence_interval(data, confidence=0.95):
     return m, h
 
 
-
+def take_safe_log(x):
+    log_fill = np.empty_like(x)
+    log_fill.fill(g.TINY_log)
+    log = np.log(x, out=log_fill, where=x > g.TINY)
+    return log
 
 # import scipy.ndimage as ndimage
 #

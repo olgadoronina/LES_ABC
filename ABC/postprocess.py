@@ -154,6 +154,10 @@ class PostprocessABC(object):
         C_final_dist_new[0] = -2 * C_final_dist_new[0] ** 2
         C_final_joint = 0
         if len(self.C_final_joint) < 5 and self.N.params != 1:
+            # if len(self.C_final_joint) == 1:
+            #     C_final_joint = self.C_final_joint[0].copy()
+            #     C_final_joint[0] = -2 * C_final_joint[0] ** 2
+            # else:
             C_final_joint = self.C_final_joint.copy()
             for i in range(len(C_final_joint)):
                 C_final_joint[i][0] = -2 * C_final_joint[i][0] ** 2
@@ -172,10 +176,6 @@ class PostprocessABC(object):
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
             current_model = model.NonlinearModel(g.TEST, 1, self.N, self.C_limits, MCMC)
 
-        if C_final_joint:
-            tau_modeled_joint = np.empty(len(C_final_joint))
-            for i in range(len(C_final_joint)):
-                tau_modeled_joint[i] = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
         tau_modeled_dist = current_model.Reynolds_stresses_from_C_tau(C_final_dist_new)
         tau_modeled_marginal = current_model.Reynolds_stresses_from_C_tau(C_final_marginal)
 
@@ -183,32 +183,42 @@ class PostprocessABC(object):
             # Plot true pdf
             if scale == 'LES':
                 x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), g.bins, g.domain)
+                y = utils.take_safe_log(y)
             if scale == 'TEST':
                 x, y = utils.pdf_from_array_with_x(g.TEST.tau_true[key].flatten(), g.bins, g.domain)
+                y = utils.take_safe_log(y)
             if scale == 'TEST_M':
                 x, y = utils.pdf_from_array_with_x(g.TEST_sp.tau_true[key].flatten(), g.bins, g.domain)
+                y = utils.take_safe_log(y)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
             axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-            # Plot max joint pdf
-            if C_final_joint:
-                for i in range(len(C_final_joint)):
-                    x, y = utils.pdf_from_array_with_x(tau_modeled_joint[i][key].flatten(), g.bins, g.domain)
-                    axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
             # plot min dist pdf
             x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), g.bins, g.domain)
+            y = utils.take_safe_log(y)
             axarr[ind].plot(x, y, 'g', linewidth=2, label='modeled dist')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
             # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
-
             axarr[ind].set_xlabel(titles[ind])
 
-        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=1e-5)
-        axarr[0].set_ylabel('pdf')
+        # Plot max joint pdf
+        if C_final_joint:
+            for i in range(len(C_final_joint)):
+                tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
+                y_dict = dict()
+                for ind, key in enumerate(['uu', 'uv', 'uw']):
+                    x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
+                    y = utils.take_safe_log(y_dict[key])
+                    axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
+
+                np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
+
+
+        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=g.TINY_log-0.5)
+        axarr[0].set_ylabel('ln(pdf)')
         plt.legend(loc=0)
         fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
-        axarr[0].set_yscale('log', nonposy='clip')
-        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=1e-5)
+        # axarr[0].set_yscale('log', basey=np.e)
         fig.savefig(self.folder + scale)
         del fig, axarr
         gc.collect()

@@ -102,10 +102,7 @@ class DataSparse(object):
         self.log_tau_pdf_true = dict()
         for key, value in self.tau_true.items():
             self.tau_pdf_true[key] = utils.pdf_from_array(value, g.bins, g.domain)
-            where_array = np.array(self.tau_pdf_true[key] > g.TINY)
-            a = np.empty_like(self.tau_pdf_true[key])
-            a.fill(g.TINY_log)
-            self.log_tau_pdf_true[key] = np.log(self.tau_pdf_true[key], out=a, where=where_array)
+            self.log_tau_pdf_true[key] = utils.take_safe_log(self.tau_pdf_true[key])
 
         logging.info('Training data shape is ' + str(self.S['uu'].shape))
 

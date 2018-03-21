@@ -305,7 +305,18 @@ def tau_abc(Cs_abc):
     gc.collect()
 
 
-
+def dist_pdf(dist):
+    x = 0.1
+    plt.figure(figsize=(3, 3))
+    plt.hist(dist, bins=100, normed=1, alpha=0.4)
+    # plt.yscale('log', nonposy='clip')
+    eps = np.percentile(dist, q=int(x * 100))
+    plt.axvline(eps, label='eps')
+    plt.xlabel(r'$\rho$')
+    plt.ylabel(r'pdf($\rho$)')
+    # plt.axis(xmin=-5, xmax=4, ymin=1e-5)
+    plt.show()
+    gc.collect()
 
 
 

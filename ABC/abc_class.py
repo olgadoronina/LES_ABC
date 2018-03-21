@@ -14,7 +14,6 @@ class ABC(object):
     def __init__(self, N, C_limits, eps, C_array=None):
 
         self.N = N
-        # self.N_total = N.each ** N.params
         self.M = N.training
         self.C_limits = C_limits
         self.eps = eps
@@ -31,7 +30,8 @@ class ABC(object):
             logging.info('ABC algorithm: IMCMC')
             if self.N.each > 0:
                 if params.sweep:
-                    self.C_array = sweep_params.random_sweep(self.N)
+                    # self.C_array = sweep_params.random_sweep(self.N)
+                    self.C_array = sweep_params.nominal_sweep(self.N)
                 else:
                     self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
@@ -145,7 +145,7 @@ class ABC(object):
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
 
         x = 0.1
-        phi = 1     # for range update
+        phi = 2     # for range update
         logging.info('x = {}'.format(x))
         S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
@@ -153,11 +153,10 @@ class ABC(object):
         logging.info('eps after calibration step = {}'.format(g.eps))
 
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-        # result = np.array(S_init[:int(x*n)])
-        g.std = np.std(S_init[:, :-1], axis=0)
+        g.std = phi*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
         for i in range(g.N.params):
-            g.C_limits[i] = phi*[np.min(S_init[:, i]), np.max(S_init[:, i])]
+            g.C_limits[i] = phi*np.array([np.min(S_init[:, i]), np.max(S_init[:, i])])
         logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
 
         # Randomly choose starting points for Markov chains
@@ -218,7 +217,7 @@ class ABC(object):
         # np.savetxt('accepted_'+str(N_params_in_task)+'.out', g.accepted)
         # np.savetxt('dist_'+str(N_params_in_task)+'.out', g.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
-                                                                round(len(g.accepted) / self.N_total * 100, 2)))
+                                                                round(len(g.accepted) / self.N.total * 100, 2)))
 
 
 ########################################################################################################################
@@ -232,11 +231,9 @@ def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
     """
-    log_fill = np.empty_like(pdf_modeled)
-    log_fill.fill(g.TINY_log)
-    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
+
+    log_modeled = utils.take_safe_log(pdf_modeled)
     dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
-    # dist = np.sum(np.multiply(pdf_modeled, (log_modeled - g.TEST_sp.log_tau_pdf_true[key])), axis=axis)
 
     return dist
 
@@ -246,9 +243,8 @@ def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance
     """
-    log_fill = np.empty_like(pdf_modeled)
-    log_fill.fill(g.TINY_log)
-    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
+
+    log_modeled = utils.take_safe_log(pdf_modeled)
     dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
     return dist
 
@@ -281,9 +277,7 @@ def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
     """
-    log_fill = np.empty_like(pdf_modeled)
-    log_fill.fill(g.TINY_log)
-    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
+    log_modeled = utils.take_safe_log(pdf_modeled)
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
@@ -295,10 +289,8 @@ def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
     :param axis:
     :return:
     """
-    log_fill = np.empty_like(pdf_modeled)
-    log_fill.fill(g.TINY_log)
-    log_modeled = np.log(pdf_modeled, out=log_fill, where=pdf_modeled > g.TINY)
-    dist = np.sqrt(np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis))
+    log_modeled = utils.take_safe_log(pdf_modeled)
+    dist = np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
 
@@ -315,7 +307,7 @@ def calibration_function_single_value(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
+        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
         dist += d
     result = C[:]
     result.append(dist)
@@ -323,7 +315,7 @@ def calibration_function_single_value(C):
 
 
 def calibration_function_multiple_values(C):
-    return g.TEST_Model.Reynolds_stresses_from_C_calibration2(C, distance_between_pdf_KL)
+    return g.TEST_Model.Reynolds_stresses_from_C_calibration2(C, distance_between_pdf_L2log)
 
 def work_function_single_value(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -335,7 +327,7 @@ def work_function_single_value(C):
     dist = 0
     for key in g.TEST_Model.elements_in_tensor:
         pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
+        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
         dist += d
     if dist <= g.eps:
         result = C[:]
@@ -367,7 +359,7 @@ def work_function_MCMC(C_init):
         dist = 0
         for key in g.TEST_Model.elements_in_tensor:
             pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-            d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
+            d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
             dist += d
         return dist
     ####################################################################################################################

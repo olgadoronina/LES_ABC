@@ -8,13 +8,14 @@ import sys
 import global_var as g
 import init
 import numpy as np
-
+import plotting
 
 sweep = 0
 calibration = 0
-IMCMC = 1
+IMCMC = 0
 
 if calibration:
+    filename_all = './plots/calibration_all.npz'
     filename = './plots/calibration.npz'
 elif sweep:
     filename = './plots/sweep_params.npz'
@@ -48,22 +49,24 @@ g.dist = np.load(filename)['dist']
 if IMCMC:
     S_init = np.load(filename_calibration)['C']
     S_dist = np.load(filename_calibration)['dist']
-    S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)
-g.accepted = np.vstack((g.accepted, S_init))
+    # S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)
+    g.accepted = np.vstack((g.accepted, S_init))
 
 if calibration:
-    g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+    # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
     C_limits = params.C_limits
     num_bin_joint = 10
+    dist = np.load(filename_all)['S_init'][:, -1]
+    plotting.dist_pdf(dist)
 else:
-    num_bin_joint = 10
+    num_bin_joint = 20
     C_limits = np.zeros((10, 2))
     C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
     C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
     C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-    C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
-    C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
-    C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
+    # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+    # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
+    # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
 # # # #########################
 eps = g.eps
 # eps = new_eps
