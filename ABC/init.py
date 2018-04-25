@@ -2,7 +2,7 @@ import logging
 
 import matplotlib as mpl
 
-# mpl.use('pdf')
+mpl.use('pdf')
 import matplotlib.pyplot as plt
 import pickle
 
@@ -36,7 +36,7 @@ class NPoints():
             self.params = num_param[str(params.ORDER)]
 
         # define number samples per task
-        if self.params == 1 or params.MCMC==1:       # ignore the number and use 0
+        if self.params == 1 or params.MCMC == 1:       # ignore the number and use 0
             self.params_in_task = 0
         else:
             self.params_in_task = params.N_params_in_task
@@ -67,8 +67,8 @@ class Init(object):
         g.N = self.N
         self.C_limits = params.C_limits[:self.N.params].copy()
         g.C_limits = self.C_limits[:self.N.params].copy()
-        g.C_limits[0, 0] = - g.C_limits[0, 1] ** 2
-        g.C_limits[0, 1] = - g.C_limits[0, 0] ** 2
+        g.C_limits[0, 0] = - 2 * g.C_limits[0, 1] ** 2
+        g.C_limits[0, 1] = - 2 * g.C_limits[0, 0] ** 2
 
         self.LES_scale = params.LES_scale
         self.TEST_scale = params.TEST_scale
@@ -170,12 +170,12 @@ class Init(object):
             HIT_data = load_HIT_data()
 
             logging.info('Filter HIT data')
-            LES_data = filter.filter3d(data=HIT_data, scale_k=params.LES_scale, dx=dx, N_points=params.N_points)
+            LES_data = utils.filter3d(data=HIT_data, scale_k=params.LES_scale, dx=dx, N_points=params.N_points)
             TEST_data = None
             logging.info('Writing file')
             np.savez(params.data_folder + 'LES.npz', **LES_data)
             if self.TEST_scale:
-                TEST_data = filter.filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
+                TEST_data = utils.filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
                 logging.info('Writing file')
                 np.savez(params.data_folder + 'TEST.npz', **TEST_data)
 
@@ -200,14 +200,15 @@ class Init(object):
             g.TEST = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
 
         if params.PLOT_INIT_INFO:
-            # logging.info('Calculate spectra')
-            # utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
-            #                        params.plot_folder+'LES')
-            # if self.TEST_scale:
-            #     utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
-            #                        params.plot_folder + 'test')
+            logging.info('Calculate spectra')
+            utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
+                                   params.plot_folder+'LES')
+            if self.TEST_scale:
+                utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
+                                   params.plot_folder + 'test')
 
             logging.info('Plot initial data info')
+            g.plot.spectra()
             g.plot.vel_fields(scale='LES', dns=not self.TEST_scale)
             g.plot.vel_fields(scale='TEST', dns=not self.TEST_scale)
             g.plot.sigma_field(scale='LES', dns=not self.TEST_scale)

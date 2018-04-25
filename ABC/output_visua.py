@@ -62,8 +62,8 @@ else:
     num_bin_joint = 20
     C_limits = np.zeros((10, 2))
     C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-    C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-    C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+    # C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+    # C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
     # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
     # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
     # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
@@ -82,10 +82,10 @@ else:
 
 if not sweep and not calibration:
     # # postproc.plot_eps()
-    # postproc.plot_scatter()
+    postproc.plot_scatter()
     # # postproc.scatter_animation()
-    postproc.plot_compare_tau(scale='TEST_M', MCMC=2)
-    postproc.plot_compare_tau(scale='TEST', MCMC=2)
+    postproc.plot_compare_tau(scale='TEST_M', MCMC=0)
+    postproc.plot_compare_tau(scale='TEST', MCMC=0)
     # postproc.plot_compare_tau('LES')
 
 # new_eps = 25

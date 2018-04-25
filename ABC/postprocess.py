@@ -213,8 +213,7 @@ class PostprocessABC(object):
 
                 np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
 
-
-        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=g.TINY_log-0.5)
+        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
         axarr[0].set_ylabel('ln(pdf)')
         plt.legend(loc=0)
         fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)

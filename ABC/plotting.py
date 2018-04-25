@@ -27,7 +27,7 @@ class Plot(object):
 
         axis = [0, 2 * pi, 0, 2 * pi]
         if len(Arrays) > 1:
-            fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(6.5, 2.4))
+            fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(6.5, 3))
             k = 0
             for ax in axes.flat:
                 im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
@@ -39,7 +39,7 @@ class Plot(object):
                 k += 1
             axes[0].set_ylabel(r'$y$')
             cbar_ax = fig.add_axes([0.89, 0.18, 0.017, 0.68])  # ([0.85, 0.15, 0.05, 0.68])
-            fig.subplots_adjust(left=0.07, right=0.87, wspace=0.1, bottom=0.05, top=0.98)
+            fig.subplots_adjust(left=0.07, right=0.87, wspace=0.1, bottom=0.2, top=0.9)
             fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
         else:
             fig = plt.figure(figsize=(6.5, 5))

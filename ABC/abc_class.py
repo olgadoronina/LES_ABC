@@ -7,7 +7,8 @@ import global_var as g
 import params
 import numpy as np
 import utils
-import sweep_params
+
+from sobol_seq import i4_sobol_generate
 
 class ABC(object):
 
@@ -18,10 +19,7 @@ class ABC(object):
         self.C_limits = C_limits
         self.eps = eps
 
-        if params.PMC:
-            self.work_func = work_function_PMC
-            self.main_loop = self.main_loop_PMC
-        elif params.MCMC == 1:  # MCMC
+        if params.MCMC == 1:  # MCMC
             logging.info('ABC algorithm: MCMC')
             self.C_array = self.form_C_array_initial_for_MCMC()
             self.main_loop = self.main_loop_MCMC
@@ -29,11 +27,7 @@ class ABC(object):
         elif params.MCMC == 2:  # IMCMC
             logging.info('ABC algorithm: IMCMC')
             if self.N.each > 0:
-                if params.sweep:
-                    # self.C_array = sweep_params.random_sweep(self.N)
-                    self.C_array = sweep_params.nominal_sweep(self.N)
-                else:
-                    self.C_array = self.form_C_array_manual()
+                self.C_array = self.form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
             self.work_func = work_function_MCMC
             self.calibration = calibration_function_single_value
@@ -62,19 +56,21 @@ class ABC(object):
 
         return C_array
 
-    # def form_C_array_random(self):
-    #     """Create list of lists of N parameters uniformly distributed on given interval
-    #     :return: list of lists of sampled parameters
-    #     """
-    #     C_array = []
-    #     for i in range(self.N.each ** self.N.params):
-    #         C = []
-    #         for j in range(self.N.params):
-    #             c = rand.uniform(self.C_limits[j][0], self.C_limits[j][1])
-    #             C.append(-2*c**2)
-    #         C_array.append(C)
-    #
-    #     return C_array
+    def form_C_array_sobol(self):
+        """Create list of lists of N parameters uniformly distributed on given interval
+        :return: list of lists of sampled parameters
+        """
+        C_array = []
+
+        results = i4_sobol_generate(10, 100)
+        for i in range(self.N.each ** self.N.params):
+            C = []
+            for j in range(self.N.params):
+                c = rand.uniform(self.C_limits[j][0], self.C_limits[j][1])
+                C.append(-2*c**2)
+            C_array.append(C)
+
+        return C_array
 
 
     def form_C_array_manual(self):
@@ -133,13 +129,13 @@ class ABC(object):
             if self.N.params_in_task > 0:
                 S_init = [chunk[:] for item in S_init for chunk in item]
 
-            if params.sweep:
-                np.savez('./plots/sweep_params.npz', C=np.array(S_init)[:, :-1], dist=np.array(S_init)[:, -1])
-                logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
-                exit()
-            else:
-                np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
-                logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
+            # if params.sweep:
+            #     np.savez('./plots/sweep_params.npz', C=np.array(S_init)[:, :-1], dist=np.array(S_init)[:, -1])
+            #     logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
+            #     exit()
+            # else:
+            np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
+            logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
 
         else:
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])

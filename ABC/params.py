@@ -7,10 +7,10 @@ import numpy as np
 ########################################################################################################################
 # Path to data
 LOAD = 1          # Load filtered data or filter from DNS
-DATA = 'JHU_data'
-data_folder = './data_input/JohnHopkins/'
-# DATA = 'CU_data'
-# data_folder = './data_input/HIT_DNS_N256/'
+# DATA = 'JHU_data'
+# data_folder = './data_input/JohnHopkins/'
+DATA = 'CU_data'
+data_folder = './data_input/HIT_DNS_N256/'
 # Plotting
 plot_folder = './plots/'
 PLOT_INIT_INFO = 0
@@ -23,31 +23,29 @@ lx = [2 * pi, 2 * pi, 2 * pi]               # domain size
 # Filter scales
 # LES_scale = 10
 # TEST_scale = 5
-LES_scale = 10
+LES_scale = 30/2/np.pi
 TEST_scale = None
-M = 256                                     # number of training points (sparse data)
+M = 64                                     # number of training points (sparse data)
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 5           # order of eddy-viscosity model
-N_params_force = 0
+ORDER = 2           # order of eddy-viscosity model
+N_params_force = 3
 ########################################################################################################################
 # Sampling
-N_each = 10
+N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
-domain = [-0.45, 0.45]  # for pdf comparison
+# domain = [-0.45, 0.45]  # for pdf comparison
+domain = [-0.7, 0.7]  # for pdf comparison
 num_bin_joint = 10
-eps = 25    # acceptance tolerance
-########################################################################################################################
-sweep = 1  # parameter sweep study
-n_sweeps = 16*5
+eps = 200   # acceptance tolerance
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
 N_total = 2*10**5
-N_calibration = 1000**3  # recommended 10^p, where p is number of params
+N_calibration = 10**3  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
@@ -88,7 +86,7 @@ var[5] = (C_limits[2][1] - C_limits[2][0]) / 20
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+N_proc = 4          # Number of processes
 ########################################################################################################################
 
 

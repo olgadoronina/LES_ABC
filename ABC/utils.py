@@ -3,13 +3,15 @@ import global_var as g
 import numpy as np
 import scipy as sp
 import scipy.stats
-from numpy.fft import fftfreq, fftn
+from numpy.fft import fftfreq, fftn, ifftn
+from time import time
 
 
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
+
 
 def pdf_from_array_with_x(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
@@ -138,3 +140,79 @@ def take_safe_log(x):
 # imagesc([HIT['u'][:, :, 127], LES['u'].real[:, :, 127], TEST['u'].real[:, :, 127]], map_bounds, 'Fourier_sharp')
 
 
+
+
+def tophat_kernel(k, limit):
+    """Create 3D array of Tophat filter.
+        k - array of wave numbers;
+        limit - cutoff wavenumber."""
+    a = np.zeros((len(k[0]), len(k[1]), len(k[2])), dtype=np.float32)
+    for indx, kx in enumerate(k[0]):
+        for indy, ky in enumerate(k[1]):
+            for indz, kz in enumerate(k[2]):
+                a[indx, indy, indz] = np.sqrt(kx ** 2 + ky ** 2 + kz ** 2)
+
+    kernel = np.piecewise(a, [a <= limit, a > limit], [1, 0])
+    return kernel
+
+def filter3d(data, scale_k, dx, N_points, filename=None):
+    """ Tophat filter in Fourier space for dictionary of 3D arrays.
+        data - dictionary of numpy arrays;
+        scale_k - wave number, which define size of filter."""
+    # FFT
+    start = time()
+    FFT = dict()
+    for key, value in data.items():
+        FFT[key] = fftn(value)
+    k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
+    end = time()
+    timer(start, end, 'Time for FFT')
+
+    # Filtering
+    start = time()
+    kernel = tophat_kernel(k, scale_k)
+    end = time()
+    timer(start, end, 'Time for creating filter kernel')
+
+    start = time()
+    result = dict()
+    fft_filtered = dict()
+    for key, value in FFT.items():
+        fft_filtered[key] = np.multiply(value, kernel)
+    end = time()
+    timer(start, end, 'Time for filtering')
+
+    FFT.clear()
+
+    start = time()
+    for key, value in fft_filtered.items():
+        result[key] = ifftn(value).real
+    end = time()
+    timer(start, end, 'Time for iFFT')
+
+    fft_filtered.clear()
+
+    if filename:
+        logging.info('\nWrite file in ./data/' + filename + '.npz')
+        file = './data/' + filename + '.npz'
+        np.savez(file, **result)
+
+    return result
+
+# def filter3d_array(array, scale_k):
+#
+#     fft_array = fftn(array)
+#     k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
+#     kernel = tophat_kernel(k, scale_k)
+#     fft_filtered = np.multiply(fft_array, kernel)
+#     result = ifftn(fft_filtered).real
+#
+#     return result
+#
+# def filter3d_array_inFspace(array, scale_k):
+#     logging.info(array.shape)
+#     k = [fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])]
+#     kernel = tophat_kernel(k, scale_k)
+#     fft_filtered = np.multiply(array, kernel)
+#
+#     return fft_filtered
