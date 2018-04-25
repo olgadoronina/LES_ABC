@@ -7,10 +7,10 @@ import numpy as np
 ########################################################################################################################
 # Path to data
 LOAD = 1          # Load filtered data or filter from DNS
-# DATA = 'JHU_data'
-# data_folder = './data_input/JohnHopkins/'
-DATA = 'CU_data'
-data_folder = './data_input/HIT_DNS_N256/'
+DATA = 'JHU_data'
+data_folder = './data_input/JohnHopkins/'
+# DATA = 'CU_data'
+# data_folder = './data_input/HIT_DNS_N256/'
 # Plotting
 plot_folder = './plots/'
 PLOT_INIT_INFO = 0
@@ -33,8 +33,9 @@ ORDER = 2           # order of eddy-viscosity model
 N_params_force = 3
 ########################################################################################################################
 # Sampling
+sampling = 'uniform'    # 'random', 'sobol'
 N_each = 100
-N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
+N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
@@ -45,7 +46,7 @@ eps = 200   # acceptance tolerance
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
 N_total = 2*10**5
-N_calibration = 10**3  # recommended 10^p, where p is number of params
+N_calibration = 60**3  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
@@ -86,7 +87,7 @@ var[5] = (C_limits[2][1] - C_limits[2][0]) / 20
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 4          # Number of processes
+N_proc = 6          # Number of processes
 ########################################################################################################################
 
 

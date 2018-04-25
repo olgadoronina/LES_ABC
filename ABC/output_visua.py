@@ -10,16 +10,13 @@ import init
 import numpy as np
 import plotting
 
-sweep = 0
-calibration = 0
+
+calibration = 1
 IMCMC = 0
 
 if calibration:
     filename_all = './plots/calibration_all.npz'
     filename = './plots/calibration.npz'
-elif sweep:
-    filename = './plots/sweep_params.npz'
-    filename_h = './plots/sweep_h.npz'
 else:
     if IMCMC:
         filename_calibration = './plots/calibration.npz'
@@ -36,12 +33,12 @@ logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
 ####################################################################################################################
 initialize = init.Init()
 initialize.plotting()
-if not sweep:
-    initialize.LES_TEST_data()
-    initialize.TEST_sparse_data()
-    initialize.model_on_sparse_TEST_data()
-    abc = initialize.ABC_algorithm()
-    del initialize
+
+initialize.LES_TEST_data()
+initialize.TEST_sparse_data()
+initialize.model_on_sparse_TEST_data()
+abc = initialize.ABC_algorithm()
+del initialize
 
 # ########################
 g.accepted = np.load(filename)['C']
@@ -73,14 +70,11 @@ eps = g.eps
 initialize = init.InitPostProcess(eps, C_limits, num_bin_joint)
 postproc = initialize.postprocessing()
 
-if sweep:
-    n = params.n_sweeps
-    postproc.sweep_params(filename_h, n)
-else:
-    postproc.calc_final_C()
-    postproc.plot_marginal_pdf()
 
-if not sweep and not calibration:
+postproc.calc_final_C()
+postproc.plot_marginal_pdf()
+
+if not calibration:
     # # postproc.plot_eps()
     postproc.plot_scatter()
     # # postproc.scatter_animation()

@@ -8,7 +8,6 @@ import pickle
 
 import abc_class
 import data
-import filter
 import utils
 import global_var as g
 import model
@@ -232,7 +231,11 @@ class Init(object):
 
     def ABC_algorithm(self):
 
-        abc_init = abc_class.ABC(N=self.N, C_limits=self.C_limits, eps=params.eps)
+        assert params.sampling == 'random' \
+               or params.sampling == 'uniform' \
+               or params.sampling == 'sobol', 'Incorrect sampling type {}'.format(params.sampling)
+        
+        abc_init = abc_class.ABC(N=self.N, C_limits=self.C_limits, eps=params.eps, sampling=params.sampling)
         return abc_init
 
 
