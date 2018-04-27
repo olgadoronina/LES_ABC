@@ -26,25 +26,18 @@ class Parallel(object):
             pbar.close()
         elif self.bar == 2:
             logging.debug('Printing progress')
-            self.results = self.pool.map_async(func, tasks)
+            self.results = pool.map_async(func, tasks)
             while not self.results.ready():
-                done = len(tasks) - self.results._number_left*self.results._chunksize
+                done = len(tasks) - self.results._number_left * self.results._chunksize
                 logging.info("Done {}% ({}/{})".format(int(done/len(tasks)*100), done, len(tasks)))
-                sleep(20)
+                sleep(1)
             pool.close()
             pool.join()
         else:
             logging.debug('No progress bar')
-            self.results = self.pool.map(func, tasks)
+            self.results = pool.map(func, tasks)
             pool.close()
         pool.terminate()
-
-    # def run_processes(self, func, tasks):
-    #     jobs = []
-    #     for C in tasks:
-    #         p = mp.Process(target=func, args=(C,))
-    #         jobs.append(p)
-    #         p.start()
 
     def get_results(self):
         if self.bar == 1:

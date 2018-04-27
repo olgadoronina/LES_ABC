@@ -1,4 +1,4 @@
-import itertools
+
 import logging
 import random as rand
 from time import time
@@ -8,27 +8,23 @@ import params
 import numpy as np
 import utils
 
-from sobol_seq import i4_sobol_generate
+
 
 class ABC(object):
 
-    def __init__(self, N, C_limits, eps, C_array=None):
+    def __init__(self, N, form_C_array):
 
         self.N = N
         self.M = N.training
-        self.C_limits = C_limits
-        self.eps = eps
+
+        self.C_array = form_C_array()
 
         if params.MCMC == 1:  # MCMC
             logging.info('ABC algorithm: MCMC')
-            self.C_array = form_C_array_initial_for_MCMC()
             self.main_loop = self.main_loop_MCMC
             self.work_func = work_function_MCMC
         elif params.MCMC == 2:  # IMCMC
             logging.info('ABC algorithm: IMCMC')
-            if self.N.each > 0:
-                # self.C_array = self.form_C_array_sobol()
-                self.C_array = form_C_array_manual()
             self.main_loop = self.main_loop_IMCMC
             self.work_func = work_function_MCMC
             self.calibration = calibration_function_single_value
@@ -36,18 +32,15 @@ class ABC(object):
                 self.calibration = calibration_function_multiple_values
         else:                   # Uniform
             logging.info('ABC algorithm: Uniform grid sampling')
-            self.C_array = form_C_array_manual()
             self.main_loop = self.main_loop_uniform
             if N.params == 1 or N.params_in_task == 0:
                 self.work_func = work_function_single_value
             else:
                 self.work_func = work_function_multiple_values
 
-
-
     def main_loop_IMCMC(self):
 
-        if g.N.each > 0:    # Run calibration step
+        if self.N.each > 0:    # Run calibration step
             logging.info('Calibration step with {} samples'.format(len(self.C_array)))
 
             start_calibration = time()
@@ -68,19 +61,14 @@ class ABC(object):
             if self.N.params_in_task > 0:
                 S_init = [chunk[:] for item in S_init for chunk in item]
 
-            # if params.sweep:
-            #     np.savez('./plots/sweep_params.npz', C=np.array(S_init)[:, :-1], dist=np.array(S_init)[:, -1])
-            #     logging.info('Accepted parameters and distances saved in ./ABC/plots/sweep_params.npz')
-            #     exit()
-            # else:
             np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
             logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
 
         else:
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
 
-        x = 0.1
-        phi = 2     # for range update
+        x = 0.15
+        phi = 1     # for range update
         logging.info('x = {}'.format(x))
         S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
@@ -91,7 +79,11 @@ class ABC(object):
         g.std = phi*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
         for i in range(g.N.params):
-            g.C_limits[i] = phi*np.array([np.min(S_init[:, i]), np.max(S_init[:, i])])
+            max_S = np.max(S_init[:, i])
+            min_S = np.min(S_init[:, i])
+            half_length = phi * (max_S - min_S) / 2.0
+            middle = (max_S + min_S) / 2.0
+            g.C_limits[i] = np.array( [middle - half_length, middle + half_length])
         logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
 
         # Randomly choose starting points for Markov chains
@@ -99,8 +91,10 @@ class ABC(object):
         np.set_printoptions(precision=3)
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
-
-        S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
+        # Save prior
+        g.prior, _ = np.histogramdd(S_init[:, :-1], bins=g.N.each, normed=True, range=tuple(map(tuple, g.C_limits)))
+        np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits)
+        # S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
         logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
         ####################################################################################################################
@@ -241,18 +235,20 @@ def work_function_MCMC(C_init):
             while True:
                 while True:
                     c = np.random.normal(result[-1][:-1], std)
-                    # if c[0] < 0:
                     if not (False in np.less(C_limits[:, 0], c) or False in np.less(c, C_limits[:, 1])):
                         break
-                # c = np.random.normal(result[-1][:-1], std)
                 dist = calc_dist(c)
                 counter += 1
                 if dist <= g.eps:
-                    a = list(c[:])
-                    a.append(dist)
-                    result.append(a)
-                    pbar.update()
-                    break
+                    prior_new = utils.get_prior(c)
+                    prior_old = utils.get_prior(result[-1][:-1])
+                    h = min(1, np.divide(prior_new, prior_old))  # np.divede return 0 for division by 0
+                    if h > 0 and np.random.random() < h:
+                        a = list(c[:])
+                        a.append(dist)
+                        result.append(a)
+                        pbar.update()
+                        break
         pbar.close()
     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
@@ -359,69 +355,6 @@ def work_function_PMC():
         W_prev = W.copy()
     return result
 
-
-
-
-########################################################################################################################
-## Sampling functions
-########################################################################################################################
-def form_C_array_initial_for_MCMC():
-    """ Find starting points for MCMC. (Sample randomly and save if distance < eps)
-    :return: list of lists of parameters
-    """
-    C_array = []
-
-    while len(C_array) <= g.N.proc:
-        c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
-        c_start = work_function_single_value(list(c))
-        if c_start:
-            C_array.append(c_start[:-1])
-            logging.info('C_start = {}'.format(c_start[:-1]))
-
-    return C_array
-
-
-def form_C_array_sobol():
-    """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
-    :return: list of lists of sampled parameters
-    """
-    C_array = i4_sobol_generate(g.N.params, g.N.calibration)
-    for i in range(g.N.params):
-        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
-    C_array = C_array.tolist()
-    return C_array
-
-
-def form_C_array_random():
-    """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
-    :return: list of lists of sampled parameters
-    """
-    C_array = np.random.random(size=(g.N.calibration, g.N.params))
-    for i in range(g.N.params):
-        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
-    C_array = C_array.tolist()
-    return C_array
-
-
-def form_C_array_manual():
-    """ Create list of lists of N parameters manually (make grid) uniformly distributed on given interval
-    :return: list of lists of sampled parameters
-    """
-    if g.N.params == 1:
-        C_array = []
-        C1 = np.linspace(g.C_limits[0][0], g.C_limits[0][1], g.N.each + 1)
-        C1 = C1[:-1] + (C1[1] - C1[0]) / 2
-        C1 = -2 * C1 ** 2
-        for i in C1:
-            C_array.append([i])
-    else:
-        C = np.ndarray((g.N.params - g.N.params_in_task, g.N.each))
-        for i in range(g.N.params - g.N.params_in_task):
-            C[i, :] = utils.uniform_grid(g.C_limits[i], g.N.each)
-        permutation = itertools.product(*C)
-        C_array = list(map(list, permutation))
-    logging.debug('Form C_array manually: {} samples\n'.format(len(C_array)))
-    return C_array
 
 
 ########################################################################################################################

@@ -35,7 +35,7 @@ class NPoints():
             self.params = num_param[str(params.ORDER)]
 
         # define number samples per task
-        if self.params == 1 or params.MCMC == 1:       # ignore the number and use 0
+        if self.params == 1 or params.MCMC == 1 or params.sampling != 'uniform':       # ignore the number and use 0
             self.params_in_task = 0
         else:
             self.params_in_task = params.N_params_in_task
@@ -51,6 +51,7 @@ class NPoints():
             self.chain = int(self.total/self.proc)
         else:
             self.each = params.N_each
+            self.calibration = self.each ** self.params
             self.total = self.each ** self.params
 
 
@@ -66,8 +67,9 @@ class Init(object):
         g.N = self.N
         self.C_limits = params.C_limits[:self.N.params].copy()
         g.C_limits = self.C_limits[:self.N.params].copy()
-        g.C_limits[0, 0] = - 2 * g.C_limits[0, 1] ** 2
-        g.C_limits[0, 1] = - 2 * g.C_limits[0, 0] ** 2
+
+        # g.C_limits[0, 0] = - 2 * params.C_limits[0, 1] ** 2
+        # g.C_limits[0, 1] = - 2 * params.C_limits[0, 0] ** 2
 
         self.LES_scale = params.LES_scale
         self.TEST_scale = params.TEST_scale
@@ -231,11 +233,21 @@ class Init(object):
 
     def ABC_algorithm(self):
 
-        assert params.sampling == 'random' \
-               or params.sampling == 'uniform' \
-               or params.sampling == 'sobol', 'Incorrect sampling type {}'.format(params.sampling)
-        
-        abc_init = abc_class.ABC(N=self.N, C_limits=self.C_limits, eps=params.eps, sampling=params.sampling)
+        if params.sampling == 'random':
+            sampling_func = utils.sampling_random
+        elif params.sampling == 'uniform':
+            sampling_func = utils.sampling_uniform_grid
+        elif params.sampling == 'sobol':
+            sampling_func = utils.sampling_sobol
+        elif params.sampling == 'MCMC':
+            sampling_func = utils.sampling_initial_for_MCMC
+        else:
+            logging.error('Incorrect sampling type {}'.format(params.sampling))
+            exit()
+
+        logging.info('Sampling is {}'.format(params.sampling))
+
+        abc_init = abc_class.ABC(N=self.N, form_C_array=sampling_func)
         return abc_init
 
 

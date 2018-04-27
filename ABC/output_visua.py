@@ -52,13 +52,15 @@ if IMCMC:
 if calibration:
     # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
     C_limits = params.C_limits
+
     num_bin_joint = 10
     dist = np.load(filename_all)['S_init'][:, -1]
     plotting.dist_pdf(dist)
 else:
-    num_bin_joint = 20
-    C_limits = np.zeros((10, 2))
-    C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+    num_bin_joint = 10
+    C_limits = params.C_limits
+    # C_limits = np.zeros((10, 2))
+    # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
     # C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
     # C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
     # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
@@ -67,7 +69,8 @@ else:
 # # # #########################
 eps = g.eps
 # eps = new_eps
-initialize = init.InitPostProcess(eps, C_limits, num_bin_joint)
+print(g.C_limits)
+initialize = init.InitPostProcess(eps, g.C_limits, num_bin_joint)
 postproc = initialize.postprocessing()
 
 

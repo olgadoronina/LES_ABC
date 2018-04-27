@@ -6,11 +6,23 @@ import scipy.stats
 from numpy.fft import fftfreq, fftn, ifftn
 from time import time
 
+import abc_class
+from sobol_seq import i4_sobol_generate
+import itertools
+
 
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
+
+def get_prior(x):
+    d = (g.C_limits[:, 1]-g.C_limits[:, 0]) / g.N.each
+    # ind, reminder = np.divmod((x - g.C_limits[:, 0]), d)
+    ind = np.floor_divide((x - g.C_limits[:, 0]), d)   # find nearest point
+    ind = tuple(ind.astype(np.int8, copy=False))
+    y = g.prior[ind]
+    return y
 
 
 def pdf_from_array_with_x(array, bins, range):
@@ -27,7 +39,7 @@ def pdf_from_array_improved(array, bins, domain, N_each):
 
 
 def pdf_from_array(array, bins, range):
-    pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
+    pdf, _ = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
 
 
@@ -216,3 +228,139 @@ def filter3d(data, scale_k, dx, N_points, filename=None):
 #     fft_filtered = np.multiply(array, kernel)
 #
 #     return fft_filtered
+
+
+
+########################################################################################################################
+## Sampling functions
+########################################################################################################################
+def sampling_initial_for_MCMC():
+    """ Find starting points for MCMC. (Sample randomly and save if distance < eps)
+    :return: list of lists of parameters
+    """
+    C_array = []
+
+    while len(C_array) <= g.N.proc:
+        c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+        c_start = abc_class.work_function_single_value(list(c))
+        if c_start:
+            C_array.append(c_start[:-1])
+            logging.info('C_start = {}'.format(c_start[:-1]))
+
+    return C_array
+
+
+def sampling_sobol():
+    """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
+    :return: list of lists of sampled parameters
+    """
+    C_array = i4_sobol_generate(g.N.params, g.N.calibration)
+    for i in range(g.N.params):
+        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
+    C_array = C_array.tolist()
+    return C_array
+
+
+def sampling_random():
+    """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
+    :return: list of lists of sampled parameters
+    """
+    C_array = np.random.random(size=(g.N.calibration, g.N.params))
+    for i in range(g.N.params):
+        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
+    C_array = C_array.tolist()
+    return C_array
+
+
+def sampling_uniform_grid():
+    """ Create list of lists of N parameters manually (make grid) uniformly distributed on given interval
+    :return: list of lists of sampled parameters
+    """
+    if g.N.params == 1:
+        C1 = uniform_grid(g.C_limits[0], g.N.each)
+        C_array = []
+        for i in C1:
+            C_array.append([i])
+    else:
+        C = np.ndarray((g.N.params - g.N.params_in_task, g.N.each))
+        for i in range(g.N.params - g.N.params_in_task):
+            C[i, :] = uniform_grid(g.C_limits[i], g.N.each)
+        permutation = itertools.product(*C)
+        C_array = list(map(list, permutation))
+    logging.debug('Form C_array manually: {} samples\n'.format(len(C_array)))
+    return C_array
+
+
+########################################################################################################################
+## Distance functions
+########################################################################################################################
+def distance_between_pdf_KL(pdf_modeled, key, axis=1):
+    """Calculate statistical distance between two pdf as
+    the Kullback-Leibler (KL) divergence (no symmetry).
+    Function for N_params_in_task > 0
+    :param pdf_modeled: array of modeled pdf
+    :param key: tensor component(key of dict)
+    :return: 1D array of calculated distance
+    """
+
+    log_modeled = utils.take_safe_log(pdf_modeled)
+    dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
+
+    return dist
+
+
+def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
+    """Calculate statistical distance between two pdf as
+    :param pdf_modeled: array of modeled pdf
+    :return:            scalar of calculated distance
+    """
+
+    log_modeled = utils.take_safe_log(pdf_modeled)
+    dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
+    return dist
+
+
+def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf as mean((P1-P2)^2).
+    :param pdf_modeled: array of modeled pdf
+    :param key: tensor component(key of dict)
+    :param axis: equal 1 when pdf_modeled is 2D array
+    :return: scalar or 1D array of calculated distance
+    """
+    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis)
+    return dist
+
+
+def distance_between_pdf_L2(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf as sqrt(sum((P1-P2)^2)).
+    :param pdf_modeled: array of modeled pdf
+    :param key: tensor component(key of dict)
+    :param axis: equal 1 when pdf_modeled is 2D array
+    :return: scalar or 1D array of calculated distance
+    """
+    dist = np.sqrt(np.sum((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis))
+    return dist
+
+
+def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
+    :param pdf_modeled: array of modeled pdf
+    :param key: tensor component(key of dict)
+    :return: 1D array of calculated distance
+    """
+    log_modeled = utils.take_safe_log(pdf_modeled)
+    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
+    return dist
+
+
+def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
+    """ Calculate statistical distance between two pdf.
+    :param pdf_modeled:
+    :param key:
+    :param axis:
+    :return:
+    """
+    log_modeled = utils.take_safe_log(pdf_modeled)
+    dist = np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
+    return dist
+

@@ -26,9 +26,7 @@ class NonlinearModel(object):
         for i in range(N.params):
             self.Tensor[str(i)] = self.calc_tensor(data, number=i)
 
-        if N.params == 1:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Smagorinsky
-        elif N.params_in_task == 0 or MCMC:
+        if N.params == 1 or N.params_in_task == 0 or MCMC:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_tau
         elif N.params_in_task == 1:
             self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param1
@@ -37,7 +35,6 @@ class NonlinearModel(object):
             if N.params_in_task > 2 or N.params_in_task < 0:
                 logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
                     N.params_in_task))
-
 
 
         logging.info('Nonlinear model with {}'.format(self.Reynolds_stresses_from_C.__name__))
@@ -258,15 +255,15 @@ class NonlinearModel(object):
                 tau[i] += C[j] * self.Tensor[str(j)][i]
         return tau
 
-    def Reynolds_stresses_from_C_Smagorinsky(self, C):
-        """Calculate Reynolds stresses using Smagorinsky eddy-viscosity model with constants C.
-        :param C: list of constant parameters
-        :return: dict of modeled Reynolds stresses tensor
-        """
-        tau = dict()
-        for i in self.elements_in_tensor:
-            tau[i] = C[0] * self.Tensor['0'][i]
-        return tau
+    # def Reynolds_stresses_from_C_Smagorinsky(self, C):
+    #     """Calculate Reynolds stresses using Smagorinsky eddy-viscosity model with constants C.
+    #     :param C: list of constant parameters
+    #     :return: dict of modeled Reynolds stresses tensor
+    #     """
+    #     tau = dict()
+    #     for i in self.elements_in_tensor:
+    #         tau[i] = C[0] * self.Tensor['0'][i]
+    #     return tau
 
     def Reynolds_stresses_from_C_Nonlin_param1(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.

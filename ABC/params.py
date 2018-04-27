@@ -33,25 +33,24 @@ ORDER = 2           # order of eddy-viscosity model
 N_params_force = 3
 ########################################################################################################################
 # Sampling
-sampling = 'uniform'    # 'random', 'sobol'
-N_each = 100
-N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
+sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
+N_each = 10
+N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
 # domain = [-0.45, 0.45]  # for pdf comparison
 domain = [-0.7, 0.7]  # for pdf comparison
 num_bin_joint = 10
-eps = 200   # acceptance tolerance
+eps = 5000   # acceptance tolerance
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 2*10**5
-N_calibration = 60**3  # recommended 10^p, where p is number of params
+N_total = 10**5
+N_calibration = 10**3  # recommended 10^p, where p is number of params
 PMC = 0
 #######################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
-# C_limits[0] = [0.0, 0.4]
 # # for 4 params:
 # C_limits[0] = [0.0, 0.25]
 # C_limits[1] = [-0.2, 0.2]
@@ -63,7 +62,7 @@ C_limits = np.zeros((10, 2))
 
 # best
 # C_limits[0] = [0.0, 0.30]
-C_limits[0] = [0.0, 0.3]
+C_limits[0] = [-0.3, 0.3]
 C_limits[1] = [-0.5, 0.5]
 C_limits[2] = [-0.2, 0.2]
 C_limits[3] = [-0.2, 0.2]

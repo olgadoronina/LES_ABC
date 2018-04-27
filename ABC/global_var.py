@@ -24,3 +24,5 @@ N = None
 
 accepted = None
 dist = None
+
+prior = None

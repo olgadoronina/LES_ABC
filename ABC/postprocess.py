@@ -33,7 +33,7 @@ class PostprocessABC(object):
             logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N.params))
         self.C_limits = C_limits
         self.eps = eps
-        self.params_names = [r'$C_S$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
+        self.params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
         self.C_final_dist = []
         self.C_final_joint = []
@@ -85,15 +85,11 @@ class PostprocessABC(object):
         #     plt.xlabel(params_names[i])
         #     plt.show()
 
-        # accepted = g.accepted
-        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0]/2)
-
         if self.N.params > 1:
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
             cmaplist[0] = ('white')  # force the first color entry to be grey
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
-
             fig = plt.figure(figsize=(6.5, 6.5))
             for i in range(self.N.params):
                 for j in range(self.N.params):
@@ -110,9 +106,9 @@ class PostprocessABC(object):
                         # ax.axvline(mean, linestyle='--', color='g', label='mean')
                         # ax.axvline(max, linestyle='--', color='r', label='max')
                         ax.axvline(self.C_final_dist[i], linestyle='--', color='g', label='min dist')
-                        if self.C_final_joint:
-                            for C in self.C_final_joint:
-                                ax.axvline(C[i], linestyle='--', color='b', label='joint max')
+                        # if self.C_final_joint:
+                        #     for C in self.C_final_joint:
+                        #         ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
@@ -131,16 +127,12 @@ class PostprocessABC(object):
 
         for i in range(self.N.params):
             x = g.accepted[:, i]
-            # if i == 0:
-            #     print(x)
-            #     x = np.sqrt(-x/2)
             fig = plt.figure(figsize=(3.2, 2.8))
             ax = plt.axes()
             ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1], ymax=self.eps + 1)
             ax.scatter(x, g.dist, color='blue')
             ax.set_xlabel(self.params_names[i])
             ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
-            # ax.set_title('KL distance')
             fig.subplots_adjust(left=0.19, right=0.95, bottom=0.15, top=0.9)
             fig.savefig(self.folder + self.params_names[i][1:-1])
         gc.collect()
