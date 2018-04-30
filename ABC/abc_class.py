@@ -1,4 +1,3 @@
-
 import logging
 import random as rand
 from time import time
@@ -7,7 +6,6 @@ import global_var as g
 import params
 import numpy as np
 import utils
-
 
 
 class ABC(object):
@@ -92,7 +90,11 @@ class ABC(object):
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
         # Save prior
-        g.prior, _ = np.histogramdd(S_init[:, :-1], bins=g.N.each, normed=True, range=tuple(map(tuple, g.C_limits)))
+        d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
+        limits = g.C_limits.copy()
+        limits[:, 1] += d # to calculate prior on right edge
+        g.prior, _ = np.histogramdd(S_init[:, :-1], bins=g.N.each+1, normed=True, range=tuple(map(tuple, limits)))
+        print(g.prior.shape)
         np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits)
         # S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
@@ -149,8 +151,6 @@ class ABC(object):
                                                                 round(len(g.accepted) / self.N.total * 100, 2)))
 
 
-
-
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
@@ -170,8 +170,10 @@ def calibration_function_single_value(C):
     result.append(dist)
     return result
 
+
 def calibration_function_multiple_values(C):
     return g.TEST_Model.Reynolds_stresses_from_C_calibration2(C, distance_between_pdf_L2log)
+
 
 def work_function_single_value(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -189,6 +191,7 @@ def work_function_single_value(C):
         result = C[:]
         result.append(dist)
         return result
+
 
 def work_function_multiple_values(C):
     """ Worker function for parallel regime (for pool.map from multiprocessing module)
@@ -227,18 +230,27 @@ def work_function_MCMC(C_init):
         a = C_init[:]
         a.append(dist)
         result.append(a)
+        print(result)
+        print(result[-1][:-1])
         pbar.update()
     ####################################################################################################################
         # Markov Chain
-        counter = 0
+        counter_sample = 0
+        counter_dist = 0
         for i in range(1, N):
             while True:
                 while True:
-                    c = np.random.normal(result[-1][:-1], std)
-                    if not (False in np.less(C_limits[:, 0], c) or False in np.less(c, C_limits[:, 1])):
+                    print(i, counter_dist, counter_sample)
+                    if i < 10:
+                        c = np.random.normal(result[-1][:-1], std)
+                    else:
+                        covariance_matrix = np.cov(np.array(result)[-10:, :-1].T)
+                        c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                    counter_sample += 1
+                    if not(False in (g.C_limits[:, 0] < c) * (c < g.C_limits[:, 1])):
                         break
                 dist = calc_dist(c)
-                counter += 1
+                counter_dist += 1
                 if dist <= g.eps:
                     prior_new = utils.get_prior(c)
                     prior_old = utils.get_prior(result[-1][:-1])
@@ -250,14 +262,16 @@ def work_function_MCMC(C_init):
                         pbar.update()
                         break
         pbar.close()
-    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
-    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter, N))
+    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
+    print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
+    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
+    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
     return result
+
 
 ############
 #
 ############
-
 def work_function_PMC():
 
     N_params = 1

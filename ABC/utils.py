@@ -16,9 +16,9 @@ def timer(start, end, label):
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
 
+
 def get_prior(x):
     d = (g.C_limits[:, 1]-g.C_limits[:, 0]) / g.N.each
-    # ind, reminder = np.divmod((x - g.C_limits[:, 0]), d)
     ind = np.floor_divide((x - g.C_limits[:, 0]), d)   # find nearest point
     ind = tuple(ind.astype(np.int8, copy=False))
     y = g.prior[ind]
