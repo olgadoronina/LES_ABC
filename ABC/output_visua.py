@@ -1,26 +1,28 @@
 import params
-import pickle
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import logging
 import sys
 
 import global_var as g
-import init
 import numpy as np
 import plotting
+import init
+import postprocess
 
 
-calibration = 1
-IMCMC = 0
+uniform = 0
+calibration = 0
+IMCMC = 1
+
+filename_calibration_all = './plots/calibration_all.npz'
+filename_calibration = './plots/calibration.npz'
+filename_accepted = './plots/accepted.npz'
 
 if calibration:
-    filename_all = './plots/calibration_all.npz'
-    filename = './plots/calibration.npz'
+    filename = filename_calibration
 else:
-    if IMCMC:
-        filename_calibration = './plots/calibration.npz'
-    filename = './plots/accepted.npz'
+    filename = filename_accepted
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 
@@ -40,24 +42,24 @@ initialize.model_on_sparse_TEST_data()
 abc = initialize.ABC_algorithm()
 del initialize
 
-# ########################
+########################
 g.accepted = np.load(filename)['C']
 g.dist = np.load(filename)['dist']
+########################
+
 if IMCMC:
     S_init = np.load(filename_calibration)['C']
     S_dist = np.load(filename_calibration)['dist']
-    # S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)
     g.accepted = np.vstack((g.accepted, S_init))
 
 if calibration:
-    # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
     C_limits = params.C_limits
+    num_bin_joint = 10
+    dist = np.load(filename_calibration_all)['S_init'][:, -1]
+    plotting.dist_pdf(dist, params.x, params.plot_folder)
 
-    num_bin_joint = 10
-    dist = np.load(filename_all)['S_init'][:, -1]
-    plotting.dist_pdf(dist)
 else:
-    num_bin_joint = 10
+    num_bin_joint = 20
     C_limits = params.C_limits
     # C_limits = np.zeros((10, 2))
     # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
@@ -67,18 +69,21 @@ else:
     # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
     # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
 # # # #########################
-eps = g.eps
-# eps = new_eps
-print(g.C_limits)
-initialize = init.InitPostProcess(eps, g.C_limits, num_bin_joint)
-postproc = initialize.postprocessing()
 
+eps = g.eps
+N = init.NPoints()
+postproc = postprocess.PostprocessABC(g.C_limits, eps, N, params.plot_folder)
 
 postproc.calc_final_C()
 postproc.plot_marginal_pdf()
 
 if not calibration:
-    # # postproc.plot_eps()
+    # new_eps = 2500
+    # g.accepted = g.accepted[g.dist < new_eps]
+    # g.dist = g.dist[g.dist < new_eps]
+    # logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+
+    postproc.plot_eps()
     postproc.plot_scatter()
     # # postproc.scatter_animation()
     postproc.plot_compare_tau(scale='TEST_M', MCMC=0)

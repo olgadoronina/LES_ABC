@@ -7,7 +7,7 @@ import utils
 
 class Data(object):
 
-    def __init__(self, data_dict, delta, homogeneous, dx, info):
+    def __init__(self, data_dict, delta, homogeneous, dx):
         self.field = data_dict
         self.dx = dx
         self.delta = delta
@@ -15,9 +15,9 @@ class Data(object):
         self.S = self.calc_strain_tensor()
         self.S_mod = self.calc_strain_mod()
         self.R = self.calc_rotation_tensor()
-        self.A = None
-        if info:
-            self.A = self.field_gradient()
+        # self.A = None
+        # if info:
+        #     self.A = self.field_gradient()
 
 
 

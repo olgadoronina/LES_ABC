@@ -13,8 +13,6 @@ data_folder = './data_input/JohnHopkins/'
 # data_folder = './data_input/HIT_DNS_N256/'
 # Plotting
 plot_folder = './plots/'
-PLOT_INIT_INFO = 0
-
 ########################################################################################################################
 # Initial case parameters
 N_point = 256
@@ -34,19 +32,24 @@ N_params_force = 3
 ########################################################################################################################
 # Sampling
 sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
-N_each = 10
+N_each = 100
 N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
-# domain = [-0.45, 0.45]  # for pdf comparison
-domain = [-0.7, 0.7]  # for pdf comparison
+domain = [-0.45, 0.45]  # for pdf comparison
+# domain = [-0.7
+# , 0.7]  # for pdf comparison
 num_bin_joint = 10
 eps = 5000   # acceptance tolerance
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
 N_total = 10**5
+########################################################################################################################
 N_calibration = 10**3  # recommended 10^p, where p is number of params
+x = 0.15   # percent of accepted for calibration step
+phi = 1
+########################################################################################################################
 PMC = 0
 #######################################################################################################################
 # Sample limits

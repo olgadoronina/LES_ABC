@@ -1,11 +1,4 @@
 import logging
-
-import matplotlib as mpl
-
-mpl.use('pdf')
-import matplotlib.pyplot as plt
-import pickle
-
 import abc_class
 import data
 import utils
@@ -14,7 +7,6 @@ import model
 import numpy as np
 import parallel
 import params
-import plotting
 import postprocess
 
 
@@ -91,37 +83,6 @@ class Init(object):
             logging.info('Number of samples per interval = {}'.format(self.N.each))
             logging.info('Number of parameters per task = {}\n'.format(self.N.params_in_task))
 
-    def plotting(self):
-
-        # mpl.style.use(['dark_background','mystyle'])
-        # mpl.style.use(['mystyle'])
-
-        # mpl.rcParams['figure.figsize'] = 6.5, 2.2
-        # plt.rcParams['figure.autolayout'] = True
-
-        mpl.rcParams['font.size'] = 10
-        mpl.rcParams['font.family'] = 'Times New Roman'
-        mpl.rc('text', usetex=True)
-        mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
-        mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
-        mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-        mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
-        mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
-        # plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
-        mpl.rcParams['xtick.major.size'] = 3
-        mpl.rcParams['xtick.minor.size'] = 3
-        mpl.rcParams['xtick.major.width'] = 1
-        mpl.rcParams['xtick.minor.width'] = 1
-        mpl.rcParams['ytick.major.size'] = 3
-        mpl.rcParams['ytick.minor.size'] = 3
-        mpl.rcParams['ytick.major.width'] = 1
-        mpl.rcParams['ytick.minor.width'] = 1
-        # mpl.rcParams['legend.frameon'] = False
-        # plt.rcParams['legend.loc'] = 'center left'
-        plt.rcParams['axes.linewidth'] = 1
-        g.plot = plotting.Plot(params.plot_folder, params.PLOT_INIT_INFO)
-
-
     def LES_TEST_data(self):
 
         def load_HIT_data():
@@ -148,8 +109,6 @@ class Init(object):
                 for j in ['u', 'v', 'w']:
                     HIT_data[i + j] = np.multiply(HIT_data[i], HIT_data[j])
 
-            # utils.spectral_density([HIT_data['u'], HIT_data['v'], HIT_data['w']], dx, params.N_points,
-            #                        params.plot_folder + 'DNS')
             return HIT_data
 
         dx = np.divide(params.lx, params.N_points)
@@ -158,7 +117,6 @@ class Init(object):
             logging.info("Load LES data")
             loadfile_LES = params.data_folder + 'LES.npz'
             LES_data = np.load(loadfile_LES)
-            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
 
             if self.TEST_scale:
                 logging.info("Load TEST data")
@@ -180,11 +138,6 @@ class Init(object):
                 logging.info('Writing file')
                 np.savez(params.data_folder + 'TEST.npz', **TEST_data)
 
-            g.plot.map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
-
-            if params.PLOT_INIT_INFO:
-                g.plot.compare_filter_fields(HIT_data, LES_data, TEST_data)
-
         if self.TEST_scale:
             LES_delta = 1 / params.LES_scale
             TEST_delta = 1 / params.TEST_scale
@@ -199,22 +152,6 @@ class Init(object):
             g.LES = data.Data(HIT_data, DNS_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
             logging.info('Create TEST class')
             g.TEST = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
-
-        if params.PLOT_INIT_INFO:
-            logging.info('Calculate spectra')
-            utils.spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points,
-                                   params.plot_folder+'LES')
-            if self.TEST_scale:
-                utils.spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points,
-                                   params.plot_folder + 'test')
-
-            logging.info('Plot initial data info')
-            g.plot.spectra()
-            g.plot.vel_fields(scale='LES', dns=not self.TEST_scale)
-            g.plot.vel_fields(scale='TEST', dns=not self.TEST_scale)
-            g.plot.sigma_field(scale='LES', dns=not self.TEST_scale)
-            g.plot.sigma_field(scale='TEST', dns=not self.TEST_scale)
-            g.plot.sigma_pdf(dns=not self.TEST_scale)
 
         if self.TEST_scale:
             del TEST_data, LES_data
@@ -250,18 +187,5 @@ class Init(object):
         abc_init = abc_class.ABC(N=self.N, form_C_array=sampling_func)
         return abc_init
 
-
-class InitPostProcess(object):
-
-    def __init__(self, eps, C_limits, num_bin_joint):
-
-        self.eps = eps
-        self.N = NPoints()
-        self.N.bin_joint = num_bin_joint
-        self.C_limits = C_limits
-
-    def postprocessing(self):
-        postproc = postprocess.PostprocessABC(self.C_limits, self.eps, self.N, params.plot_folder)
-        return postproc
 
 

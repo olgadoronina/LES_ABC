@@ -303,7 +303,6 @@ class NonlinearModel(object):
         dist = np.zeros(self.N.each ** 2)
         C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
         C_before_last = utils.uniform_grid(self.C_limits[-2], self.N.each)
-        print(len(C_last), len(C_before_last))
 
         for i in self.elements_in_tensor:
             tau = np.zeros(self.M ** 3)

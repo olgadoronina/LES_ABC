@@ -93,6 +93,8 @@ class ABC(object):
         d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
         limits = g.C_limits.copy()
         limits[:, 1] += d # to calculate prior on right edge
+        print(tuple(map(tuple, limits)))
+        print(S_init[:, :-1].shape)
         g.prior, _ = np.histogramdd(S_init[:, :-1], bins=g.N.each+1, normed=True, range=tuple(map(tuple, limits)))
         print(g.prior.shape)
         np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits)
@@ -118,7 +120,7 @@ class ABC(object):
             g.accepted = np.array([C[:self.N.params] for C in result if C])
             g.dist = np.array([C[-1] for C in result if C])
         utils.timer(start, end, 'Time ')
-        g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
+        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
 
     def main_loop_uniform(self):
@@ -144,7 +146,7 @@ class ABC(object):
         else:
             g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
-        g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
+        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
         # np.savetxt('accepted_'+str(N_params_in_task)+'.out', g.accepted)
         # np.savetxt('dist_'+str(N_params_in_task)+'.out', g.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
@@ -230,8 +232,8 @@ def work_function_MCMC(C_init):
         a = C_init[:]
         a.append(dist)
         result.append(a)
-        print(result)
-        print(result[-1][:-1])
+        # print(result)
+        # print(result[-1][:-1])
         pbar.update()
     ####################################################################################################################
         # Markov Chain
@@ -240,12 +242,14 @@ def work_function_MCMC(C_init):
         for i in range(1, N):
             while True:
                 while True:
-                    print(i, counter_dist, counter_sample)
+                    # print(i, counter_dist, counter_sample)
                     if i < 10:
                         c = np.random.normal(result[-1][:-1], std)
                     else:
-                        covariance_matrix = np.cov(np.array(result)[-10:, :-1].T)
-                        c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                        # covariance_matrix = np.cov(np.array(result)[-10:, :-1].T)
+                        # c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                        c = np.random.normal(result[-1][:-1], std)
+
                     counter_sample += 1
                     if not(False in (g.C_limits[:, 0] < c) * (c < g.C_limits[:, 1])):
                         break
@@ -254,7 +258,13 @@ def work_function_MCMC(C_init):
                 if dist <= g.eps:
                     prior_new = utils.get_prior(c)
                     prior_old = utils.get_prior(result[-1][:-1])
-                    h = min(1, np.divide(prior_new, prior_old))  # np.divede return 0 for division by 0
+                    if prior_new == 0:
+                        h = 0
+                    elif prior_old == 0:
+                        h = 1
+                    else:
+                        h = min(1, np.divide(prior_new, prior_old))  # np.divide return 0 for division by 0
+
                     if h > 0 and np.random.random() < h:
                         a = list(c[:])
                         a.append(dist)

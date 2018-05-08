@@ -14,7 +14,8 @@ import itertools
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
-    logging.info("{:0>2}:{:05.2f} \t {}".format(int(minutes), seconds, label))
+    logging.info("{:0>1}:{:0>2}:{:05.2f} \t {}".format(int(hours), int(minutes), seconds, label))
+
 
 
 def get_prior(x):
@@ -57,55 +58,6 @@ def baseconvert(x, newbase, number_digits):
     for i in range(number_digits-len(r)):
         r = [0] + r
     return r
-
-
-def shell_average(spect3D, N_point, k_3d):
-    """ Compute the 1D, shell-averaged, spectrum of the 3D Fourier-space
-    variable E3.
-    :param E3: 3-dimensional complex or real Fourier-space scalar
-    :param km:  wavemode of each n-D wavevector
-    :return: 1D, shell-averaged, spectrum
-    """
-    i = 0
-    F_k = np.zeros(N_point**3)
-    k_array = np.empty_like(F_k)
-    for ind_x, kx in enumerate(k_3d[0]):
-        for ind_y, ky in enumerate(k_3d[1]):
-            for ind_z, kz in enumerate(k_3d[2]):
-                k_array[i] = round(np.sqrt(kx**2 + ky**2 + kz**2))
-                F_k[i] = 2*np.pi*k_array[i]**2*spect3D[ind_x, ind_y, ind_z]
-                i += 1
-    all_F_k = sorted(list(zip(k_array, F_k)))
-
-    x, y = [all_F_k[0][0]], [all_F_k[0][1]]
-    n = 1
-    for k, F in all_F_k[1:]:
-        if k == x[-1]:
-            n += 1
-            y[-1] += F
-        else:
-            y[-1] /= n
-            x.append(k)
-            y.append(F)
-            n = 1
-    return x, y
-
-
-def spectral_density(vel_array, dx, N_points, fname):
-    """
-    Write the 1D power spectral density of var to text file. Method
-    assumes a real input in physical space.
-    """
-    k = 2*np.pi*np.array([fftfreq(N_points[0], dx[0]), fftfreq(N_points[1], dx[1]), fftfreq(N_points[2], dx[2])])
-    spect3d = 0
-    for array in vel_array:
-        fft_array = fftn(array)
-        spect3d += np.real(fft_array * np.conj(fft_array))
-
-    x, y = shell_average(spect3d, N_points[0], k)
-    fh = open(fname + '.spectra', 'w')
-    fh.writelines(["%s\n" % item for item in y])
-    fh.close()
 
 
 def uniform_grid(C_limits, N_each):

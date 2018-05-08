@@ -22,9 +22,7 @@ class PostprocessABC(object):
     def __init__(self, C_limits, eps, N, folder):
 
         logging.info('\nPostprocessing')
-        if len(g.accepted) == 0:
-            logging.error('Oops! No accepted values')
-            exit()
+        assert len(g.accepted) != 0, 'Oops! No accepted values'
         self.N = N
         self.num_bin_joint = N.bin_joint
         self.folder = folder
@@ -50,18 +48,16 @@ class PostprocessABC(object):
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
             logging.info('Estimated parameter: {}'.format(self.C_final_dist[0][0]))
             logging.info('Min distance: {}'.format(g.dist[np.argmin(g.dist)]))
-            # logging.info('Estimated parameter:{}'.format(np.sqrt(-self.C_final_dist[0][0]/2)))
         else:
             # C_final_dist
             minim = np.argmin(g.dist)
             self.C_final_dist = g.accepted[minim, :]
             C_final_dist = self.C_final_dist
-            # C_final_dist[0] = np.sqrt(-C_final_dist[0] / 2)
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             # C_final_joint
             H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint)
-            logging.debug('Max number in bin: ' + str(np.max(H)))
-            logging.debug('Mean number in bin: ' + str(np.mean(H)))
+            logging.debug('Max number in bin: {}'.format(np.max(H)))
+            logging.debug('Mean number in bin: {}'.format(np.mean(H)))
             edges = np.array(edges)
             C_bin = (edges[:, :-1] + edges[:, 1:]) / 2  # shift value in the center of the bin
             ind = np.argwhere(H == np.max(H))
@@ -88,7 +84,7 @@ class PostprocessABC(object):
         if self.N.params > 1:
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
-            cmaplist[0] = ('white')  # force the first color entry to be grey
+            cmaplist[0] = ('white')  # force the first color entry to be white
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
             fig = plt.figure(figsize=(6.5, 6.5))
             for i in range(self.N.params):
@@ -106,9 +102,9 @@ class PostprocessABC(object):
                         # ax.axvline(mean, linestyle='--', color='g', label='mean')
                         # ax.axvline(max, linestyle='--', color='r', label='max')
                         ax.axvline(self.C_final_dist[i], linestyle='--', color='g', label='min dist')
-                        # if self.C_final_joint:
-                        #     for C in self.C_final_joint:
-                        #         ax.axvline(C[i], linestyle='--', color='b', label='joint max')
+                        if self.C_final_joint:
+                            for C in self.C_final_joint:
+                                ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
@@ -216,7 +212,7 @@ class PostprocessABC(object):
 
     def plot_eps(self):
         num_eps = 6
-        eps = np.linspace(7.2, 15, num_eps)
+        eps = np.linspace(200, 4000, num_eps)
 
         # eps = np.append(8.877, eps)
 
@@ -229,7 +225,6 @@ class PostprocessABC(object):
         for ind, new_eps in enumerate(eps):
             g.accepted = np.load('./plots/accepted.npz')['C']
             g.dist = np.load('./plots/accepted.npz')['dist']
-            # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
 
             g.accepted = g.accepted[g.dist < new_eps]
             g.dist = g.dist[g.dist < new_eps]
