@@ -14,8 +14,10 @@ TEST_Model = None
 
 eps = None
 x = None
+phi = None
 std = None
 C_limits = None
+C_limits_prior = None
 par_process = None
 plot = None
 

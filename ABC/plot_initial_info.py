@@ -9,7 +9,7 @@ from numpy.fft import fftfreq, fftn, ifftn
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 spectra = 0
-folder = './plots/init_info/'
+folder = './plots/init_info_'+params.DATA
 if not os.path.isdir(folder):
     os.makedirs(folder)
 
@@ -170,3 +170,21 @@ def main():
 if __name__ == '__main__':
     main()
 
+
+
+########################################################################################################################
+# Initial data
+########################################################################################################################
+# fig = pickle.load(open(params.plot_folder + 'LES_velocities', 'rb'))
+# plt.show()
+#
+# fig = pickle.load(open(params.plot_folder + 'TEST_velocities', 'rb'))
+# plt.show()
+#
+# fig = pickle.load(open(params.plot_folder+'sigma_TEST', 'rb'))
+# fig.set_title[r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+# plt.show()
+#
+# fig = pickle.load(open(params.plot_folder+'TEST', 'rb'))
+#
+# plt.show()

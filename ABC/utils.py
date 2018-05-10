@@ -75,35 +75,11 @@ def mean_confidence_interval(data, confidence=0.95):
 
 
 def take_safe_log(x):
+    """Takes natural logarithm and put g.TINY number where x = 0"""
     log_fill = np.empty_like(x)
     log_fill.fill(g.TINY_log)
     log = np.log(x, out=log_fill, where=x > g.TINY)
     return log
-
-# import scipy.ndimage as ndimage
-#
-# # Other filters
-# for example
-#     for key, value in HIT.items():
-#         LES[key] = ndimage.gaussian_filter(value, sigma=3)
-#         TEST[key] = ndimage.gaussian_filter(value, sigma=5)
-# map_bounds = np.linspace(np.min(HIT['u'][:, :, 127]), np.max(HIT['u'][:, :, 127]), 20)
-# imagesc([HIT['u'][:, :, 127], LES['u'][:, :, 127], TEST['u'][:, :, 127]], map_bounds, 'gaussian_filter')
-#
-# for key, value in HIT.items():
-#     LES[key] = ndimage.uniform_filter(value, size=5, mode='constant')
-#     TEST[key] = ndimage.uniform_filter(value, size=10, mode='constant')
-# map_bounds = np.linspace(np.min(HIT['u'][:, :, 127]), np.max(HIT['u'][:, :, 127]), 20)
-# imagesc([HIT['u'][:, :, 127], LES['u'][:, :, 127], TEST['u'][:, :, 127]], map_bounds, 'Physical_sharp')
-#
-# for key, value in HIT.items():
-#     input = np.fft.fftn(value)
-#     LES[key] = np.fft.ifftn(ndimage.fourier_uniform(input, size=5))
-#     TEST[key] = np.fft.ifftn(ndimage.fourier_uniform(input, size=10))
-# map_bounds = np.linspace(np.min(HIT['u'][:, :, 127]), np.max(HIT['u'][:, :, 127]), 20)
-# imagesc([HIT['u'][:, :, 127], LES['u'].real[:, :, 127], TEST['u'].real[:, :, 127]], map_bounds, 'Fourier_sharp')
-
-
 
 
 def tophat_kernel(k, limit):
@@ -118,6 +94,7 @@ def tophat_kernel(k, limit):
 
     kernel = np.piecewise(a, [a <= limit, a > limit], [1, 0])
     return kernel
+
 
 def filter3d(data, scale_k, dx, N_points, filename=None):
     """ Tophat filter in Fourier space for dictionary of 3D arrays.
@@ -239,6 +216,7 @@ def sampling_uniform_grid():
             C[i, :] = uniform_grid(g.C_limits[i], g.N.each)
         permutation = itertools.product(*C)
         C_array = list(map(list, permutation))
+        print(np.array(C_array).shape)
     logging.debug('Form C_array manually: {} samples\n'.format(len(C_array)))
     return C_array
 

@@ -27,27 +27,26 @@ M = 64                                     # number of training points (sparse d
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 2           # order of eddy-viscosity model
-N_params_force = 3
+ORDER = 3           # order of eddy-viscosity model
+N_params_force = 6
 ########################################################################################################################
 # Sampling
 sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
 N_each = 100
-N_params_in_task = 0  # only 0, 1 or 2  #only 0 and 2 for calibration
+N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
 # abs algorithm
 bins = 100  # for pdf comparison
 domain = [-0.45, 0.45]  # for pdf comparison
-# domain = [-0.7
-# , 0.7]  # for pdf comparison
-num_bin_joint = 10
+# domain = [-0.7, 0.7]  # for pdf comparison
+num_bin_joint = 20
 eps = 5000   # acceptance tolerance
 ########################################################################################################################
 MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 10**5
+N_total = 10**7
 ########################################################################################################################
-N_calibration = 10**3  # recommended 10^p, where p is number of params
-x = 0.15   # percent of accepted for calibration step
+N_calibration = 10**6  # recommended 10^p, where p is number of params
+x = 0.05   # percent of accepted for calibration step
 phi = 1
 ########################################################################################################################
 PMC = 0

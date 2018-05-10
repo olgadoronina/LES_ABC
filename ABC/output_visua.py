@@ -1,9 +1,6 @@
 import params
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import logging
 import sys
-
 import global_var as g
 import numpy as np
 import plotting
@@ -26,16 +23,10 @@ else:
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 
-logging.info('platform {}'.format(sys.platform))
-logging.info('python {}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]))
-logging.info('numpy {}'.format(np.__version__))
-logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
 ####################################################################################################################
 # Initial data
 ####################################################################################################################
 initialize = init.Init()
-initialize.plotting()
-
 initialize.LES_TEST_data()
 initialize.TEST_sparse_data()
 initialize.model_on_sparse_TEST_data()
@@ -46,20 +37,22 @@ del initialize
 g.accepted = np.load(filename)['C']
 g.dist = np.load(filename)['dist']
 ########################
-
-if IMCMC:
-    S_init = np.load(filename_calibration)['C']
-    S_dist = np.load(filename_calibration)['dist']
-    g.accepted = np.vstack((g.accepted, S_init))
+#
+# if IMCMC:
+#     S_init = np.load(filename_calibration)['C']
+#     S_dist = np.load(filename_calibration)['dist']
+#     g.accepted = np.vstack((g.accepted, S_init))
 
 if calibration:
     C_limits = params.C_limits
     num_bin_joint = 10
+    N_each = 10
     dist = np.load(filename_calibration_all)['S_init'][:, -1]
     plotting.dist_pdf(dist, params.x, params.plot_folder)
 
 else:
-    num_bin_joint = 20
+    num_bin_joint = 30
+    N_each = 100
     C_limits = params.C_limits
     # C_limits = np.zeros((10, 2))
     # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
@@ -72,28 +65,27 @@ else:
 
 eps = g.eps
 N = init.NPoints()
-postproc = postprocess.PostprocessABC(g.C_limits, eps, N, params.plot_folder)
+N.bin_joint = num_bin_joint
+N.each = N_each
+postproc = postprocess.PostprocessABC(C_limits, eps, N, params.plot_folder)
+
+
+if uniform:
+    new_eps = 2000
+    g.accepted = g.accepted[g.dist < new_eps]
+    g.dist = g.dist[g.dist < new_eps]
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+
 
 postproc.calc_final_C()
 postproc.plot_marginal_pdf()
-
 if not calibration:
-    # new_eps = 2500
-    # g.accepted = g.accepted[g.dist < new_eps]
-    # g.dist = g.dist[g.dist < new_eps]
-    # logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
-
-    postproc.plot_eps()
-    postproc.plot_scatter()
+    #
+    # postproc.plot_eps()
+    # postproc.plot_scatter()
     # # postproc.scatter_animation()
     postproc.plot_compare_tau(scale='TEST_M', MCMC=0)
     postproc.plot_compare_tau(scale='TEST', MCMC=0)
-    # postproc.plot_compare_tau('LES')
-
-# new_eps = 25
-# g.accepted = g.accepted[g.dist < new_eps]
-# g.dist = g.dist[g.dist < new_eps]
-# logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
 
 
 
@@ -111,81 +103,11 @@ if not calibration:
 
 
 
-    # if g.plot.plot_info:
-    # #     logging.info('Plot initial data info')
-    # #     # g.plot.vel_fields(scale='LES')
-    # #     # g.plot.vel_fields(scale='TEST')
-    # #     # g.plot.sigma_field(scale='LES')
-    # #     # g.plot.sigma_field(scale='TEST')
-    # #     # g.plot.sigma_pdf()
-    #     g.plot.S_pdf()
-    #     g.plot.A_compare()
-        # g.plot.spectra()
-
-    ####################################################################################################################
-    # logging.info('Strain tensors')
-    # g.HIT.strain_tensor()
-    # g.LES.strain_tensor()
-    # g.TEST.strain_tensor()
-    # g.LES_sp.A = utils.sparse_dict(g.LES.A, M)
-    # g.TEST_sp.A = utils.sparse_dict(g.TEST.A, M)
-    # plot.A_compare(g.TEST_sp.A, axarr, titles, M=M, color=colors[k])
-    ####################################################################################################################
 
 
 
 
 
-
-
-
-
-
-
-
-# mpl.style.use(['dark_background','mystyle'])
-# # mpl.style.use(['mystyle'])
-#
-# # mpl.rcParams['figure.figsize'] = 6.5, 2.2
-# plt.rcParams['figure.autolayout'] = True
-#
-# mpl.rcParams['font.size'] = 10
-# mpl.rcParams['font.family'] = 'Times New Roman'
-# mpl.rc('text', usetex=True)
-# mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
-# mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
-# mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-# mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
-# mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
-# # plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
-# mpl.rcParams['xtick.major.size'] = 3
-# mpl.rcParams['xtick.minor.size'] = 3
-# mpl.rcParams['xtick.major.width'] = 1
-# mpl.rcParams['xtick.minor.width'] = 1
-# mpl.rcParams['ytick.major.size'] = 3
-# mpl.rcParams['ytick.minor.size'] = 3
-# mpl.rcParams['ytick.major.width'] = 1
-# mpl.rcParams['ytick.minor.width'] = 1
-# # mpl.rcParams['legend.frameon'] = False
-# # plt.rcParams['legend.loc'] = 'center left'
-# plt.rcParams['axes.linewidth'] = 1
-
-########################################################################################################################
-# Initial data
-########################################################################################################################
-# fig = pickle.load(open(params.plot_folder + 'LES_velocities', 'rb'))
-# plt.show()
-#
-# fig = pickle.load(open(params.plot_folder + 'TEST_velocities', 'rb'))
-# plt.show()
-#
-# fig = pickle.load(open(params.plot_folder+'sigma_TEST', 'rb'))
-# fig.set_title[r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
-# plt.show()
-#
-# fig = pickle.load(open(params.plot_folder+'TEST', 'rb'))
-#
-# plt.show()
 
 
 

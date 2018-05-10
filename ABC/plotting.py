@@ -312,7 +312,7 @@ def tau_abc(Cs_abc):
 
 
 def dist_pdf(dist, x, folder):
-    fig = plt.figure(figsize=(4, 3))
+    fig = plt.figure(figsize=(5, 3))
     ax = plt.gca()
     ax.hist(dist, bins=100, normed=1, alpha=0.4)
     # plt.yscale('log', nonposy='clip')
@@ -321,6 +321,7 @@ def dist_pdf(dist, x, folder):
     ax.set_xlabel(r'$\rho$')
     ax.set_ylabel(r'pdf($\rho$)')
     # plt.axis(xmin=-5, xmax=4, ymin=1e-5)
+    fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
     fig.savefig(os.path.join(folder, 'dist'))
     plt.close('all')
 

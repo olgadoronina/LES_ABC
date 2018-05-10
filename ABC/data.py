@@ -15,7 +15,7 @@ class Data(object):
         self.S = self.calc_strain_tensor()
         self.S_mod = self.calc_strain_mod()
         self.R = self.calc_rotation_tensor()
-        # self.A = None
+        self.A = None
         # if info:
         #     self.A = self.field_gradient()
 

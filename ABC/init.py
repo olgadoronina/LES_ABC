@@ -7,7 +7,7 @@ import model
 import numpy as np
 import parallel
 import params
-import postprocess
+
 
 
 class NPoints():
@@ -54,34 +54,39 @@ class Init(object):
         g.eps = params.eps
         g.bins = params.bins
         g.domain = params.domain
+        g.x = params.x
+        g.phi = params.phi
 
         self.N = NPoints()
         g.N = self.N
         self.C_limits = params.C_limits[:self.N.params].copy()
         g.C_limits = self.C_limits[:self.N.params].copy()
 
-        # g.C_limits[0, 0] = - 2 * params.C_limits[0, 1] ** 2
-        # g.C_limits[0, 1] = - 2 * params.C_limits[0, 0] ** 2
-
         self.LES_scale = params.LES_scale
         self.TEST_scale = params.TEST_scale
 
         logging.info('Number of parameters = {}'.format(self.N.params))
         logging.info('Number of processors = {}'.format(self.N.proc))
-        if params.MCMC == 1:
+        if params.MCMC == 0:    # uniform sampling
+            logging.info('Number of samples per interval = {}'.format(self.N.each))
+            logging.info('Number of parameters per task = {}\n'.format(self.N.params_in_task))
+        elif params.MCMC == 1:    # MCMC
             g.std = np.sqrt(params.var[:self.N.params])
             logging.info('Number of accepted samples per MCMC chain = {}\n'.format(self.N.chain))
-        elif params.MCMC == 2:
+        elif params.MCMC == 2:  # MCMC with calibration step
             if self.N.each > 0:
                 logging.info('Number samples on calibration step = {}'.format(self.N.calibration))
                 logging.info('Number of samples in each dimension on calibration step = {}'.format(self.N.each))
+                assert self.N.params_in_task == 0 or self.N.params_in_task == 2, \
+                    'Does not work for MCMC = {} and N_params_in_task = {}'.format(params.MCMC, self.N.params_in_task)
                 logging.info('Number of parameters per task on calibration step = {}\n'.format(self.N.params_in_task))
             else:
                 logging.info('Download calibration data')
             logging.info('Number of accepted samples per MCMC chain = {}\n'.format(self.N.chain))
         else:
-            logging.info('Number of samples per interval = {}'.format(self.N.each))
-            logging.info('Number of parameters per task = {}\n'.format(self.N.params_in_task))
+            logging.error('params.MCMC = {} is out of range'.format(params.MCMC))
+            exit()
+
 
     def LES_TEST_data(self):
 
@@ -142,16 +147,16 @@ class Init(object):
             LES_delta = 1 / params.LES_scale
             TEST_delta = 1 / params.TEST_scale
             logging.info('Create LES class')
-            g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            g.LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx)
             logging.info('Create TEST class')
-            g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            g.TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx)
         else:
             DNS_delta = params.lx[0]
             LES_delta = 1 / params.LES_scale
             logging.info('Create LES class')
-            g.LES = data.Data(HIT_data, DNS_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            g.LES = data.Data(HIT_data, DNS_delta, params.HOMOGENEOUS, dx)
             logging.info('Create TEST class')
-            g.TEST = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx, params.PLOT_INIT_INFO)
+            g.TEST = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx)
 
         if self.TEST_scale:
             del TEST_data, LES_data

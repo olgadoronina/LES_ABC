@@ -1,19 +1,41 @@
 import gc
-import itertools
 import logging
-import random as rand
-from time import time
-
 import global_var as g
+import matplotlib as mpl
+mpl.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import pickle
 from matplotlib import animation
 import model
 import numpy as np
 import utils
 
+# mpl.style.use(['dark_background','mystyle'])
+# mpl.style.use(['mystyle'])
 
+# mpl.rcParams['figure.figsize'] = 6.5, 2.2
+# plt.rcParams['figure.autolayout'] = True
+
+mpl.rcParams['font.size'] = 10
+mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rc('text', usetex=True)
+mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
+mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
+mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
+mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
+mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
+# plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
+mpl.rcParams['xtick.major.size'] = 3
+mpl.rcParams['xtick.minor.size'] = 2
+mpl.rcParams['xtick.major.width'] = 1
+mpl.rcParams['xtick.minor.width'] = 1
+mpl.rcParams['ytick.major.size'] = 3
+mpl.rcParams['ytick.minor.size'] = 2
+mpl.rcParams['ytick.major.width'] = 1
+mpl.rcParams['ytick.minor.width'] = 1
+# mpl.rcParams['legend.frameon'] = False
+# plt.rcParams['legend.loc'] = 'center left'
+plt.rcParams['axes.linewidth'] = 1
 ########################################################################################################################
 ## class PostprocessABC
 ########################################################################################################################
@@ -106,17 +128,26 @@ class PostprocessABC(object):
                             for C in self.C_final_joint:
                                 ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
+                        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, j))
                         ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1],
                                 ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
+                        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                        ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                         plt.hist2d(g.accepted[:, j], g.accepted[:, i], bins=self.num_bin_joint, cmap=cmap,
                                    range=[self.C_limits[j], self.C_limits[i]])
             plt.legend(loc='lower left', bbox_to_anchor=(-6.5, 3.5), fancybox=True, shadow=True)
-            fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
+
+
+            if self.N.params == 3:
+                fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
+            elif self.N.params == 4:
+                fig.subplots_adjust(left=0.03, right=0.98, wspace=0.35, hspace=0.3, bottom=0.08, top=0.97)
             # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
             fig.savefig(self.folder+'marginal')
+            plt.close('all')
             del fig
 
     def plot_scatter(self):
@@ -139,16 +170,12 @@ class PostprocessABC(object):
             C_final_dist_new = self.C_final_dist[0].copy()
         else:
             C_final_dist_new = self.C_final_dist.copy()
-        C_final_dist_new[0] = -2 * C_final_dist_new[0] ** 2
         C_final_joint = 0
         if len(self.C_final_joint) < 5 and self.N.params != 1:
             # if len(self.C_final_joint) == 1:
             #     C_final_joint = self.C_final_joint[0].copy()
-            #     C_final_joint[0] = -2 * C_final_joint[0] ** 2
-            # else:
+            #  else:
             C_final_joint = self.C_final_joint.copy()
-            for i in range(len(C_final_joint)):
-                C_final_joint[i][0] = -2 * C_final_joint[i][0] ** 2
         C_final_marginal = self.C_final_marginal
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
@@ -179,7 +206,7 @@ class PostprocessABC(object):
                 x, y = utils.pdf_from_array_with_x(g.TEST_sp.tau_true[key].flatten(), g.bins, g.domain)
                 y = utils.take_safe_log(y)
             axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
-            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
             # plot min dist pdf
             x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), g.bins, g.domain)
             y = utils.take_safe_log(y)
@@ -243,8 +270,8 @@ class PostprocessABC(object):
         axarr[0].set_ylabel('marginal pdf')
         # Put a legend below current axis
         legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
-        frame = legend.get_frame()
-        frame.set_alpha(1)
+        # frame = legend.get_frame()
+        # frame.set_alpha(1)
         fig.subplots_adjust(left=0.08, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
         fig.savefig(self.folder + 'eps_marginal')
 

@@ -65,23 +65,32 @@ class ABC(object):
         else:
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
 
-        x = 0.15
-        phi = 1     # for range update
-        logging.info('x = {}'.format(x))
+
+        logging.info('x = {}'.format(g.x))
         S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
-        g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
+        g.eps = np.percentile(S_init, q=int(g.x * 100), axis=0)[-1]
         logging.info('eps after calibration step = {}'.format(g.eps))
 
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-        g.std = phi*np.std(S_init[:, :-1], axis=0)
+        g.std = g.phi*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
+
+        # Save prior
+        d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
+        limits = g.C_limits.copy()
+        limits[:, 1] += d   # to calculate prior on right edge
+        g.prior, edges = np.histogramdd(S_init[:, :-1], bins=g.N.each+1, normed=True, range=tuple(map(tuple, limits)))
+        g.C_limits_prior = g.C_limits.copy()
+        np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits_prior, edges=edges)
+
+        # Define new range
         for i in range(g.N.params):
             max_S = np.max(S_init[:, i])
             min_S = np.min(S_init[:, i])
-            half_length = phi * (max_S - min_S) / 2.0
+            half_length = g.phi * (max_S - min_S) / 2.0
             middle = (max_S + min_S) / 2.0
-            g.C_limits[i] = np.array( [middle - half_length, middle + half_length])
+            g.C_limits[i] = np.array([middle - half_length, middle + half_length])
         logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
 
         # Randomly choose starting points for Markov chains
@@ -89,16 +98,6 @@ class ABC(object):
         np.set_printoptions(precision=3)
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
-        # Save prior
-        d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
-        limits = g.C_limits.copy()
-        limits[:, 1] += d # to calculate prior on right edge
-        print(tuple(map(tuple, limits)))
-        print(S_init[:, :-1].shape)
-        g.prior, _ = np.histogramdd(S_init[:, :-1], bins=g.N.each+1, normed=True, range=tuple(map(tuple, limits)))
-        print(g.prior.shape)
-        np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits)
-        # S_init[:, 0] = np.sqrt(-S_init[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
         logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
         ####################################################################################################################
@@ -146,9 +145,6 @@ class ABC(object):
         else:
             g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
-        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)
-        # np.savetxt('accepted_'+str(N_params_in_task)+'.out', g.accepted)
-        # np.savetxt('dist_'+str(N_params_in_task)+'.out', g.dist)
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
                                                                 round(len(g.accepted) / self.N.total * 100, 2)))
 
@@ -232,8 +228,6 @@ def work_function_MCMC(C_init):
         a = C_init[:]
         a.append(dist)
         result.append(a)
-        # print(result)
-        # print(result[-1][:-1])
         pbar.update()
     ####################################################################################################################
         # Markov Chain
@@ -243,12 +237,12 @@ def work_function_MCMC(C_init):
             while True:
                 while True:
                     # print(i, counter_dist, counter_sample)
-                    if i < 10:
+                    if i < 50:
                         c = np.random.normal(result[-1][:-1], std)
                     else:
-                        # covariance_matrix = np.cov(np.array(result)[-10:, :-1].T)
-                        # c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
-                        c = np.random.normal(result[-1][:-1], std)
+                        covariance_matrix = np.cov(np.array(result)[-50:, :-1].T)
+                        c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                        # c = np.random.normal(result[-1][:-1], std)
 
                     counter_sample += 1
                     if not(False in (g.C_limits[:, 0] < c) * (c < g.C_limits[:, 1])):
@@ -256,21 +250,21 @@ def work_function_MCMC(C_init):
                 dist = calc_dist(c)
                 counter_dist += 1
                 if dist <= g.eps:
-                    prior_new = utils.get_prior(c)
-                    prior_old = utils.get_prior(result[-1][:-1])
-                    if prior_new == 0:
-                        h = 0
-                    elif prior_old == 0:
-                        h = 1
-                    else:
-                        h = min(1, np.divide(prior_new, prior_old))  # np.divide return 0 for division by 0
-
-                    if h > 0 and np.random.random() < h:
-                        a = list(c[:])
-                        a.append(dist)
-                        result.append(a)
-                        pbar.update()
-                        break
+                    # prior_new = utils.get_prior(c)
+                    # prior_old = utils.get_prior(result[-1][:-1])
+                    # if prior_new == 0:
+                    #     h = 0
+                    # elif prior_old == 0:
+                    #     h = 1
+                    # else:
+                    #     h = min(1, np.divide(prior_new, prior_old))  # np.divide return 0 for division by 0
+                    #
+                    # if h > 0 and np.random.random() < h:
+                    a = list(c[:])
+                    a.append(dist)
+                    result.append(a)
+                    pbar.update()
+                    break
         pbar.close()
     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
     print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
