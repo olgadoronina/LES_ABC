@@ -6,6 +6,7 @@ import global_var as g
 import params
 import numpy as np
 import utils
+import fully_adaptive
 
 
 class ABC(object):
@@ -28,6 +29,10 @@ class ABC(object):
             self.calibration = calibration_function_single_value
             if self.N.params_in_task > 0:
                 self.calibration = calibration_function_multiple_values
+        elif params.MCMC == 3: # Gaussian mixture
+            logging.info('ABC algorithm: Gaussian Mixture')
+            self.main_loop = self.main_loop_gaussian_mixture
+            self.work_func = fully_adaptive.work_function_gaussian_mixture
         else:                   # Uniform
             logging.info('ABC algorithm: Uniform grid sampling')
             self.main_loop = self.main_loop_uniform
@@ -121,6 +126,24 @@ class ABC(object):
         utils.timer(start, end, 'Time ')
         # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
+
+    def main_loop_gaussian_mixture(self):
+        start = time()
+        if g.par_process:
+            g.par_process.run(func=self.work_func, tasks=self.C_array)
+            result = g.par_process.get_results()
+            end = time()
+            g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
+            g.dist = np.array([chunk[-1] for item in result for chunk in item])
+        else:
+            result = self.work_func(self.C_array[0])
+            end = time()
+            g.accepted = np.array([C[:self.N.params] for C in result if C])
+            g.dist = np.array([C[-1] for C in result if C])
+        utils.timer(start, end, 'Time ')
+        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
+        logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
+
 
     def main_loop_uniform(self):
         """ Main loop of ABC algorithm, fill list of accepted parameters
@@ -273,105 +296,105 @@ def work_function_MCMC(C_init):
     return result
 
 
-############
+# ############
+# #
+# ############
+# def work_function_PMC():
 #
-############
-def work_function_PMC():
-
-    N_params = 1
-    print('N_params', N_params)
-    C_limits = params.C_limits
-    N = 10
-    M = 100
-    delta = 0.1
-    prior = 1/(-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2))
-    result = []
-    imp_var = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2))/5
-
-    def gausspdf(x, mu=0, sigma=1):
-        if sigma == 0:
-            print('sigma is 0')
-            exit()
-        u = ((x - mu) / np.abs(sigma))**2
-        y = np.exp(- u / 2) / (np.sqrt(2 * np.pi) * np.abs(sigma))
-        return y
-
-    ####################################################################################################################
-    def calc_dist(C):
-        # Generate data D
-        tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-        # Calculate distance rho(pdf(D), pdf(D'))
-        dist = 0
-        for key in g.TEST_Model.elements_in_tensor:
-            pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-            d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
-            dist += d
-        return dist
-    ####################################################################################################################
-    ####################################################################################################################
-    # first iteration
-    K = M
-    S_init = []
-    for i in range(M):
-        C = []
-        for i in range(N_params):
-            C.append(rand.uniform(C_limits[i][0], C_limits[i][1]))
-        C[0] = -2 * C[0] ** 2
-        dist = calc_dist(C)
-        a = C[:]
-        a.append(dist)
-        S_init.append(a)
-
-    S_init.sort(key=lambda x: x[-1])
-    S_init = np.array(S_init)
-    eps = np.percentile(S_init, q=75, axis=0)[-1]
-    print('eps = ', eps)
-    S_init = S_init[np.where(S_init[:, -1] < eps)]
-    # Calculate initial covariance
-    Cov = 2*np.std(S_init[:, 0])*np.ones(N)
-    print(Cov)
-    # Calculate initial weights
-    W_prev = np.ones(N)/N
-
-    t = 1
-    ####################################################################################################################
-    for n in range(10):
-        K = 0
-        t += 1
-        S = []
-        eps = S_prev[int(0.9*N), -1]
-        counter = 0
-        while len(S) < N:
-            K += 1
-            index = np.random.choice(N, p=W_prev)
-            mean = S_prev[index, 0]
-            C_new = rand.gauss(mean, Cov[index])
-            dist = calc_dist(C)
-            if dist <= eps:
-                a = [C_new, dist]
-                counter += 1
-                S.append(a)
-                K = 0
-        # end
-
-        S = np.array(S)
-        # set new weights
-        W = np.empty_like(W_prev)
-        for j in range(N):
-            denom = 0
-            for i in range(N):
-                denom += W_prev[i]*gausspdf(S[j, 0], mu=S_prev[i, 0], sigma=Cov[i])
-            W[i] = prior/denom
-        W = W/np.sum(W)
-
-        # new covariance
-        Cov = 2 * np.std(S[:, 0]) * W
-        print(Cov)
-        # set next step
-        result.append(S)
-        S_prev = S.copy()
-        W_prev = W.copy()
-    return result
+#     N_params = 1
+#     print('N_params', N_params)
+#     C_limits = params.C_limits
+#     N = 10
+#     M = 100
+#     delta = 0.1
+#     prior = 1/(-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2))
+#     result = []
+#     imp_var = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2))/5
+#
+#     def gausspdf(x, mu=0, sigma=1):
+#         if sigma == 0:
+#             print('sigma is 0')
+#             exit()
+#         u = ((x - mu) / np.abs(sigma))**2
+#         y = np.exp(- u / 2) / (np.sqrt(2 * np.pi) * np.abs(sigma))
+#         return y
+#
+#     ####################################################################################################################
+#     def calc_dist(C):
+#         # Generate data D
+#         tau = g.TEST_Model.Reynolds_stresses_from_C(C)
+#         # Calculate distance rho(pdf(D), pdf(D'))
+#         dist = 0
+#         for key in g.TEST_Model.elements_in_tensor:
+#             pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
+#             d = distance_between_pdf_KL(pdf_modeled=pdf, key=key, axis=0)
+#             dist += d
+#         return dist
+#     ####################################################################################################################
+#     ####################################################################################################################
+#     # first iteration
+#     K = M
+#     S_init = []
+#     for i in range(M):
+#         C = []
+#         for i in range(N_params):
+#             C.append(rand.uniform(C_limits[i][0], C_limits[i][1]))
+#         C[0] = -2 * C[0] ** 2
+#         dist = calc_dist(C)
+#         a = C[:]
+#         a.append(dist)
+#         S_init.append(a)
+#
+#     S_init.sort(key=lambda x: x[-1])
+#     S_init = np.array(S_init)
+#     eps = np.percentile(S_init, q=75, axis=0)[-1]
+#     print('eps = ', eps)
+#     S_init = S_init[np.where(S_init[:, -1] < eps)]
+#     # Calculate initial covariance
+#     Cov = 2*np.std(S_init[:, 0])*np.ones(N)
+#     print(Cov)
+#     # Calculate initial weights
+#     W_prev = np.ones(N)/N
+#
+#     t = 1
+#     ####################################################################################################################
+#     for n in range(10):
+#         K = 0
+#         t += 1
+#         S = []
+#         eps = S_prev[int(0.9*N), -1]
+#         counter = 0
+#         while len(S) < N:
+#             K += 1
+#             index = np.random.choice(N, p=W_prev)
+#             mean = S_prev[index, 0]
+#             C_new = rand.gauss(mean, Cov[index])
+#             dist = calc_dist(C)
+#             if dist <= eps:
+#                 a = [C_new, dist]
+#                 counter += 1
+#                 S.append(a)
+#                 K = 0
+#         # end
+#
+#         S = np.array(S)
+#         # set new weights
+#         W = np.empty_like(W_prev)
+#         for j in range(N):
+#             denom = 0
+#             for i in range(N):
+#                 denom += W_prev[i]*gausspdf(S[j, 0], mu=S_prev[i, 0], sigma=Cov[i])
+#             W[i] = prior/denom
+#         W = W/np.sum(W)
+#
+#         # new covariance
+#         Cov = 2 * np.std(S[:, 0]) * W
+#         print(Cov)
+#         # set next step
+#         result.append(S)
+#         S_prev = S.copy()
+#         W_prev = W.copy()
+#     return result
 
 
 

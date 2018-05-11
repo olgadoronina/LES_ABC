@@ -33,14 +33,14 @@ class NPoints():
             self.params_in_task = params.N_params_in_task
 
         # define number of samples
-        if params.MCMC == 1:
+        if params.MCMC:
             self.total = params.N_total
             self.chain = int(self.total/self.proc)
-        elif params.MCMC == 2:
-            self.total = params.N_total
-            self.calibration = params.N_calibration
-            self.each = int(round(self.calibration**(1/self.params)))
-            self.chain = int(self.total/self.proc)
+            if params.MCMC == 2:
+                self.calibration = params.N_calibration
+                self.each = int(round(self.calibration**(1/self.params)))
+            if params.MCMC == 3:
+                self.gaussians = params.N_gaussians
         else:
             self.each = params.N_each
             self.calibration = self.each ** self.params
@@ -70,7 +70,7 @@ class Init(object):
         if params.MCMC == 0:    # uniform sampling
             logging.info('Number of samples per interval = {}'.format(self.N.each))
             logging.info('Number of parameters per task = {}\n'.format(self.N.params_in_task))
-        elif params.MCMC == 1:    # MCMC
+        elif params.MCMC == 1 or params.MCMC == 3:    # MCMC
             g.std = np.sqrt(params.var[:self.N.params])
             logging.info('Number of accepted samples per MCMC chain = {}\n'.format(self.N.chain))
         elif params.MCMC == 2:  # MCMC with calibration step
@@ -175,18 +175,18 @@ class Init(object):
 
     def ABC_algorithm(self):
 
-        if params.sampling == 'random':
-            sampling_func = utils.sampling_random
-        elif params.sampling == 'uniform':
-            sampling_func = utils.sampling_uniform_grid
-        elif params.sampling == 'sobol':
-            sampling_func = utils.sampling_sobol
-        elif params.sampling == 'MCMC':
+        if params.MCMC == 1:
             sampling_func = utils.sampling_initial_for_MCMC
+        elif params.MCMC == 3:
+            sampling_func = utils.sampling_initial_for_gaussian_mixture
         else:
-            logging.error('Incorrect sampling type {}'.format(params.sampling))
-            exit()
-
+            if params.sampling == 'random':
+                sampling_func = utils.sampling_random
+            elif params.sampling == 'uniform':
+                sampling_func = utils.sampling_uniform_grid
+            else:
+                logging.error('Incorrect sampling type {}'.format(params.sampling))
+                exit()
         logging.info('Sampling is {}'.format(params.sampling))
 
         abc_init = abc_class.ABC(N=self.N, form_C_array=sampling_func)

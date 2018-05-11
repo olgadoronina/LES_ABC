@@ -27,11 +27,11 @@ M = 64                                     # number of training points (sparse d
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 3           # order of eddy-viscosity model
-N_params_force = 6
+ORDER = 2           # order of eddy-viscosity model
+N_params_force = 3
 ########################################################################################################################
 # Sampling
-sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
+sampling = 'Gaussian_mixture'    # 'uniform', 'random', 'sobol' , 'MCMC'
 N_each = 100
 N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
@@ -40,30 +40,22 @@ bins = 100  # for pdf comparison
 domain = [-0.45, 0.45]  # for pdf comparison
 # domain = [-0.7, 0.7]  # for pdf comparison
 num_bin_joint = 20
-eps = 5000   # acceptance tolerance
+eps = 2000   # acceptance tolerance
 ########################################################################################################################
-MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 10**7
+MCMC = 3    # 1 = MCMC; 2 = IMCMC
+N_total = 100000
 ########################################################################################################################
 N_calibration = 10**6  # recommended 10^p, where p is number of params
 x = 0.05   # percent of accepted for calibration step
 phi = 1
 ########################################################################################################################
+# Gaussian mixture
+N_gaussians = 10  # number of gaussians
+########################################################################################################################
 PMC = 0
 #######################################################################################################################
 # Sample limits
 C_limits = np.zeros((10, 2))
-# # for 4 params:
-# C_limits[0] = [0.0, 0.25]
-# C_limits[1] = [-0.2, 0.2]
-# C_limits[2] = [-0.2, 0.2]
-# C_limits[3] = [-0.2, 0.2]
-#
-# C_limits[4] = [-0.3, 0.3]
-# C_limits[5] = [-0.3, 0.3]
-
-# best
-# C_limits[0] = [0.0, 0.30]
 C_limits[0] = [-0.3, 0.3]
 C_limits[1] = [-0.5, 0.5]
 C_limits[2] = [-0.2, 0.2]
@@ -77,18 +69,14 @@ C_limits[9] = [-1, 1]
 
 
 ################################
-var = np.empty(6)
-var[0] = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2)) / 20
-var[1] = (C_limits[1][1] - C_limits[1][0]) / 20
-var[2] = (C_limits[2][1] - C_limits[2][0]) / 20
-var[3] = (-2*C_limits[0][0]**2 - (-2*C_limits[0][1]**2)) / 20
-var[4] = (C_limits[1][1] - C_limits[1][0]) / 20
-var[5] = (C_limits[2][1] - C_limits[2][0]) / 20
+var = np.empty(3)
+var = (C_limits[:, 1] - C_limits[:, 0]) / 20
+
 
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+N_proc = 4          # Number of processes
 ########################################################################################################################
 
 

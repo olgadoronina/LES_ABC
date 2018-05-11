@@ -16,6 +16,7 @@ def main():
     logging.info('python {}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     logging.info('numpy {}'.format(np.__version__))
     logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
+
     ####################################################################################################################
     # Initial data
     ####################################################################################################################

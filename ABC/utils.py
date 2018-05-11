@@ -179,6 +179,22 @@ def sampling_initial_for_MCMC():
     return C_array
 
 
+def sampling_initial_for_gaussian_mixture():
+    """ Find starting points for MCMC. (Sample randomly and save if distance < eps)
+    :return: list of lists of parameters
+    """
+    C_array = []
+    for i in range(g.N.proc):
+        c_array = []
+        while len(c_array) < g.N.gaussians:
+            c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+            c_start = abc_class.work_function_single_value(list(c))
+            if c_start:
+                c_array.append(c_start[:-1])
+        C_array.append(np.array(c_array))
+    return C_array
+
+
 def sampling_sobol():
     """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
     :return: list of lists of sampled parameters
@@ -233,7 +249,7 @@ def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     :return: 1D array of calculated distance
     """
 
-    log_modeled = utils.take_safe_log(pdf_modeled)
+    log_modeled = take_safe_log(pdf_modeled)
     dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
 
     return dist
@@ -245,7 +261,7 @@ def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
     :return:            scalar of calculated distance
     """
 
-    log_modeled = utils.take_safe_log(pdf_modeled)
+    log_modeled = take_safe_log(pdf_modeled)
     dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
     return dist
 
@@ -278,7 +294,7 @@ def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     :param key: tensor component(key of dict)
     :return: 1D array of calculated distance
     """
-    log_modeled = utils.take_safe_log(pdf_modeled)
+    log_modeled = take_safe_log(pdf_modeled)
     dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
@@ -290,7 +306,7 @@ def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
     :param axis:
     :return:
     """
-    log_modeled = utils.take_safe_log(pdf_modeled)
+    log_modeled = take_safe_log(pdf_modeled)
     dist = np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
     return dist
 
