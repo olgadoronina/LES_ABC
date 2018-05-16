@@ -15,8 +15,8 @@ class ABC(object):
 
         self.N = N
         self.M = N.training
-
-        self.C_array = form_C_array()
+        if N.each:
+            self.C_array = form_C_array()
 
         if params.MCMC == 1:  # MCMC
             logging.info('ABC algorithm: MCMC')
@@ -29,7 +29,7 @@ class ABC(object):
             self.calibration = calibration_function_single_value
             if self.N.params_in_task > 0:
                 self.calibration = calibration_function_multiple_values
-        elif params.MCMC == 3: # Gaussian mixture
+        elif params.MCMC == 3:  # Gaussian mixture
             logging.info('ABC algorithm: Gaussian Mixture')
             self.main_loop = self.main_loop_gaussian_mixture
             self.work_func = fully_adaptive.work_function_gaussian_mixture
@@ -67,8 +67,20 @@ class ABC(object):
             np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
             logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
 
+            # Save prior
+            d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
+            limits = g.C_limits.copy()
+            limits[:, 1] += d  # to calculate prior on right edge
+
+            g.prior, edges = np.histogramdd(np.array(S_init)[:, :-1], bins=g.N.each + 1, normed=True,
+                                            range=tuple(map(tuple, limits)))
+            g.C_limits_prior = g.C_limits.copy()
+            np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits_prior, edges=edges)
+
         else:
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
+            # g.prior = np.load('./plots/prior.npz')['prior']
+            # g.C_limits_prior = np.load('./plots/prior.npz')['C_limits']
 
 
         logging.info('x = {}'.format(g.x))
@@ -80,14 +92,6 @@ class ABC(object):
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
         g.std = g.phi*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
-
-        # Save prior
-        d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
-        limits = g.C_limits.copy()
-        limits[:, 1] += d   # to calculate prior on right edge
-        g.prior, edges = np.histogramdd(S_init[:, :-1], bins=g.N.each+1, normed=True, range=tuple(map(tuple, limits)))
-        g.C_limits_prior = g.C_limits.copy()
-        np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits_prior, edges=edges)
 
         # Define new range
         for i in range(g.N.params):

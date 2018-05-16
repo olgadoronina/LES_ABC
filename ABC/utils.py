@@ -168,30 +168,36 @@ def sampling_initial_for_MCMC():
     :return: list of lists of parameters
     """
     C_array = []
-
     while len(C_array) <= g.N.proc:
         c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
-        c_start = abc_class.work_function_single_value(list(c))
-        if c_start:
-            C_array.append(c_start[:-1])
-            logging.info('C_start = {}'.format(c_start[:-1]))
+        dist = calc_dist(c)
+        if dist <= g.eps:
+            C_array.append(c)
+            logging.info('C_start = {}'.format(c))
 
     return C_array
 
 
 def sampling_initial_for_gaussian_mixture():
-    """ Find starting points for MCMC. (Sample randomly and save if distance < eps)
+    """ Find starting points for Gaussian Mixture. (Sample randomly and save if distance < eps)
     :return: list of lists of parameters
     """
     C_array = []
-    for i in range(g.N.proc):
-        c_array = []
-        while len(c_array) < g.N.gaussians:
-            c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
-            c_start = abc_class.work_function_single_value(list(c))
-            if c_start:
-                c_array.append(c_start[:-1])
-        C_array.append(np.array(c_array))
+    start = time()
+    from tqdm import tqdm
+    with tqdm(total=g.N.proc*g.N.gaussians) as pbar:
+        for i in range(g.N.proc):
+            c_array = []
+            while len(c_array) < g.N.gaussians:
+                c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+                dist = calc_dist(c)
+                if dist <= g.eps:
+                    c_array.append(c)
+                    pbar.update()
+            C_array.append(np.array(c_array))
+        pbar.close()
+    end = time()
+    timer(start, end, 'Time for sampling')
     return C_array
 
 
@@ -240,6 +246,18 @@ def sampling_uniform_grid():
 ########################################################################################################################
 ## Distance functions
 ########################################################################################################################
+def calc_dist(C):
+    # Generate data D
+    tau = g.TEST_Model.Reynolds_stresses_from_C(C)
+    # Calculate distance rho(pdf(D), pdf(D'))
+    dist = 0
+    for key in g.TEST_Model.elements_in_tensor:
+        pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
+        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
+        dist += d
+    return dist
+
+
 def distance_between_pdf_KL(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf as
     the Kullback-Leibler (KL) divergence (no symmetry).

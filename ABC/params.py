@@ -1,5 +1,4 @@
 from math import *
-import matplotlib as mpl
 import numpy as np
 
 # import cProfile
@@ -27,11 +26,11 @@ M = 64                                     # number of training points (sparse d
 ########################################################################################################################
 # Model parameters
 HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 2           # order of eddy-viscosity model
-N_params_force = 3
+ORDER = 3           # order of eddy-viscosity model
+N_params_force = 6
 ########################################################################################################################
 # Sampling
-sampling = 'Gaussian_mixture'    # 'uniform', 'random', 'sobol' , 'MCMC'
+sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
 N_each = 100
 N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
 ########################################################################################################################
@@ -42,15 +41,15 @@ domain = [-0.45, 0.45]  # for pdf comparison
 num_bin_joint = 20
 eps = 2000   # acceptance tolerance
 ########################################################################################################################
-MCMC = 3    # 1 = MCMC; 2 = IMCMC
-N_total = 100000
+MCMC = 2    # 1 = MCMC; 2 = IMCMC
+N_total = 10**7
 ########################################################################################################################
-N_calibration = 10**6  # recommended 10^p, where p is number of params
-x = 0.05   # percent of accepted for calibration step
+N_calibration = 0  # recommended 10^p, where p is number of params
+x = 0.01   # percent of accepted for calibration step
 phi = 1
 ########################################################################################################################
 # Gaussian mixture
-N_gaussians = 10  # number of gaussians
+N_gaussians = 30  # number of gaussians
 ########################################################################################################################
 PMC = 0
 #######################################################################################################################
@@ -69,34 +68,10 @@ C_limits[9] = [-1, 1]
 
 
 ################################
-var = np.empty(3)
-var = (C_limits[:, 1] - C_limits[:, 0]) / 20
-
-
+var = np.empty(10)
+var = (C_limits[:, 1] - C_limits[:, 0])/2
 ########################################################################################################################
 # Parallel regime parameters
 PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 4          # Number of processes
+N_proc = 6          # Number of processes
 ########################################################################################################################
-
-
-mpl.rcParams['font.size'] = 10
-mpl.rcParams['font.family'] = 'Times New Roman'
-mpl.rc('text', usetex=True)
-mpl.rcParams['axes.labelsize'] = mpl.rcParams['font.size']
-mpl.rcParams['axes.titlesize'] = 1.5 * mpl.rcParams['font.size']
-mpl.rcParams['legend.fontsize'] = mpl.rcParams['font.size']
-mpl.rcParams['xtick.labelsize'] = mpl.rcParams['font.size']
-mpl.rcParams['ytick.labelsize'] = mpl.rcParams['font.size']
-# plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
-mpl.rcParams['xtick.major.size'] = 3
-mpl.rcParams['xtick.minor.size'] = 3
-mpl.rcParams['xtick.major.width'] = 1
-mpl.rcParams['xtick.minor.width'] = 1
-mpl.rcParams['ytick.major.size'] = 3
-mpl.rcParams['ytick.minor.size'] = 3
-mpl.rcParams['ytick.major.width'] = 1
-mpl.rcParams['ytick.minor.width'] = 1
-# mpl.rcParams['legend.frameon'] = False
-# plt.rcParams['legend.loc'] = 'center left'
-mpl.rcParams['axes.linewidth'] = 1

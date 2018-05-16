@@ -10,8 +10,6 @@ import global_var as g
 
 epsilon = 1e-6
 
-
-
 def calc_dist(C):
     # Generate data D
     tau = g.TEST_Model.Reynolds_stresses_from_C(C)
@@ -34,9 +32,11 @@ def work_function_gaussian_mixture(C_init):
     # a)
     T_tot = g.N.chain
     # T_tot = 10
-    T_train = 0.01*T_tot
-    T_stop = 0.7*T_tot
+    T_train = int(100*g.N.params)
+    T_stop = int(0.9*T_tot)
+    assert T_train < T_stop/2, "T_train = {} is bigger then T_stop/2 = {}".format(T_train, T_stop/2)
     N = g.N.gaussians  # Number of Gaussians
+    print(T_train, T_stop, T_tot, N)
 
     # b) Proposal
     mu = np.empty((N, g.N.params))
@@ -49,8 +49,6 @@ def work_function_gaussian_mixture(C_init):
 
     # c) Auxiliary parameters
     m = np.ones(N)
-    # S = np.empty((1, N, N_params))
-    # S[0] = mu
 
     ############################################################################
     # MH steps
@@ -61,20 +59,23 @@ def work_function_gaussian_mixture(C_init):
         # ax = plt.gca()
         counter_sample = 0
         counter_dist = 0
+        counter_update = 0
         for step in range(T_tot):
-            if T_train < i < T_stop:
+            if T_train < step < T_stop:
                 ###########################
                 #  Update proposal
                 ###########################
+                counter_update += 1
                 # Find the closest Gaussian
                 j = np.argmin(np.linalg.norm(mu - c, axis=1))
                 m[j] += 1
-                # update S
+                # update mu and cov
                 mu[j] = 1 / m[j] * c + (m[j] - 1) / m[j] * mu[j]
-                cov[j] = (np.outer(c - mu[j],(c - mu[j]).T) / m[j] + epsilon * np.identity(g.N.params))/(m[j] - 1) + \
+                cov[j] = (np.outer(c - mu[j], (c - mu[j]).T) / m[j] + epsilon * np.identity(g.N.params))/(m[j] - 1) + \
                          (m[j] - 2) / (m[j] - 1) * cov[j]
+                # update weights
                 for i in range(N):
-                    weights[i] = m[i] / (step + N)
+                    weights[i] = m[i] / (N + counter_update)
 
                 # for j in range(N):
                 #     lambda_, v = np.linalg.eig(cov[j])

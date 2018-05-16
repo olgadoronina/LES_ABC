@@ -108,15 +108,15 @@ class PostprocessABC(object):
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
             cmaplist[0] = ('white')  # force the first color entry to be white
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
-            fig = plt.figure(figsize=(6.5, 6.5))
+            fig = plt.figure(figsize=(7, 6.5))
             for i in range(self.N.params):
                 for j in range(self.N.params):
                     if i == j:
-                        mean = np.mean(g.accepted[:, i])
+                        # mean = np.mean(g.accepted[:, i])
                         x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
-                        max = x[np.argmax(y)]
+                        # max = x[np.argmax(y)]
                         # print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
-                        self.C_final_marginal[i] = max
+                        # self.C_final_marginal[i] = max
                         ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
                         ax.hist(g.accepted[:, i], bins=self.num_bin_joint, normed=1, alpha=0.5, color='grey',
                                 range=self.C_limits[i])
@@ -124,7 +124,7 @@ class PostprocessABC(object):
                         # ax.axvline(mean, linestyle='--', color='g', label='mean')
                         # ax.axvline(max, linestyle='--', color='r', label='max')
                         ax.axvline(self.C_final_dist[i], linestyle='--', color='g', label='min dist')
-                        if self.C_final_joint:
+                        if self.C_final_joint and len(self.C_final_joint) < 4:
                             for C in self.C_final_joint:
                                 ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1])
@@ -140,11 +140,13 @@ class PostprocessABC(object):
                                    range=[self.C_limits[j], self.C_limits[i]])
             plt.legend(loc='lower left', bbox_to_anchor=(-6.5, 3.5), fancybox=True, shadow=True)
 
-
             if self.N.params == 3:
                 fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
             elif self.N.params == 4:
                 fig.subplots_adjust(left=0.03, right=0.98, wspace=0.35, hspace=0.3, bottom=0.08, top=0.97)
+            elif self.N.params == 6:
+                fig.subplots_adjust(left=0.05, right=0.98, wspace=0.45, hspace=0.35, bottom=0.08, top=0.98)
+
             # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
             fig.savefig(self.folder+'marginal')
             plt.close('all')

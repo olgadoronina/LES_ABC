@@ -9,8 +9,8 @@ import postprocess
 
 
 uniform = 0
-calibration = 0
-IMCMC = 1
+calibration = 1
+IMCMC = 0
 
 filename_calibration_all = './plots/calibration_all.npz'
 filename_calibration = './plots/calibration.npz'
@@ -30,7 +30,6 @@ initialize = init.Init()
 initialize.LES_TEST_data()
 initialize.TEST_sparse_data()
 initialize.model_on_sparse_TEST_data()
-abc = initialize.ABC_algorithm()
 del initialize
 
 ########################
@@ -51,7 +50,7 @@ if calibration:
     plotting.dist_pdf(dist, params.x, params.plot_folder)
 
 else:
-    num_bin_joint = 30
+    num_bin_joint = 20
     N_each = 100
     C_limits = params.C_limits
     # C_limits = np.zeros((10, 2))
