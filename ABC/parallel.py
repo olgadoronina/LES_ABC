@@ -5,11 +5,11 @@ from time import sleep
 
 class Parallel(object):
 
-    def __init__(self, N_total, progressbar, processes=mp.cpu_count()):
+    def __init__(self, progressbar, processes=mp.cpu_count()):
         self.proc = processes
-        self.N = N_total
         self.results = None
         self.bar = progressbar
+        # logging.info('\n')
         logging.info('Parallel regime: {} workers'.format(processes))
 
     def run(self, func, tasks):

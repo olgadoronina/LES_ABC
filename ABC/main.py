@@ -3,6 +3,10 @@ import sys
 import numpy as np
 import global_var as g
 import init
+import data
+import model
+import parallel
+import abc_class
 
 
 def main():
@@ -18,22 +22,24 @@ def main():
     logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
 
     ####################################################################################################################
-    # Initial data
+    # Initialize data
     ####################################################################################################################
-    initialize = init.Init()
-    initialize.LES_TEST_data()
-    initialize.TEST_sparse_data()
-    initialize.model_on_sparse_TEST_data()
-    initialize.parallel()
+    params = init.CreateParams()
+    init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+    g.TEST_sp = data.DataSparse(g.TEST, params.abc['num_training_points'])
+    g.TEST_Model = model.NonlinearModel(g.TEST_sp, params.model, params.abc['algorithm'], params.algorithm,
+                                        params.C_limits)
+    if params.parallel['N_proc'] > 1:
+        g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])
 
-    abc = initialize.ABC_algorithm()
-    del initialize
+    abc = abc_class.ABC(params.abc, params.algorithm, params.model['N_params'], params.parallel['N_proc'],
+                        params.C_limits)
     ####################################################################################################################
     # ABC algorithm
     ####################################################################################################################
     abc.main_loop()
-    np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
-    logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
+    # np.savez('./plots/accepted.npz', C=g.accepted, dist=g.dist)
+    # logging.info('Accepted parameters and distances saved in ./ABC/plots/accepted.npz')
 
 
 if __name__ == '__main__':

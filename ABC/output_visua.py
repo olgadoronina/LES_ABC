@@ -1,6 +1,6 @@
 import params
 import logging
-import sys
+import data
 import global_var as g
 import numpy as np
 import plotting
@@ -8,8 +8,8 @@ import init
 import postprocess
 
 
-uniform = 0
-calibration = 1
+uniform = 1
+calibration = 0
 IMCMC = 0
 
 filename_calibration_all = './plots/calibration_all.npz'
@@ -26,11 +26,11 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 ####################################################################################################################
 # Initial data
 ####################################################################################################################
-initialize = init.Init()
-initialize.LES_TEST_data()
-initialize.TEST_sparse_data()
-initialize.model_on_sparse_TEST_data()
-del initialize
+# initialize = init.Init()
+params = init.CreateParams()
+init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf, params.abc['summary_statistics'])
+g.TEST_sp = data.DataSparse(g.TEST, params.abc['num_training_points'])
+
 
 ########################
 g.accepted = np.load(filename)['C']
@@ -47,7 +47,7 @@ if calibration:
     num_bin_joint = 10
     N_each = 10
     dist = np.load(filename_calibration_all)['S_init'][:, -1]
-    plotting.dist_pdf(dist, params.x, params.plot_folder)
+    plotting.dist_pdf(dist, params.x, params.output['output_path'])
 
 else:
     num_bin_joint = 20
@@ -63,17 +63,16 @@ else:
 # # # #########################
 
 eps = g.eps
-N = init.NPoints()
-N.bin_joint = num_bin_joint
-N.each = N_each
-postproc = postprocess.PostprocessABC(C_limits, eps, N, params.plot_folder)
+params.algorithm['N_each'] = N_each
+postproc = postprocess.PostprocessABC(C_limits, eps, num_bin_joint, params.output['output_path'])
 
 
 if uniform:
     new_eps = 2000
     g.accepted = g.accepted[g.dist < new_eps]
     g.dist = g.dist[g.dist < new_eps]
-    logging.info('accepted {} values ({}%)'.format(len(g.accepted), round(len(g.accepted) / abc.N.total * 100, 2)))
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+                                                   round(len(g.accepted) / params.algorithm['N_total'] * 100, 2)))
 
 
 postproc.calc_final_C()

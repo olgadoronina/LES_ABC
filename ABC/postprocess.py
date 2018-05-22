@@ -10,11 +10,6 @@ import model
 import numpy as np
 import utils
 
-# mpl.style.use(['dark_background','mystyle'])
-# mpl.style.use(['mystyle'])
-
-# mpl.rcParams['figure.figsize'] = 6.5, 2.2
-# plt.rcParams['figure.autolayout'] = True
 
 mpl.rcParams['font.size'] = 10
 mpl.rcParams['font.family'] = 'Times New Roman'
@@ -41,23 +36,28 @@ plt.rcParams['axes.linewidth'] = 1
 ########################################################################################################################
 class PostprocessABC(object):
 
-    def __init__(self, C_limits, eps, N, folder):
+    def __init__(self, C_limits, eps, num_bin_joint, params, folder):
 
         logging.info('\nPostprocessing')
         assert len(g.accepted) != 0, 'Oops! No accepted values'
-        self.N = N
-        self.num_bin_joint = N.bin_joint
+        self.num_bin_joint = num_bin_joint
+        self.N_params = params.model['N_params']
+        self.model_params = params.model_params
+        self.abc_algorithm = params.abc['algorithm']
+        self.algorithm = params.algorithm
         self.folder = folder
-        if self.N.params != len(g.accepted[0]):
-            self.N.params = len(g.accepted[0])
-            logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N.params))
+        self.bins = params.compare_pdf['bins']
+        self.domain = params.compare_pdf['domain']
+        if self.N_params != len(g.accepted[0]):
+            self.N_params = len(g.accepted[0])
+            logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N_params))
         self.C_limits = C_limits
         self.eps = eps
-        self.params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
+        self.params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
         self.C_final_dist = []
         self.C_final_joint = []
-        self.C_final_marginal = np.empty(self.N.params)
+        self.C_final_marginal = np.empty(self.N_params)
 
     def calc_final_C(self):
         """ Estimate the best fit of parameters.
@@ -65,7 +65,7 @@ class PostprocessABC(object):
         For more then 1 parameter: based on joint pdf.
         """
 
-        if self.N.params == 1:
+        if self.N_params == 1:
             # C_final_dist only
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
             logging.info('Estimated parameter: {}'.format(self.C_final_dist[0][0]))
@@ -85,7 +85,7 @@ class PostprocessABC(object):
             ind = np.argwhere(H == np.max(H))
             for i in ind:
                 point = []
-                for j in range(self.N.params):
+                for j in range(self.N_params):
                     point.append(C_bin[j, i[j]])
                 self.C_final_joint.append(point)
             if len(ind) > 10:
@@ -103,21 +103,21 @@ class PostprocessABC(object):
         #     plt.xlabel(params_names[i])
         #     plt.show()
 
-        if self.N.params > 1:
+        if self.N_params > 1:
             cmap = plt.cm.jet  # define the colormap
             cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
             cmaplist[0] = ('white')  # force the first color entry to be white
             cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
             fig = plt.figure(figsize=(7, 6.5))
-            for i in range(self.N.params):
-                for j in range(self.N.params):
+            for i in range(self.N_params):
+                for j in range(self.N_params):
                     if i == j:
                         # mean = np.mean(g.accepted[:, i])
-                        x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N.each, range=self.C_limits[i])
+                        x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N_each, range=self.C_limits[i])
                         # max = x[np.argmax(y)]
                         # print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
                         # self.C_final_marginal[i] = max
-                        ax = plt.subplot2grid((self.N.params, self.N.params), (i, i))
+                        ax = plt.subplot2grid((self.N_params, self.N_params), (i, i))
                         ax.hist(g.accepted[:, i], bins=self.num_bin_joint, normed=1, alpha=0.5, color='grey',
                                 range=self.C_limits[i])
                         ax.plot(x, y)
@@ -131,7 +131,7 @@ class PostprocessABC(object):
                         ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                         ax.set_xlabel(self.params_names[i])
                     elif i < j:
-                        ax = plt.subplot2grid((self.N.params, self.N.params), (i, j))
+                        ax = plt.subplot2grid((self.N_params, self.N_params), (i, j))
                         ax.axis(xmin=self.C_limits[j, 0], xmax=self.C_limits[j, 1],
                                 ymin=self.C_limits[i, 0], ymax=self.C_limits[i, 1])
                         ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
@@ -168,12 +168,12 @@ class PostprocessABC(object):
 
     def plot_compare_tau(self, MCMC, scale='LES'):
 
-        if self.N.params == 1:
+        if self.N_params == 1:
             C_final_dist_new = self.C_final_dist[0].copy()
         else:
             C_final_dist_new = self.C_final_dist.copy()
         C_final_joint = 0
-        if len(self.C_final_joint) < 5 and self.N.params != 1:
+        if len(self.C_final_joint) < 5 and self.N_params != 1:
             # if len(self.C_final_joint) == 1:
             #     C_final_joint = self.C_final_joint[0].copy()
             #  else:
@@ -185,16 +185,16 @@ class PostprocessABC(object):
         # create pdfs
         if scale == 'LES':
             titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.LES, 1, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
         if scale == 'TEST_M':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.TEST_sp, 1, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.TEST_sp, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
         if scale == 'TEST':
             titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-            current_model = model.NonlinearModel(g.TEST, 1, self.N, self.C_limits, MCMC)
+            current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
 
-        tau_modeled_dist = current_model.Reynolds_stresses_from_C_tau(C_final_dist_new)
-        tau_modeled_marginal = current_model.Reynolds_stresses_from_C_tau(C_final_marginal)
+        tau_modeled_dist = current_model.sigma_from_C(C_final_dist_new)
+        tau_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
 
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             # Plot true pdf
@@ -230,7 +230,7 @@ class PostprocessABC(object):
 
                 np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
 
-        axarr[0].axis(xmin=g.domain[0], xmax=g.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
+        axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
         axarr[0].set_ylabel('ln(pdf)')
         plt.legend(loc=0)
         fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)

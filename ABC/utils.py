@@ -17,7 +17,6 @@ def timer(start, end, label):
     logging.info("{:0>1}:{:0>2}:{:05.2f} \t {}".format(int(hours), int(minutes), seconds, label))
 
 
-
 def get_prior(x):
     d = (g.C_limits[:, 1]-g.C_limits[:, 0]) / g.N.each
     ind = np.floor_divide((x - g.C_limits[:, 0]), d)   # find nearest point
@@ -59,11 +58,10 @@ def baseconvert(x, newbase, number_digits):
         r = [0] + r
     return r
 
-
-def uniform_grid(C_limits, N_each):
-    C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
-    C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
-    return C_tmp
+#
+# def uniform_grid(C_limits, N_each):
+#     C = np.linspace(C_limits[0], C_limits[1], N_each)
+#     return C
 
 
 def mean_confidence_interval(data, confidence=0.95):
@@ -159,39 +157,38 @@ def filter3d(data, scale_k, dx, N_points, filename=None):
 #     return fft_filtered
 
 
-
 ########################################################################################################################
 ## Sampling functions
 ########################################################################################################################
-def sampling_initial_for_MCMC():
+def sampling_initial_for_MCMC(N_proc, C_limits, eps):
     """ Find starting points for MCMC. (Sample randomly and save if distance < eps)
     :return: list of lists of parameters
     """
     C_array = []
-    while len(C_array) <= g.N.proc:
-        c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+    while len(C_array) <= N_proc:
+        c = np.random.uniform(C_limits[:, 0], C_limits[:, 1])
         dist = calc_dist(c)
-        if dist <= g.eps:
+        if dist <= eps:
             C_array.append(c)
             logging.info('C_start = {}'.format(c))
 
     return C_array
 
 
-def sampling_initial_for_gaussian_mixture():
+def sampling_initial_for_gaussian_mixture(N_proc, N_gaussians, C_limits, eps):
     """ Find starting points for Gaussian Mixture. (Sample randomly and save if distance < eps)
     :return: list of lists of parameters
     """
     C_array = []
     start = time()
     from tqdm import tqdm
-    with tqdm(total=g.N.proc*g.N.gaussians) as pbar:
-        for i in range(g.N.proc):
+    with tqdm(total=N_proc*N_gaussians) as pbar:
+        for i in range(N_proc):
             c_array = []
-            while len(c_array) < g.N.gaussians:
-                c = np.random.uniform(g.C_limits[:, 0], g.C_limits[:, 1])
+            while len(c_array) < N_gaussians:
+                c = np.random.uniform(C_limits[:, 0], C_limits[:, 1])
                 dist = calc_dist(c)
-                if dist <= g.eps:
+                if dist <= eps:
                     c_array.append(c)
                     pbar.update()
             C_array.append(np.array(c_array))
@@ -201,130 +198,49 @@ def sampling_initial_for_gaussian_mixture():
     return C_array
 
 
-def sampling_sobol():
+def sampling_sobol(N_total, C_limits):
     """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
     :return: list of lists of sampled parameters
     """
-    C_array = i4_sobol_generate(g.N.params, g.N.calibration)
-    for i in range(g.N.params):
-        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
+    N_params = len(C_limits)
+    C_array = i4_sobol_generate(N_params, N_total)
+    for i in range(N_params):
+        C_array[:, i] = C_array[:, i] * (C_limits[i, 1] - C_limits[i, 0]) + C_limits[i, 0]
     C_array = C_array.tolist()
     return C_array
 
 
-def sampling_random():
+def sampling_random(N_total, C_limits):
     """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
     :return: list of lists of sampled parameters
     """
-    C_array = np.random.random(size=(g.N.calibration, g.N.params))
+    N_params = len(C_limits)
+    C_array = np.random.random(size=(N_total, N_params))
     for i in range(g.N.params):
-        C_array[:, i] = C_array[:, i] * (g.C_limits[i, 1] - g.C_limits[i, 0]) + g.C_limits[i, 0]
+        C_array[:, i] = C_array[:, i] * (C_limits[i, 1] - C_limits[i, 0]) + C_limits[i, 0]
     C_array = C_array.tolist()
     return C_array
 
 
-def sampling_uniform_grid():
+def sampling_uniform_grid(N_each, N_params_in_task, C_limits):
     """ Create list of lists of N parameters manually (make grid) uniformly distributed on given interval
     :return: list of lists of sampled parameters
     """
-    if g.N.params == 1:
-        C1 = uniform_grid(g.C_limits[0], g.N.each)
+    N_params = len(C_limits)
+    if N_params == 1:
+        C1 = np.linspace(C_limits[0, 0], C_limits[0, 1], N_each)
         C_array = []
         for i in C1:
             C_array.append([i])
     else:
-        C = np.ndarray((g.N.params - g.N.params_in_task, g.N.each))
-        for i in range(g.N.params - g.N.params_in_task):
-            C[i, :] = uniform_grid(g.C_limits[i], g.N.each)
+        C = np.empty((N_params - N_params_in_task, N_each))
+        for i in range(N_params - N_params_in_task):
+            C[i, :] = np.linspace(C_limits[i, 0], C_limits[i, 1], N_each)
         permutation = itertools.product(*C)
         C_array = list(map(list, permutation))
-        print(np.array(C_array).shape)
-    logging.debug('Form C_array manually: {} samples\n'.format(len(C_array)))
+    logging.debug('Form C_array as uniform grid: {} samples\n'.format(len(C_array)))
     return C_array
 
 
-########################################################################################################################
-## Distance functions
-########################################################################################################################
-def calc_dist(C):
-    # Generate data D
-    tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-    # Calculate distance rho(pdf(D), pdf(D'))
-    dist = 0
-    for key in g.TEST_Model.elements_in_tensor:
-        pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
-        dist += d
-    return dist
 
-
-def distance_between_pdf_KL(pdf_modeled, key, axis=1):
-    """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
-    Function for N_params_in_task > 0
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: 1D array of calculated distance
-    """
-
-    log_modeled = take_safe_log(pdf_modeled)
-    dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
-
-    return dist
-
-
-def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
-    """Calculate statistical distance between two pdf as
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-
-    log_modeled = take_safe_log(pdf_modeled)
-    dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
-    return dist
-
-
-def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as mean((P1-P2)^2).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :param axis: equal 1 when pdf_modeled is 2D array
-    :return: scalar or 1D array of calculated distance
-    """
-    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
-
-
-def distance_between_pdf_L2(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as sqrt(sum((P1-P2)^2)).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :param axis: equal 1 when pdf_modeled is 2D array
-    :return: scalar or 1D array of calculated distance
-    """
-    dist = np.sqrt(np.sum((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis))
-    return dist
-
-
-def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: 1D array of calculated distance
-    """
-    log_modeled = take_safe_log(pdf_modeled)
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
-
-
-def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf.
-    :param pdf_modeled:
-    :param key:
-    :param axis:
-    :return:
-    """
-    log_modeled = take_safe_log(pdf_modeled)
-    dist = np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
 

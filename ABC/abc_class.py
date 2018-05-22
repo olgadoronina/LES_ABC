@@ -1,49 +1,67 @@
 import logging
-import random as rand
 from time import time
 
 import global_var as g
-import params
 import numpy as np
 import utils
-import fully_adaptive
+import distance as dist
 
 
 class ABC(object):
 
-    def __init__(self, N, form_C_array):
+    def __init__(self, abc, algorithm, N_params, N_proc, C_limits):
 
-        self.N = N
-        self.M = N.training
-        if N.each:
-            self.C_array = form_C_array()
+        self.N_params = N_params
+        self.N_proc = N_proc
+        self.N_each = algorithm['N_each']
+        self.N_total = algorithm['N_total']
+        self.N_params_in_task = algorithm['N_params_in_task']
+        self.M = abc['num_training_points']
+        self.C_limits = C_limits
+        self.algorithm = algorithm
 
-        if params.MCMC == 1:  # MCMC
+        if abc['algorithm'] == 'MCMC':  # MCMC
             logging.info('ABC algorithm: MCMC')
+            self.C_array = utils.sampling_initial_for_MCMC(N_proc, C_limits, algorithm['eps'])
             self.main_loop = self.main_loop_MCMC
             self.work_func = work_function_MCMC
-        elif params.MCMC == 2:  # IMCMC
+        elif abc['algorithm'] == 'IMCMC':  # IMCMC
             logging.info('ABC algorithm: IMCMC')
             self.main_loop = self.main_loop_IMCMC
             self.work_func = work_function_MCMC
+            if self.N_each > 0:
+                self.C_array = self.sampling(algorithm['sampling'], algorithm, C_limits)
             self.calibration = calibration_function_single_value
-            if self.N.params_in_task > 0:
+            if algorithm['N_params_in_task'] > 0:
                 self.calibration = calibration_function_multiple_values
-        elif params.MCMC == 3:  # Gaussian mixture
+        elif abc['algorithm'] == 'AGM_MH':  # Gaussian mixture
             logging.info('ABC algorithm: Gaussian Mixture')
+            self.C_array = utils.sampling_initial_for_gaussian_mixture(N_proc, algorithm['N_gaussians'],
+                                                                       C_limits, algorithm['eps'])
             self.main_loop = self.main_loop_gaussian_mixture
-            self.work_func = fully_adaptive.work_function_gaussian_mixture
+            self.work_func = work_function_gaussian_mixture
         else:                   # Uniform
             logging.info('ABC algorithm: Uniform grid sampling')
             self.main_loop = self.main_loop_uniform
-            if N.params == 1 or N.params_in_task == 0:
-                self.work_func = work_function_single_value
-            else:
+            self.C_array = self.sampling(algorithm['sampling'], algorithm, C_limits)
+            self.work_func = work_function_single_value
+            if algorithm['N_params_in_task'] != 0:
                 self.work_func = work_function_multiple_values
+
+    def sampling(self, sampling, abc_params, C_limits):
+        if sampling == 'random':
+            array = utils.sampling_random(abc_params['N_total'], C_limits)
+        elif sampling == 'uniform':
+            array = utils.sampling_uniform_grid(abc_params['N_each'],
+                                                abc_params['N_params_in_task'], C_limits)
+        elif sampling == 'sobol':
+            array = utils.sampling_sobol(abc_params['N_total'], C_limits)
+        logging.info('Sampling is {}'.format(sampling))
+        return array
 
     def main_loop_IMCMC(self):
 
-        if self.N.each > 0:    # Run calibration step
+        if self.N_each > 0:    # Run calibration step
             logging.info('Calibration step with {} samples'.format(len(self.C_array)))
 
             start_calibration = time()
@@ -53,7 +71,7 @@ class ABC(object):
                 S_init = g.par_process.get_results()
             else:
                 from tqdm import tqdm
-                with tqdm(total=self.N.calibration) as pbar:
+                with tqdm(total=self.N_total) as pbar:
                     for C in self.C_array:
                         S_init.append(self.calibration(C))
                         pbar.update()
@@ -61,58 +79,45 @@ class ABC(object):
             end_calibration = time()
             utils.timer(start_calibration, end_calibration, 'Time of calibration step')
 
-            if self.N.params_in_task > 0:
+            if self.N_params_in_task > 0:
                 S_init = [chunk[:] for item in S_init for chunk in item]
 
             np.savez('./plots/calibration_all.npz',  S_init=np.array(S_init))
             logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
 
-            # Save prior
-            d = (g.C_limits[:, 1] - g.C_limits[:, 0]) / g.N.each
-            limits = g.C_limits.copy()
-            limits[:, 1] += d  # to calculate prior on right edge
-
-            g.prior, edges = np.histogramdd(np.array(S_init)[:, :-1], bins=g.N.each + 1, normed=True,
-                                            range=tuple(map(tuple, limits)))
-            g.C_limits_prior = g.C_limits.copy()
-            np.savez('./plots/prior.npz', prior=g.prior, C_limits=g.C_limits_prior, edges=edges)
-
         else:
             S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
-            # g.prior = np.load('./plots/prior.npz')['prior']
-            # g.C_limits_prior = np.load('./plots/prior.npz')['C_limits']
 
-
-        logging.info('x = {}'.format(g.x))
+        logging.info('x = {}'.format(self.algorithm['x']))
         S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
-        g.eps = np.percentile(S_init, q=int(g.x * 100), axis=0)[-1]
+        g.eps = np.percentile(S_init, q=int(self.algorithm['x'] * 100), axis=0)[-1]
         logging.info('eps after calibration step = {}'.format(g.eps))
 
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-        g.std = g.phi*np.std(S_init[:, :-1], axis=0)
+        g.std = self.algorithm['phi']*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
 
         # Define new range
-        for i in range(g.N.params):
+        for i in range(self.N_params):
             max_S = np.max(S_init[:, i])
             min_S = np.min(S_init[:, i])
-            half_length = g.phi * (max_S - min_S) / 2.0
+            half_length = self.algorithm['phi'] * (max_S - min_S) / 2.0
             middle = (max_S + min_S) / 2.0
-            g.C_limits[i] = np.array([middle - half_length, middle + half_length])
-        logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
+            self.C_limits[i] = np.array([middle - half_length, middle + half_length])
+        logging.info('New parameters range after calibration step:\n{}'.format(self.C_limits))
 
         # Randomly choose starting points for Markov chains
-        C_start = (S_init[np.random.choice(S_init.shape[0], self.N.proc, replace=False), :-1])
+        C_start = (S_init[np.random.choice(S_init.shape[0], self.N_proc, replace=False), :-1])
         np.set_printoptions(precision=3)
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
         np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
         logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
+        exit()
         ####################################################################################################################
         # Markov chains
         self.main_loop_MCMC()
-        # g.accepted = np.vstack((g.accepted, S_init))
 
     def main_loop_MCMC(self):
         start = time()
@@ -120,15 +125,14 @@ class ABC(object):
             g.par_process.run(func=self.work_func, tasks=self.C_array)
             result = g.par_process.get_results()
             end = time()
-            g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
+            g.accepted = np.array([chunk[:self.N_params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
         else:
             result = self.work_func(self.C_array[0])
             end = time()
-            g.accepted = np.array([C[:self.N.params] for C in result if C])
+            g.accepted = np.array([C[:self.N_params] for C in result if C])
             g.dist = np.array([C[-1] for C in result if C])
         utils.timer(start, end, 'Time ')
-        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
 
     def main_loop_gaussian_mixture(self):
@@ -145,9 +149,7 @@ class ABC(object):
             g.accepted = np.array([C[:self.N.params] for C in result if C])
             g.dist = np.array([C[-1] for C in result if C])
         utils.timer(start, end, 'Time ')
-        # g.accepted[:, 0] = np.sqrt(-g.accepted[:, 0] / 2)   # return back to standard Cs (-2*Cs^2)
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
-
 
     def main_loop_uniform(self):
         """ Main loop of ABC algorithm, fill list of accepted parameters
@@ -159,45 +161,43 @@ class ABC(object):
             result = g.par_process.get_results()
         else:
             from tqdm import tqdm
-            with tqdm(total=self.N.each ** (self.N.params - self.N.params_in_task)) as pbar:
+            with tqdm(total=self.N_each ** (self.N_params - self.N_params_in_task)) as pbar:
                 for C in self.C_array:
                     result.append(self.work_func(C))
                     pbar.update()
             pbar.close()
         end = time()
         utils.timer(start, end, 'Time ')
-        if self.N.params_in_task == 0:
-            g.accepted = np.array([C[:self.N.params] for C in result if C])
+        if self.N_params_in_task == 0:
+            g.accepted = np.array([C[:self.N_params] for C in result if C])
             g.dist = np.array([C[-1] for C in result if C])
         else:
-            g.accepted = np.array([chunk[:self.N.params] for item in result for chunk in item])
+            g.accepted = np.array([chunk[:self.N_params] for item in result for chunk in item])
             g.dist = np.array([chunk[-1] for item in result for chunk in item])
         logging.info('Number of accepted values: {} {}%'.format(len(g.accepted),
-                                                                round(len(g.accepted) / self.N.total * 100, 2)))
+                                                                round(len(g.accepted) / self.N_total * 100, 2)))
 
 
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
+dist_func = dist.distance_production_L2log
+
+
 def calibration_function_single_value(C):
     """ Calibration function for IMCMC algorithm
         Accept all sampled values.
     :param C: list of sampled parameters
     :return:  list[Cs, dist]
     """
-    tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-    dist = 0
-    for key in g.TEST_Model.elements_in_tensor:
-        pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
-        dist += d
+    distance = dist.calc_dist(C, dist_func)
     result = C[:]
-    result.append(dist)
+    result.append(distance)
     return result
 
 
 def calibration_function_multiple_values(C):
-    return g.TEST_Model.Reynolds_stresses_from_C_calibration2(C, distance_between_pdf_L2log)
+    return g.TEST_Model.sigma_from_C_calibration2(C, dist_func)
 
 
 def work_function_single_value(C):
@@ -205,16 +205,10 @@ def work_function_single_value(C):
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
-    tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-
-    dist = 0
-    for key in g.TEST_Model.elements_in_tensor:
-        pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-        d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
-        dist += d
-    if dist <= g.eps:
+    distance = dist.calc_dist(C, dist_func)
+    if distance <= g.eps:
         result = C[:]
-        result.append(dist)
+        result.append(distance)
         return result
 
 
@@ -223,7 +217,7 @@ def work_function_multiple_values(C):
     :param C: list of sampled parameters
     :return:  list[bool, Cs, dist], where bool=True, if values are accepted
     """
-    return g.TEST_Model.Reynolds_stresses_from_C(C, distance_between_pdf_L2log)
+    return g.TEST_Model.sigma_from_C(C, dist_func)
 
 
 def work_function_MCMC(C_init):
@@ -234,26 +228,13 @@ def work_function_MCMC(C_init):
     std = g.std
     result = []
 
-    ####################################################################################################################
-    def calc_dist(C):
-        # Generate data D
-        tau = g.TEST_Model.Reynolds_stresses_from_C(C)
-        # Calculate distance rho(pdf(D), pdf(D'))
-        dist = 0
-        for key in g.TEST_Model.elements_in_tensor:
-            pdf = np.histogram(tau[key].flatten(), bins=g.bins, range=g.domain, normed=1)[0]
-            d = distance_between_pdf_L2log(pdf_modeled=pdf, key=key, axis=0)
-            dist += d
-        return dist
-    ####################################################################################################################
-
     from tqdm import tqdm
     with tqdm(total=N) as pbar:
 
         # add first param
-        dist = calc_dist(C_init)
+        distance = dist.calc_dist(C_init, dist_func)
         a = C_init[:]
-        a.append(dist)
+        a.append(distance)
         result.append(a)
         pbar.update()
     ####################################################################################################################
@@ -269,12 +250,106 @@ def work_function_MCMC(C_init):
                     else:
                         covariance_matrix = np.cov(np.array(result)[-50:, :-1].T)
                         c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
-                        # c = np.random.normal(result[-1][:-1], std)
-
                     counter_sample += 1
-                    if not(False in (g.C_limits[:, 0] < c) * (c < g.C_limits[:, 1])):
+                    if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                         break
-                dist = calc_dist(c)
+                distance = dist.calc_dist(c, dist_func)
+                counter_dist += 1
+                if distance <= g.eps:
+                    a = list(c[:])
+                    a.append(distance)
+                    result.append(a)
+                    pbar.update()
+                    break
+        pbar.close()
+    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
+    print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
+    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
+    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
+    return result
+
+
+def work_function_gaussian_mixture(C_init):
+    epsilon = 1e-6
+    C_limits = g.C_limits
+    result = []
+    ############################################################################
+    # Initialization
+    ############################################################################
+    # a)
+    T_tot = g.N.chain
+    # T_tot = 10
+    T_train = int(100*g.N.params)
+    T_stop = int(0.9*T_tot)
+    assert T_train < T_stop/2, "T_train = {} is bigger then T_stop/2 = {}".format(T_train, T_stop/2)
+    N = g.N.gaussians  # Number of Gaussians
+    print(T_train, T_stop, T_tot, N)
+
+    # b) Proposal
+    mu = np.empty((N, g.N.params))
+    cov = np.empty((N, g.N.params, g.N.params))
+    for i in range(N):
+        mu[i] = C_init[i]
+    for i in range(N):
+        cov[i] = np.diag(g.std**2)
+    weights = np.ones(N)/N
+
+    # c) Auxiliary parameters
+    m = np.ones(N)
+
+    ############################################################################
+    # MH steps
+    ############################################################################
+    from tqdm import tqdm
+    with tqdm(total=T_tot) as pbar:
+        counter_sample = 0
+        counter_dist = 0
+        counter_update = 0
+        for step in range(T_tot):
+            if T_train < step < T_stop:
+                ###########################
+                #  Update proposal
+                ###########################
+                counter_update += 1
+                # Find the closest Gaussian
+                j = np.argmin(np.linalg.norm(mu - c, axis=1))
+                m[j] += 1
+                # update mu and cov
+                mu[j] = 1 / m[j] * c + (m[j] - 1) / m[j] * mu[j]
+                cov[j] = (np.outer(c - mu[j], (c - mu[j]).T) / m[j] + epsilon * np.identity(g.N.params))/(m[j] - 1) + \
+                         (m[j] - 2) / (m[j] - 1) * cov[j]
+                # update weights
+                for i in range(N):
+                    weights[i] = m[i] / (N + counter_update)
+
+                # for j in range(N):
+                #     lambda_, v = np.linalg.eig(cov[j])
+                #     lambda_ = np.sqrt(lambda_)
+                #     ell = Ellipse(xy=(mu[j, 0], mu[j, 1]),
+                #                   width=lambda_[0], height=lambda_[1],
+                #                   angle=np.rad2deg(np.arccos(v[0, 0])))
+                #     # ell.set_facecolor('none')
+                #     ax.add_artist(ell)
+                #
+                #     ax.scatter(mu[j, 0], mu[j, 1])
+                # ax.axis([-1, 1, -1, 1])
+                # fig.savefig('./plots/gaussian_mixture' + str(i))
+
+                # mu, cov, weights = update_proposal(mu, cov, weights, m, c, i)
+
+            while True:
+                while True:
+                    # print(i, counter_dist, counter_sample)
+
+                    # Sample from gaussian mixture proposal
+                    ind = np.random.choice(np.arange(N), p=weights)
+                    c = np.random.multivariate_normal(mu[ind], cov=cov[ind])
+                    counter_sample += 1
+
+                    if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+                        break
+
+                dist = dist.calc_dist(c, dist_func)
                 counter_dist += 1
                 if dist <= g.eps:
                     # prior_new = utils.get_prior(c)
@@ -293,12 +368,11 @@ def work_function_MCMC(C_init):
                     pbar.update()
                     break
         pbar.close()
-    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
-    print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
-    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
-    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
+    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
+    print('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
+    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
+    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
     return result
-
 
 # ############
 # #
@@ -401,77 +475,4 @@ def work_function_MCMC(C_init):
 #     return result
 
 
-
-########################################################################################################################
-## Distance functions
-########################################################################################################################
-def distance_between_pdf_KL(pdf_modeled, key, axis=1):
-    """Calculate statistical distance between two pdf as
-    the Kullback-Leibler (KL) divergence (no symmetry).
-    Function for N_params_in_task > 0
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: 1D array of calculated distance
-    """
-
-    log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.sum(np.multiply(g.TEST_sp.tau_pdf_true[key], (g.TEST_sp.log_tau_pdf_true[key] - log_modeled)), axis=axis)
-
-    return dist
-
-
-def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
-    """Calculate statistical distance between two pdf as
-    :param pdf_modeled: array of modeled pdf
-    :return:            scalar of calculated distance
-    """
-
-    log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.log_tau_pdf_true[key]), axis=axis)
-    return dist
-
-
-def distance_between_pdf_LSE(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as mean((P1-P2)^2).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :param axis: equal 1 when pdf_modeled is 2D array
-    :return: scalar or 1D array of calculated distance
-    """
-    dist = np.mean((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
-
-
-def distance_between_pdf_L2(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as sqrt(sum((P1-P2)^2)).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :param axis: equal 1 when pdf_modeled is 2D array
-    :return: scalar or 1D array of calculated distance
-    """
-    dist = np.sqrt(np.sum((pdf_modeled - g.TEST_sp.tau_pdf_true[key]) ** 2, axis=axis))
-    return dist
-
-
-def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
-    :param pdf_modeled: array of modeled pdf
-    :param key: tensor component(key of dict)
-    :return: 1D array of calculated distance
-    """
-    log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.mean((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
-
-
-def distance_between_pdf_L2log(pdf_modeled, key, axis=1):
-    """ Calculate statistical distance between two pdf.
-    :param pdf_modeled:
-    :param key:
-    :param axis:
-    :return:
-    """
-    log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.sum((log_modeled - g.TEST_sp.log_tau_pdf_true[key]) ** 2, axis=axis)
-    return dist
 

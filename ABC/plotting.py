@@ -138,37 +138,63 @@ def sigma_field(tau, scale, folder):
             map_bounds, name=name, titles=titles)
 
 
-def sigma_pdf(les, test, bins, domain, folder):
+def sum_stat(les, test, bins, domain, folder, name):
 
-    name = 'sigma_pdf'
     labels = ['LES', 'test']
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
-    if test:
-        titles = [r'$\sigma_{11},\ \widehat{\sigma}_{11}$',
-                r'$\sigma_{12},\ \widehat{\sigma}_{12}$',
-                r'$\sigma_{13},\ \widehat{\sigma}_{13}$']
-    else:
-        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
 
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        data = les.tau_true[i].flatten()
-        x, y = utils.pdf_from_array_with_x(data, bins, domain)
-        axarr[ind].plot(x, y, 'r', linewidth=2, label=labels[0])
-        axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-    if test:
+    if name == 'sigma_pdf_log':
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
+        if test:
+            titles = [r'$\sigma_{11},\ \widehat{\sigma}_{11}$',
+                    r'$\sigma_{12},\ \widehat{\sigma}_{12}$',
+                    r'$\sigma_{13},\ \widehat{\sigma}_{13}$']
+        else:
+            titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+
         for ind, i in enumerate(['uu', 'uv', 'uw']):
-            data = test.tau_true[i].flatten()
+            data = les.sum_stat_true[i].flatten()
             x, y = utils.pdf_from_array_with_x(data, bins, domain)
-            axarr[ind].plot(x, y, 'g', linewidth=2, label=labels[1])
-            axarr[ind].set_xlabel(titles[ind])
+            axarr[ind].plot(x, y, 'r', linewidth=2, label=labels[0])
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+        if test:
+            for ind, i in enumerate(['uu', 'uv', 'uw']):
+                data = test.sum_stat_true[i].flatten()
+                x, y = utils.pdf_from_array_with_x(data, bins, domain)
+                axarr[ind].plot(x, y, 'g', linewidth=2, label=labels[1])
+                axarr[ind].set_xlabel(titles[ind])
 
-    axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
-    axarr[0].set_ylabel('pdf')
-    axarr[0].set_yscale('log')
-    plt.legend(loc=0)
-    fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
+        axarr[0].axis(xmin=-1.1, xmax=1.1, ymin=1e-5)
+        axarr[0].set_ylabel('pdf')
+        axarr[0].set_yscale('log')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
+
+    elif name == 'production_pdf_log':
+        fig = plt.figure(figsize=(4, 3))
+        ax = plt.gca()
+        if test:
+            title = r'$\widehat{\widetilde{P}}'
+        else:
+            title = r'$\widetilde{P}'
+
+        data = les.sum_stat_true.flatten()
+        x, y = utils.pdf_from_array_with_x(data, bins, domain)
+        ax.plot(x, y, 'r', linewidth=2, label=labels[0])
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+        if test:
+            data = test.sum_stat_true.flatten()
+            x, y = utils.pdf_from_array_with_x(data, bins, domain)
+            ax.plot(x, y, 'g', linewidth=2, label=labels[1])
+            ax.set_xlabel(title)
+
+        ax.axis(xmin=-5, xmax=5, ymin=1e-5)
+        ax.set_ylabel('pdf')
+        ax.set_yscale('log')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
     fig.savefig(os.path.join(folder, name))
     plt.close('all')
+
 
 def S_pdf(folder):
 
@@ -202,40 +228,7 @@ def S_pdf(folder):
     del fig, axarr
     gc.collect()
 
-def A_compare():
 
-    name = 'A_compare_'+str(g.TEST_sp.M)
-
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
-    titles = [r'$\widetilde{A}_{11}/\widehat{\widetilde{A}}_{11}$',
-              r'$\widetilde{A}_{12}/\widehat{\widetilde{A}}_{12}$',
-              r'$\widetilde{A}_{13}/\widehat{\widetilde{A}}_{13}$']
-    deriv = g.LES.A
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        y = deriv[i][:, 128, 128]
-        x = np.linspace(0, 2 * np.pi - 2 * np.pi / 256, 256)
-        axarr[ind].plot(x, y, 'r', linewidth=1, label='LES')
-        axarr[ind].set_xlabel('$x$')
-        axarr[ind].set_title(titles[ind])
-    deriv = g.TEST.A
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        y = deriv[i][:, 128, 128]
-        x = np.linspace(0, 2 * np.pi, 256)
-        axarr[ind].plot(x, y, 'g', linewidth=1, label='test')
-
-    deriv = g.TEST_sp.A
-    for ind, i in enumerate(['uu', 'uv', 'uw']):
-        x = np.linspace(0, 2 * np.pi - 2 * np.pi / g.TEST_sp.M, g.TEST_sp.M)
-        y = deriv[i][:, int(g.TEST_sp.M / 2), int(g.TEST_sp.M / 2)]
-        axarr[ind].plot(x, y, 'b', linewidth=1, label='test sparse M='+str(g.TEST_sp.M))
-
-    axarr[0].axis(xmin=0, xmax=2 * np.pi, ymin=-7, ymax=7)
-    axarr[0].set_ylabel('$A_{ij}$')
-    plt.legend(loc=0)
-    fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.16, top=0.83)
-    fig.savefig(folder + name)
-    del fig, axarr
-    gc.collect()
 
 def spectra(folder):
 
@@ -261,18 +254,6 @@ def spectra(folder):
 
     fig.subplots_adjust(left=0.16, right=0.95, bottom=0.2, top=0.87)
     fig.savefig(folder + 'spectra')
-
-
-def TS(TS):
-    plt.figure(figsize=(5, 5))
-    plt.hist(TS.flatten(), bins=500, normed=1, alpha=0.4)
-    plt.yscale('log', nonposy='clip')
-    plt.xlabel(r'$T_{ij}S^T_{ij}$')
-    plt.ylabel(r'pdf($T_{ij}S^T_{ij}$)')
-    plt.axis(xmin=-5, xmax=4, ymin=1e-5)
-    plt.show()
-    gc.collect()
-
 
 def tau_abc(Cs_abc):
     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(18, 6))
@@ -312,15 +293,14 @@ def tau_abc(Cs_abc):
 
 
 def dist_pdf(dist, x, folder):
+
     fig = plt.figure(figsize=(5, 3))
     ax = plt.gca()
     ax.hist(dist, bins=100, normed=1, alpha=0.4)
-    # plt.yscale('log', nonposy='clip')
     eps = np.percentile(dist, q=int(x * 100))
     ax.axvline(eps, label='eps')
     ax.set_xlabel(r'$\rho$')
     ax.set_ylabel(r'pdf($\rho$)')
-    # plt.axis(xmin=-5, xmax=4, ymin=1e-5)
     fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
     fig.savefig(os.path.join(folder, 'dist'))
     plt.close('all')

@@ -9,7 +9,7 @@ from numpy.fft import fftfreq, fftn, ifftn
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 spectra = 0
-folder = './plots/init_info_'+params.DATA
+folder = './plots/init_info_'+params.data['data_name']
 if not os.path.isdir(folder):
     os.makedirs(folder)
 
@@ -64,19 +64,19 @@ def spectral_density(vel_array, dx, N_points, fname):
 
 def load_HIT_data():
     datafile = dict()
-    if params.DATA == 'JHU_data':
-        datafile['u'] = params.data_folder + 'HIT_u.bin'
-        datafile['v'] = params.data_folder + 'HIT_v.bin'
-        datafile['w'] = params.data_folder + 'HIT_w.bin'
+    if params.data['data_name'] == 'JHU_data':
+        datafile['u'] = params.data['data_path'] + 'HIT_u.bin'
+        datafile['v'] = params.data['data_path'] + 'HIT_v.bin'
+        datafile['w'] = params.data['data_path'] + 'HIT_w.bin'
         type_of_bin_data = np.float32
-    elif params.DATA == 'CU_data':
-        datafile['u'] = params.data_folder + 'Velocity1_003.rst'
-        datafile['v'] = params.data_folder + 'Velocity2_003.rst'
-        datafile['w'] = params.data_folder + 'Velocity3_003.rst'
+    elif params.data['data_name'] == 'CU_data':
+        datafile['u'] = params.data['data_path'] + 'Velocity1_003.rst'
+        datafile['v'] = params.data['data_path'] + 'Velocity2_003.rst'
+        datafile['w'] = params.data['data_path'] + 'Velocity3_003.rst'
         type_of_bin_data = np.float64
 
     HIT_data = dict()
-    data_shape = (params.N_point, params.N_point, params.N_point)
+    data_shape = (params.physical_case['N_point'], params.physical_case['N_point'], params.physical_case['N_point'])
     for i in ['u', 'v', 'w']:
         HIT_data[i] = np.reshape(np.fromfile(datafile[i], dtype=type_of_bin_data), data_shape)
     for key, value in HIT_data.items():
@@ -85,10 +85,10 @@ def load_HIT_data():
         for j in ['u', 'v', 'w']:
             HIT_data[i + j] = np.multiply(HIT_data[i], HIT_data[j])
 
-    dx = np.divide(params.lx, params.N_points)
+    dx = [params.physical_case['lx'] / params.physical_case['N_point']] * 3
     if spectra:
         logging.info('calculate DNS spectra')
-        spectral_density([HIT_data['u'], HIT_data['v'], HIT_data['w']], dx, params.N_points, folder + 'DNS')
+        spectral_density([HIT_data['u'], HIT_data['v'], HIT_data['w']], dx, params.physical_case['N_point'], folder + 'DNS')
     return HIT_data
 
 
@@ -130,41 +130,44 @@ def filter3d(data, scale_k, dx, N_points):
 
 def main():
 
-    dx = np.divide(params.lx, params.N_points)
+    dx = [params.physical_case['lx']/params.physical_case['N_point']] * 3
     logging.info('Load HIT data')
     HIT_data = load_HIT_data()
     logging.info('Filter HIT data')
-    LES_data = filter3d(data=HIT_data, scale_k=params.LES_scale, dx=dx, N_points=params.N_points)
+    LES_data = filter3d(data=HIT_data, scale_k=params.physical_case['LES_scale'], dx=dx,
+                        N_points=[params.physical_case['N_point']]*3)
     TEST_data = None
-    if params.TEST_scale:
-        TEST_data = filter3d(data=HIT_data, scale_k=params.TEST_scale, dx=dx, N_points=params.N_points)
+    if params.physical_case['TEST_scale']:
+        TEST_data = filter3d(data=HIT_data, scale_k=params.physical_case['TEST_scale'], dx=dx,
+                             N_points=[params.physical_case['N_point']]*3)
 
-    LES_delta = 1 / params.LES_scale
-    LES = data.Data(LES_data, LES_delta, params.HOMOGENEOUS, dx)
+    LES_delta = 1 / params.physical_case['LES_scale']
+    LES = data.Data(LES_data, LES_delta, dx, params.compare_pdf, params.abc['summary_statistics'])
     TEST = None
-    if params.TEST_scale:
-        TEST_delta = 1 / params.TEST_scale
-        TEST = data.Data(TEST_data, TEST_delta, params.HOMOGENEOUS, dx)
+    if params.physical_case['TEST_scale']:
+        TEST_delta = 1 / params.physical_case['TEST_scale']
+        TEST = data.Data(TEST_data, TEST_delta, dx, params.compare_pdf, params.abc['summary_statistics'])
 
     if spectra:
         logging.info('Calculate LES spectra')
-        spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx, params.N_points, folder + 'LES')
-        if params.TEST_scale:
+        spectral_density([LES_data['u'], LES_data['v'], LES_data['w']], dx,
+                         params.physical_case['N_point'], folder + 'LES')
+        if params.physical_case['TEST_scale']:
             logging.info('Calculate TEST spectra')
-            spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx, params.N_points, folder + 'test')
+            spectral_density([TEST_data['u'], TEST_data['v'], TEST_data['w']], dx,
+                             params.physical_case['N_point'], folder + 'test')
 
     logging.info('Plot initial data info')
     if spectra:
-        plotting.spectra()
+        plotting.spectra(folder)
     map_bounds = np.linspace(np.min(LES_data['v'][:, :, 127]), np.max(LES_data['v'][:, :, 127]), 9)
     plotting.compare_filter_fields(HIT_data, LES_data, TEST_data, map_bounds, folder=folder)
     plotting.vel_fields(HIT_data, scale='DNS', map_bounds=map_bounds, folder=folder)
     plotting.vel_fields(LES_data, scale='LES', map_bounds=map_bounds, folder=folder)
-    if params.TEST_scale:
+    if params.physical_case['TEST_scale']:
         plotting.vel_fields(TEST_data, scale='TEST', map_bounds=map_bounds, folder=folder)
-        plotting.sigma_field(TEST.tau_true, scale='TEST', folder=folder)
-    plotting.sigma_field(LES.tau_true, scale='LES', folder=folder)
-    plotting.sigma_pdf(LES, TEST, bins=params.bins, domain=params.domain, folder=folder)
+    plotting.sum_stat(LES, TEST, bins=params.compare_pdf['bins'], domain=params.compare_pdf['domain'], folder=folder,
+                      name=params.abc['summary_statistics'])
 
 
 if __name__ == '__main__':

@@ -1,77 +1,83 @@
-from math import *
-import numpy as np
+from math import pi
 
-# import cProfile
-# prof = cProfile.Profile()
+
 ########################################################################################################################
-# Path to data
-LOAD = 1          # Load filtered data or filter from DNS
-DATA = 'JHU_data'
-data_folder = './data_input/JohnHopkins/'
-# DATA = 'CU_data'
-# data_folder = './data_input/HIT_DNS_N256/'
-# Plotting
-plot_folder = './plots/'
+# Data
+data = {'load': True,
+        'data_name': 'JHU_data',
+        'data_path': './data_input/JohnHopkins/'}
+# 'data_name': 'CU_data'
+# 'data_folder':  './data_input/HIT_DNS_N256/'}
+output = {'output_path': './plots/'}
 ########################################################################################################################
 # Initial case parameters
-N_point = 256
-N_points = [N_point, N_point, N_point]      # number of points
-lx = [2 * pi, 2 * pi, 2 * pi]               # domain size
-# Filter scales
-# LES_scale = 10
-# TEST_scale = 5
-LES_scale = 30/2/np.pi
-TEST_scale = None
-M = 64                                     # number of training points (sparse data)
+physical_case = {'N_point': 256,
+                 'lx': 2 * pi,          # domain size
+                 'homogeneous': True,   # Use symmetry of tau tensor
+                 'LES_scale': 30/2/pi,
+                 'TEST_scale': None}
+                 # LES_scale = 10
+                 # TEST_scale = 5
 ########################################################################################################################
 # Model parameters
-HOMOGENEOUS = 1     # Use symmetry of tau tensor
-ORDER = 3           # order of eddy-viscosity model
-N_params_force = 6
+model = {'order': 2,           # order of eddy-viscosity model
+         'N_params_force': 3}
 ########################################################################################################################
-# Sampling
-sampling = 'uniform'    # 'uniform', 'random', 'sobol' , 'MCMC'
-N_each = 100
-N_params_in_task = 2  # only 0, 1 or 2  #only 0 and 2 for calibration
+compare_pdf = {'bins': 100,                 # for pdf comparison
+               'domain': [-5, 5],     # for pdf comparison
+               # domain = [-0.7, 0.7]      # for pdf comparison
+               'distance': 'L2log',
+               'summary_statistics': 'production_pdf_log'}  # 'sigma_pdf_log', production pdf; production mean
+
 ########################################################################################################################
 # abs algorithm
-bins = 100  # for pdf comparison
-domain = [-0.45, 0.45]  # for pdf comparison
-# domain = [-0.7, 0.7]  # for pdf comparison
-num_bin_joint = 20
-eps = 2000   # acceptance tolerance
+abc = {'algorithm': 'acc-rej',    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+       'num_training_points': 64}
+################################################################################################################
+# Define only one of the following
+################################################################################################################
+algorithm ={'acc-rej':
+               {'sampling': 'uniform',   # 'uniform', 'random', 'sobol'
+                'eps': 2000,
+                'N_each': 10,
+                'N_params_in_task': 0},  # only 0, 1 or 2  #only 0 and 2 for calibration
+            ############################################################################################################
+            'MCMC':
+               {'N_total_chain': 1e7,
+                'eps': 2000,
+                'var_multiplier': 0.5},
+            ############################################################################################################
+            'IMCMC':
+                # Calibration
+               {'sampling': 'uniform',     # 'uniform', 'random', 'sobol'
+                'N_each': 10,              # recommended 10
+                'N_params_in_task': 2,     # only 0 and 2 for calibration
+                'x': 0.01,                 # percent of accepted for calibration step
+                'phi': 1,
+                # MCMC
+                'N_total_chain': 1e7},
+            ############################################################################################################
+            'AGM-MH':
+                {' N_gaussians': 30,
+                 'var_multiplier': 0.5,
+                 'eps': 2000}
+            }
 ########################################################################################################################
-MCMC = 2    # 1 = MCMC; 2 = IMCMC
-N_total = 10**7
-########################################################################################################################
-N_calibration = 0  # recommended 10^p, where p is number of params
-x = 0.01   # percent of accepted for calibration step
-phi = 1
-########################################################################################################################
-# Gaussian mixture
-N_gaussians = 30  # number of gaussians
-########################################################################################################################
-PMC = 0
+
 #######################################################################################################################
-# Sample limits
-C_limits = np.zeros((10, 2))
-C_limits[0] = [-0.3, 0.3]
-C_limits[1] = [-0.5, 0.5]
-C_limits[2] = [-0.2, 0.2]
-C_limits[3] = [-0.2, 0.2]
-C_limits[4] = [-1, 1]
-C_limits[5] = [-0.5, 0.5]
-C_limits[6] = [-1, 1]
-C_limits[7] = [-1, 1]
-C_limits[8] = [-1, 1]
-C_limits[9] = [-1, 1]
-
-
-################################
-var = np.empty(10)
-var = (C_limits[:, 1] - C_limits[:, 0])/2
+C_limits = [[-0.3, 0.3],
+            [-0.5, 0.5],
+            [-0.2, 0.2],
+            [-0.2, 0.2],
+            [-1, 1],
+            [-0.5, 0.5],
+            [-1, 1],
+            [-1, 1],
+            [-1, 1],
+            [-1, 1]]
 ########################################################################################################################
 # Parallel regime parameters
-PROGRESSBAR = 1    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-N_proc = 6          # Number of processes
+parallel = {'progressbar': 1,    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
+            'N_proc': 0}          # Number of processes
 ########################################################################################################################
+

@@ -5,39 +5,40 @@ import numpy as np
 import utils
 
 
-# import plot
-# import utils
-# import matplotlib.pyplot as plt
-
-
 class NonlinearModel(object):
-    def __init__(self, data, homogeneous, N, C_limits, MCMC):
+    def __init__(self, data, model_params, abc_algorithm, algorithm, C_limits):
 
         self.M = data.field['uu'].shape[0]
-        self.N = N
         self.C_limits = C_limits
+        self.N_each = algorithm['N_each']
+        self.N_params = model_params['N_params']
         self.S_mod = self.calc_strain_mod(data)
-        if homogeneous:
+        if model_params['homogeneous']:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 
         self.Tensor = dict()
-        for i in range(N.params):
+        for i in range(self.N_params):
             self.Tensor[str(i)] = self.calc_tensor(data, number=i)
 
-        if N.params == 1 or N.params_in_task == 0 or MCMC:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_tau
-        elif N.params_in_task == 1:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param1
+        if abc_algorithm in ['acc-rej', 'IMCMC']:
+            self.N_params_in_task = algorithm['N_params_in_task']
         else:
-            self.Reynolds_stresses_from_C = self.Reynolds_stresses_from_C_Nonlin_param2
-            if N.params_in_task > 2 or N.params_in_task < 0:
-                logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
-                    N.params_in_task))
+            self.N_params_in_task = 0
 
-
-        logging.info('Nonlinear model with {}'.format(self.Reynolds_stresses_from_C.__name__))
+        if self.N_params_in_task == 0:
+            self.sigma_from_C = self.sigma_from_C
+        elif self.N_params_in_task == 1:
+            self.sigma_from_C = self.sigma_from_C_1param
+        elif self.N_params_in_task == 2:
+            self.sigma_from_C = self.sigma_from_C_2param
+        else:
+            self.Reynolds_stresses_from_C = self.sigma_from_C_2param
+            logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
+                self.N_params_in_task))
+        logging.info('\n')
+        logging.info('Nonlinear model with {}'.format(self.sigma_from_C.__name__))
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -239,53 +240,42 @@ class NonlinearModel(object):
             return tensor1
 
     ####################################################################################################################
-    # Reynolds_stresses_from_C
+    # sigma_from_C
     ####################################################################################################################
 
-    def Reynolds_stresses_from_C_tau(self, C):
-
-        """Calculate Reynolds stresses using eddy-viscosity model.
+    def sigma_from_C(self, C):
+        """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.
         :param C: list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
         tau = dict()
         for i in self.elements_in_tensor:
             tau[i] = np.zeros((self.M, self.M, self.M))
-            for j in range(self.N.params):
+            for j in range(self.N_params):
                 tau[i] += C[j] * self.Tensor[str(j)][i]
         return tau
 
-    # def Reynolds_stresses_from_C_Smagorinsky(self, C):
-    #     """Calculate Reynolds stresses using Smagorinsky eddy-viscosity model with constants C.
-    #     :param C: list of constant parameters
-    #     :return: dict of modeled Reynolds stresses tensor
-    #     """
-    #     tau = dict()
-    #     for i in self.elements_in_tensor:
-    #         tau[i] = C[0] * self.Tensor['0'][i]
-    #     return tau
-
-    def Reynolds_stresses_from_C_Nonlin_param1(self, C, dist_func):
+    def sigma_from_C_1param(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.
         :param C: list of constant parameters [C0, ..., C(n-1)]
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(self.N.each)
-        C_last = utils.uniform_grid(self.C_limits[self.N.params - 1], self.N.each)
+        dist = np.zeros(self.N_each)
+        C_last = np.linspace(self.C_limits[self.N.params - 1, 0], self.C_limits[self.N.params - 1, 1], self.N_each)
         for i in self.elements_in_tensor:
-            # pr.enable()
-            tau = np.zeros(self.M ** 3)
-            for j in range(self.N.params - self.N.params_in_task):
-                tau += C[j] * self.Tensor[str(j)][i].flatten()
-            tau = np.outer(np.ones(self.N.each), tau) + \
-                  np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain, N_each=self.N.each)
+            sigma = np.zeros(self.M ** 3)
+            for j in range(self.N_params - self.N_params_in_task):
+                sigma += C[j] * self.Tensor[str(j)][i].flatten()
+            sigma = np.outer(np.ones(self.N_each), sigma) + \
+                  np.outer(C_last, self.Tensor[str(self.N_params - 1)][i].flatten())
+            pdf = utils.pdf_from_array_improved(sigma, bins=g.pdf_params['bins'], domain=g.pdf_params['domain'],
+                                                N_each=self.N_each)
             dist += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0] * (self.N.params + 1)  # allocate memory
-        a[:(self.N.params - self.N.params_in_task)] = [c for c in C]
+        a = [0.0] * (self.N_params + 1)  # allocate memory
+        a[:(self.N_params - self.N_params_in_task)] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
@@ -294,60 +284,62 @@ class NonlinearModel(object):
                 result.append(a[:])
         return result
 
-    def Reynolds_stresses_from_C_Nonlin_param2(self, C, dist_func):
+    def sigma_from_C_2param(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 2 parameters in task.
         :param C: list of constant parameters [C0, ..., C(n-2)]
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(self.N.each ** 2)
-        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
-        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N.each)
+        dist = np.zeros(self.N_each ** 2)
+        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
 
         for i in self.elements_in_tensor:
-            tau = np.zeros(self.M ** 3)
-            for j in range(self.N.params - self.N.params_in_task):
-                tau += C[j] * self.Tensor[str(j)][i].flatten()
+            sigma = np.zeros(self.M ** 3)
+            for j in range(self.N_params - self.N_params_in_task):
+                sigma += C[j] * self.Tensor[str(j)][i].flatten()
             for ind, c1 in enumerate(C_before_last):
-                tau_tmp = tau.copy()
-                tau_tmp += c1 * self.Tensor[str(self.N.params - 2)][i].flatten()
-                tau_tmp = np.outer(np.ones(self.N.each), tau_tmp) + \
-                          np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain, N_each=self.N.each)
-                dist[ind * self.N.each:(ind + 1) * self.N.each] += dist_func(pdf_modeled=pdf, key=i)
+                sigma_tmp = sigma.copy()
+                sigma_tmp += c1 * self.Tensor[str(self.N_params - 2)][i].flatten()
+                sigma_tmp = np.outer(np.ones(self.N_each), sigma_tmp) + \
+                          np.outer(C_last, self.Tensor[str(self.N_params - 1)][i].flatten())
+                pdf = utils.pdf_from_array_improved(sigma_tmp, bins=g.pdf_params['bins'],
+                                                    domain=g.pdf_params['domain'], N_each=self.N_each)
+                dist[ind * self.N_each:(ind + 1) * self.N_each] += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a = [0.0] * (self.N_params + 1)  # allocate memory
         a[: -3] = [c for c in C]
-        result = [0.0]*self.N.each
+        result = [0.0]*self.N_each
         for ind, distance in enumerate(dist):
             if distance <= g.eps:
-                a[-3] = C_before_last[ind // self.N.each]
-                a[-2] = C_last[ind % self.N.each]
+                a[-3] = C_before_last[ind // self.N_each]
+                a[-2] = C_last[ind % self.N_each]
                 a[-1] = distance
                 result[ind] = a[:]
         return result
 
-    def Reynolds_stresses_from_C_calibration1(self, C, dist_func):
+    def sigma_from_C_calibration1(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.
         :param C: list of constant parameters [C0, ..., C(n-1)]
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(self.N.each)
-        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
+        dist = np.zeros(self.N_each)
+        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
         for i in self.elements_in_tensor:
-            tau = np.zeros(self.M ** 3)
-            for j in range(self.N.params - self.N.params_in_task):
-                tau += C[j] * self.Tensor[str(j)][i].flatten()
-            tau = np.outer(np.ones(self.N.each), tau) + \
-                  np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-            pdf = utils.pdf_from_array_improved(tau, bins=g.bins, domain=g.domain, N_each=self.N.each)
+            sigma = np.zeros(self.M ** 3)
+            for j in range(self.N_params - self.N_params_in_task):
+                sigma += C[j] * self.Tensor[str(j)][i].flatten()
+            sigma = np.outer(np.ones(self.N_each), sigma) + \
+                  np.outer(C_last, self.Tensor[str(self.N_params - 1)][i].flatten())
+            pdf = utils.pdf_from_array_improved(sigma, bins=g.pdf_params['bins'],
+                                                domain=g.pdf_params['domain'], N_each=self.N_each)
             dist += dist_func(pdf_modeled=pdf, key=i)
 
         # Check for each parameter if it is accepted
-        a = [0.0] * (self.N.params + 1)  # allocate memory
-        a[:-self.N.params_in_task] = [c for c in C]
+        a = [0.0] * (self.N_params + 1)  # allocate memory
+        a[:-self.N_params_in_task] = [c for c in C]
         result = []
         for ind, distance in enumerate(dist):
             a[-2] = C_last[ind]
@@ -355,141 +347,135 @@ class NonlinearModel(object):
             result.append(a[:])
         return result
 
-
-    def Reynolds_stresses_from_C_calibration2(self, C, dist_func):
+    def sigma_from_C_calibration2(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 2 parameters in task.
         :param C: list of constant parameters [C0, ..., C(n-2)]
         :param dist_func: function used to calculate statistical distance
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
-        dist = np.zeros(self.N.each ** 2)
-        C_last = utils.uniform_grid(self.C_limits[-1], self.N.each)
-        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N.each)
+        dist = np.zeros(self.N_each ** 2)
+        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
 
         for i in self.elements_in_tensor:
             tau = np.zeros(self.M ** 3)
-            for j in range(self.N.params - self.N.params_in_task):
+            for j in range(self.N_params - self.N_params_in_task):
                 tau += C[j] * self.Tensor[str(j)][i].flatten()
             for ind, c1 in enumerate(C_before_last):
                 tau_tmp = tau.copy()
-                tau_tmp += c1 * self.Tensor[str(self.N.params - 2)][i].flatten()
-                tau_tmp = np.tile(tau_tmp, (self.N.each, 1)) + \
-                          np.outer(C_last, self.Tensor[str(self.N.params - 1)][i].flatten())
-                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.bins, domain=g.domain, N_each=self.N.each)
-                dist[ind * self.N.each:(ind + 1) * self.N.each] += dist_func(pdf_modeled=pdf, key=i)
+                tau_tmp += c1 * self.Tensor[str(self.N_params - 2)][i].flatten()
+                tau_tmp = np.tile(tau_tmp, (self.N_each, 1)) + \
+                          np.outer(C_last, self.Tensor[str(self.N_params - 1)][i].flatten())
+                pdf = utils.pdf_from_array_improved(tau_tmp, bins=g.pdf_params['bins'],
+                                                    domain=g.pdf_params['domain'], N_each=self.N_each)
+                dist[ind * self.N_each:(ind + 1) * self.N_each] += dist_func(pdf_modeled=pdf, key=i)
 
-        # result = np.empty((self.N.each**2, self.N.params + 1))
-        # result[:, :-3] = np.tile(C, (self.N.each**2, 1))
-        # result[:, -3] = np.repeat(C_before_last, self.N.each)
-        # result[:, -2] = np.tile(C_last, self.N.each)
-        # result[:, -1] = dist
-        # result = result.tolist()
-
-        a = [0.0] * (self.N.params + 1)  # allocate memory
+        a = [0.0] * (self.N_params + 1)  # allocate memory
         a[: -3] = [c for c in C]
-        result = [0.0] * self.N.each**2
+        result = [0.0] * self.N_each**2
         for ind, distance in enumerate(dist):
-            a[-3] = C_before_last[ind // self.N.each]
-            a[-2] = C_last[ind % self.N.each]
+            a[-3] = C_before_last[ind // self.N_each]
+            a[-2] = C_last[ind % self.N_each]
             a[-1] = distance
             result[ind] = a[:]
         return result
 
-####################################################################################################################
-# Reynolds_stresses_from_C
-####################################################################################################################
-class DynamicSmagorinskyModel(object):
-    def __init__(self):
-        self.num_of_params = 1
-        self.Tensor_1 = self.calc_tensor_1()
 
-    def scalar_product(self, tensor1, tensor2):
-        """Calculate product of two tensors as S_ijT_ij = sum(S_11T_11+S_12T_12+...)
-        :return:       array of product in each point of domain
-        """
-        res = 0
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                res += np.multiply(tensor1[i + j], tensor2[i + j])
-        return res
-
-    def calculate_Cs_dynamic(self):
-        """ Calculate Smagorinsky constant using Dynamic Smagorinsky model
-        :return: scalar Smagorinsky constant
-        """
-        L = dict()
-        M = dict()
-        for k in ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']:
-            i, j = k[0], k[1]
-            ## L_ij
-            tensor = np.multiply(g.LES.field[i], g.LES.field[j])
-            tensor1 = filter.filter3d_array(tensor, TEST_scale)
-            L[i + j] = tensor1 - np.multiply(g.TEST.field[i], g.TEST.field[j])
-            logging.debug("Mean of L[{}] = {}".format(i + j, np.mean(L[i + j])))
-            ## M_ij
-            tensor = np.multiply(g.TEST.S_mod, g.TEST.S[i + j])
-            tensor2 = filter.filter3d_array(self.Tensor_1[i + j], TEST_scale)
-            M[i + j] = -2 * (g.TEST.delta ** 2 * tensor - g.LES.delta ** 2 * tensor2)
-            logging.debug("Mean of M[{}] = {}".format(i + j, np.mean(M[i + j])))
-        for k in ['vu', 'wu', 'wv']:
-            L[k] = L[k[1] + k[0]]
-            M[k] = M[k[1] + k[0]]
-        trace = L['uu'] + L['vv'] + L['ww']
-        logging.info('trace = ', np.mean(trace))
-        for i in ['uu', 'vv', 'ww']:
-            L[i] -= 1 / 3 * trace
-
-        # logging.debug("Calculate C_s")
-        # M_M = np.mean(self.scalar_product(M, M))
-        # logging.info('M_M = ', M_M)
-        # L_M = np.mean(self.scalar_product(L, M))
-        # logging.info('L_M = ', M_M)
-        # C_s_sqr = L_M/M_M
-        # logging.info('Cs^2 = ', C_s_sqr)
-        # C_s = sqrt(C_s_sqr)
-        # logging.debug('C_s from Dynamic model: {}'.format(C_s))
-
-        logging.debug("Calculate C_s field")
-        M_M = self.scalar_product(M, M)
-        logging.info('M_M = ', np.mean(M_M))
-        L_M = self.scalar_product(L, M)
-        logging.info('L_M = ', np.mean(L_M))
-        C_s_sqr = np.divide(L_M, M_M)
-        logging.info('Cs^2 = ', np.mean(C_s_sqr))
-        # Ploting ############################
-        map_bounds = np.linspace(-1.5, 1.5, 20)
-        plot.imagesc([C_s_sqr[:, :, 127]], map_bounds, name='Cs', titles=[r'$C_s$'])
-        plt.show()
-        x, y = utils.pdf_from_array_with_x(C_s_sqr, 100, [-0.2, 0.2])
-        plt.plot(x, y)
-        plt.xlabel(r'C_s')
-        plt.ylabel('pdf')
-        plt.show()
-        ####################################
-        C_s = np.sqrt(np.mean(C_s_sqr))
-        logging.debug('C_s from Dynamic model: {}'.format(C_s))
-        return C_s
-
-    def calc_tensor_1(self):
-        """Calculate tensor |S|S_ij for given field
-        :return:       dictionary of tensor
-        """
-        tensor = dict()
-        for i in ['u', 'v', 'w']:
-            for j in ['u', 'v', 'w']:
-                tensor[i + j] = np.multiply(g.LES.S_mod, g.LES.S[i + j])
-        return tensor
-
-    def Reynolds_stresses_from_Cs(self, Cs=None):
-        """Calculate Reynolds stresses using Smogarinsky model.
-        :param Cs: given scalar of Smogarinsky constant
-        :return: dict of modeled Reynolds stresses tensor
-        """
-        tau = dict()
-        if not Cs:
-            Cs = self.calculate_Cs_dynamic()
-        for i in self.elements_in_tensor:
-            tau[i] = -2 * (Cs * g.LES.delta) ** 2 * self.Tensor_1[i]
-        return tau
+# ####################################################################################################################
+# # Reynolds_stresses_from_C
+# ####################################################################################################################
+# class DynamicSmagorinskyModel(object):
+#     def __init__(self):
+#         self.num_of_params = 1
+#         self.Tensor_1 = self.calc_tensor_1()
+#
+#     def scalar_product(self, tensor1, tensor2):
+#         """Calculate product of two tensors as S_ijT_ij = sum(S_11T_11+S_12T_12+...)
+#         :return:       array of product in each point of domain
+#         """
+#         res = 0
+#         for i in ['u', 'v', 'w']:
+#             for j in ['u', 'v', 'w']:
+#                 res += np.multiply(tensor1[i + j], tensor2[i + j])
+#         return res
+#
+#     def calculate_Cs_dynamic(self):
+#         """ Calculate Smagorinsky constant using Dynamic Smagorinsky model
+#         :return: scalar Smagorinsky constant
+#         """
+#         L = dict()
+#         M = dict()
+#         for k in ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']:
+#             i, j = k[0], k[1]
+#             ## L_ij
+#             tensor = np.multiply(g.LES.field[i], g.LES.field[j])
+#             tensor1 = filter.filter3d_array(tensor, TEST_scale)
+#             L[i + j] = tensor1 - np.multiply(g.TEST.field[i], g.TEST.field[j])
+#             logging.debug("Mean of L[{}] = {}".format(i + j, np.mean(L[i + j])))
+#             ## M_ij
+#             tensor = np.multiply(g.TEST.S_mod, g.TEST.S[i + j])
+#             tensor2 = filter.filter3d_array(self.Tensor_1[i + j], TEST_scale)
+#             M[i + j] = -2 * (g.TEST.delta ** 2 * tensor - g.LES.delta ** 2 * tensor2)
+#             logging.debug("Mean of M[{}] = {}".format(i + j, np.mean(M[i + j])))
+#         for k in ['vu', 'wu', 'wv']:
+#             L[k] = L[k[1] + k[0]]
+#             M[k] = M[k[1] + k[0]]
+#         trace = L['uu'] + L['vv'] + L['ww']
+#         logging.info('trace = ', np.mean(trace))
+#         for i in ['uu', 'vv', 'ww']:
+#             L[i] -= 1 / 3 * trace
+#
+#         # logging.debug("Calculate C_s")
+#         # M_M = np.mean(self.scalar_product(M, M))
+#         # logging.info('M_M = ', M_M)
+#         # L_M = np.mean(self.scalar_product(L, M))
+#         # logging.info('L_M = ', M_M)
+#         # C_s_sqr = L_M/M_M
+#         # logging.info('Cs^2 = ', C_s_sqr)
+#         # C_s = sqrt(C_s_sqr)
+#         # logging.debug('C_s from Dynamic model: {}'.format(C_s))
+#
+#         logging.debug("Calculate C_s field")
+#         M_M = self.scalar_product(M, M)
+#         logging.info('M_M = ', np.mean(M_M))
+#         L_M = self.scalar_product(L, M)
+#         logging.info('L_M = ', np.mean(L_M))
+#         C_s_sqr = np.divide(L_M, M_M)
+#         logging.info('Cs^2 = ', np.mean(C_s_sqr))
+#         # Ploting ############################
+#         map_bounds = np.linspace(-1.5, 1.5, 20)
+#         plot.imagesc([C_s_sqr[:, :, 127]], map_bounds, name='Cs', titles=[r'$C_s$'])
+#         plt.show()
+#         x, y = utils.pdf_from_array_with_x(C_s_sqr, 100, [-0.2, 0.2])
+#         plt.plot(x, y)
+#         plt.xlabel(r'C_s')
+#         plt.ylabel('pdf')
+#         plt.show()
+#         ####################################
+#         C_s = np.sqrt(np.mean(C_s_sqr))
+#         logging.debug('C_s from Dynamic model: {}'.format(C_s))
+#         return C_s
+#
+#     def calc_tensor_1(self):
+#         """Calculate tensor |S|S_ij for given field
+#         :return:       dictionary of tensor
+#         """
+#         tensor = dict()
+#         for i in ['u', 'v', 'w']:
+#             for j in ['u', 'v', 'w']:
+#                 tensor[i + j] = np.multiply(g.LES.S_mod, g.LES.S[i + j])
+#         return tensor
+#
+#     def Reynolds_stresses_from_Cs(self, Cs=None):
+#         """Calculate Reynolds stresses using Smogarinsky model.
+#         :param Cs: given scalar of Smogarinsky constant
+#         :return: dict of modeled Reynolds stresses tensor
+#         """
+#         tau = dict()
+#         if not Cs:
+#             Cs = self.calculate_Cs_dynamic()
+#         for i in self.elements_in_tensor:
+#             tau[i] = -2 * (Cs * g.LES.delta) ** 2 * self.Tensor_1[i]
+#         return tau
 
 
