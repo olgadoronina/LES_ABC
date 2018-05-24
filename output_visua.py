@@ -9,8 +9,8 @@ from params import path
 import os
 
 
-uniform = 0
-calibration = 1
+uniform = 1
+calibration = 0
 IMCMC = 0
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
@@ -71,18 +71,18 @@ if uniform:
 #
 #
 postproc.calc_final_C()
-postproc.calc_marginal_pdf()
+# postproc.calc_marginal_pdf()
+#
+# plotting.plot_marginal_pdf(params.model['N_params'], g.path['output'],
+#                            g.path['visua'], params.C_limits)
+if not calibration:
 
-plotting.plot_marginal_pdf(params.model['N_params'], g.path['output'],
-                           g.path['visua'], params.C_limits)
-# if not calibration:
-    #
     # postproc.plot_eps()
-    # plotting.plot_scatter(params.model['N_params'], params.C_limits, g.path['visua'], g.accepted, g.dist)
-    # postproc.calc_compare_sum_stat(scale='TEST')
-    # plotting.plot_compare_tau(g.path['visua'], g.path['output'], scale='TEST')
-    # postproc.calc_compare_sum_stat(scale='TEST_M')
-    # plotting.plot_compare_tau(g.path['visua'], g.path['output'], scale='TEST_M')
+    plotting.plot_scatter(params.model['N_params'], params.C_limits, g.path['visua'], g.accepted, g.dist)
+    postproc.calc_compare_sum_stat(params.compare_pdf['summary_statistics'], scale='TEST')
+    plotting.plot_compare_tau(g.path['visua'], g.path['output'], params.compare_pdf['summary_statistics'], scale='TEST')
+    postproc.calc_compare_sum_stat(params.compare_pdf['summary_statistics'], scale='TEST_M')
+    plotting.plot_compare_tau(g.path['visua'], g.path['output'], params.compare_pdf['summary_statistics'], scale='TEST_M')
 
 
 

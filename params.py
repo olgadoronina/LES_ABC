@@ -4,11 +4,11 @@ from math import pi
 # Data
 data = {'load': True,
         'data_name': 'JHU_data',
-        'data_path': './data_input/JohnHopkins/'}
+        'data_path': './ABC/data_input/JohnHopkins/'}
 # 'data_name': 'CU_data'
 # 'data_folder':  './data_input/HIT_DNS_N256/'}
-path = {'output': './output/',
-        'visua': './plots/'}
+path = {'output': './ABC/output/',
+        'visua': './ABC/plots/'}
 ########################################################################################################################
 # Initial case parameters
 physical_case = {'N_point': 256,
@@ -20,17 +20,18 @@ physical_case = {'N_point': 256,
                  # TEST_scale = 5
 ########################################################################################################################
 # Model parameters
-model = {'order': 2,           # order of eddy-viscosity model
-         'N_params_force': 3}
+model = {'order': 1,           # order of eddy-viscosity model
+         'N_params_force': 1}
 ########################################################################################################################
 compare_pdf = {'bins': 100,                 # for pdf comparison
-               'domain': [-0.45, 0.45],     # for pdf comparison
+               # 'domain': [-0.45, 0.45],     # for sigma pdf comparison
+               'domain': [-5, 5],     # for production pdf comparison
                # domain = [-0.7, 0.7]      # for pdf comparison
                'distance': 'L2log',
-               'summary_statistics': 'sigma_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
+               'summary_statistics': 'production_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
 ########################################################################################################################
 # abs algorithm
-abc = {'algorithm': 'IMCMC',    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+abc = {'algorithm': 'acc-rej',    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
        'num_training_points': 64}
 ################################################################################################################
 # Define only one of the following
@@ -38,7 +39,7 @@ abc = {'algorithm': 'IMCMC',    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMC
 algorithm ={'acc-rej':
                {'sampling': 'uniform',   # 'uniform', 'random', 'sobol'
                 'eps': 5000,
-                'N_each': 10,
+                'N_each': 1000,
                 'N_params_in_task': 0},  # only 0, 1 or 2  #only 0 and 2 for calibration
             ############################################################################################################
             'MCMC':
@@ -77,6 +78,6 @@ C_limits = [[-0.3, 0.3],
 ########################################################################################################################
 # Parallel regime parameters
 parallel = {'progressbar': 1,    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-            'N_proc': 4}          # Number of processes
+            'N_proc': 1}          # Number of processes
 ########################################################################################################################
 

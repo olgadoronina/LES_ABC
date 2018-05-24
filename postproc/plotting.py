@@ -385,25 +385,48 @@ def plot_scatter(N_params, C_limits, visua, accepted, dist):
     plt.close('all')
 
 
-def plot_compare_tau(visua, output, scale='LES'):
+def plot_compare_tau(visua, output, sum_stat, scale='LES'):
 
-    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
-    titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
     x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))
-    y_true = dict()
-    y_min_dist = dict()
-    for ind, key in enumerate(['uu', 'uv', 'uw']):
+    if sum_stat == 'sigma_pdf_log':
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
+        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+        y_true = dict()
+        y_min_dist = dict()
+        for ind, key in enumerate(['uu', 'uv', 'uw']):
+            # Plot true pdf
+            y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
+            axarr[ind].plot(x, y_true[key], 'r', linewidth=2, label='true')
+            # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+            # plot min dist pdf
+            y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
+            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+            # # plot max marginal
+            # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
+            # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
+            axarr[ind].set_xlabel(titles[ind])
+        axarr[0].set_ylabel('ln(pdf)')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
+
+    elif sum_stat == 'production_pdf_log':
+        fig = plt.figure(figsize=(4, 3))
+        ax = plt.gca()
         # Plot true pdf
-        y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
-        axarr[ind].plot(x, y_true[key], 'r', linewidth=2, label='true')
+        y_true = np.loadtxt(os.path.join(output, 'sum_stat_true'))
+        ax.plot(x, y_true, 'r', linewidth=2, label='true')
         # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
         # plot min dist pdf
-        y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-        axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+        y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
+        ax.plot(x, y_min_dist, 'g', linewidth=2, label='modeled dist')
         # # plot max marginal
         # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
         # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
-        axarr[ind].set_xlabel(titles[ind])
+        ax.set_xlabel(r'$P$')
+        ax.set_ylabel('ln(pdf)')
+        plt.legend(loc=0)
+
 
     # # Plot max joint pdf
     # if C_final_joint:
@@ -419,10 +442,8 @@ def plot_compare_tau(visua, output, scale='LES'):
     #
     # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
 
-    axarr[0].set_ylabel('ln(pdf)')
-    plt.legend(loc=0)
-    fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
-    # axarr[0].set_yscale('log', basey=np.e)
+
+
     fig.savefig(os.path.join(visua, 'compare_sum_stat_' + scale))
     plt.close('all')
 

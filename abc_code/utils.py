@@ -224,7 +224,6 @@ def sampling_uniform_grid(N_each, N_params_in_task, C_limits):
         C_array = []
         for i in C1:
             C_array.append([i])
-        print(C_array)
     else:
         C = np.empty((N_params - N_params_in_task, N_each))
         for i in range(N_params - N_params_in_task):

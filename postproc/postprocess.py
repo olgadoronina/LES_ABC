@@ -76,6 +76,7 @@ class PostprocessABC(object):
             else:
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
 
+########################################################################################################################
     def calc_marginal_pdf(self):
 
         if self.N_params != 1:
@@ -95,7 +96,8 @@ class PostprocessABC(object):
                         np.savetxt(os.path.join(path['output'], 'marginal' + str(i)+str(j)), H)
                         np.savetxt(os.path.join(path['output'], 'marginal_bins' + str(i) + str(j)), [xedges, yedges])
 
-    def calc_compare_sum_stat(self, scale='LES'):
+########################################################################################################################
+    def calc_compare_sum_stat(self, sum_stat, scale='LES'):
 
         if self.N_params == 1:
             C_final_dist_new = self.C_final_dist[0].copy()
@@ -120,24 +122,33 @@ class PostprocessABC(object):
         sigma_modeled_dist = current_model.sigma_from_C(C_final_dist_new)
 
         # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
-        y = np.empty((3, self.bins))
-        for ind, key in enumerate(['uu', 'uv', 'uw']):
-            # plot min dist pdf
-            y[ind] = utils.take_safe_log(sigma_modeled_dist[key])
+
+        # calc min dist pdf
+        if sum_stat == 'sigma_pdf_log':
+            y = np.empty((3, self.bins))
+            for ind, key in enumerate(['uu', 'uv', 'uw']):
+                y[ind] = utils.take_safe_log(sigma_modeled_dist[key])
+        elif sum_stat == 'production_pdf_log':
+            y = utils.take_safe_log(sigma_modeled_dist)
         np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
             # # plot max marginal
             # y = utils.pdf_from_array(sigma_modeled_marginal[key].flatten(), self.bins, self.domain)
             # y = utils.take_safe_log(y)
             # np.savetxt(os.path.join(output['output_path'], 'sum_stat_max_marginal'), y)
-        # Plot max joint pdf
+
+        # calc max joint pdf
         if C_final_joint:
             for i in range(len(C_final_joint)):
                 sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
-                y_dict = dict()
-                for ind, key in enumerate(['uu', 'uv', 'uw']):
-                    y_dict[key] = utils.pdf_from_array(sigma_modeled_joint[key].flatten(), self.bins, self.domain)
-                    y = utils.take_safe_log(y_dict[key])
-                    np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
+
+                if sum_stat == 'sigma_pdf_log':
+                    y_dict = dict()
+                    for ind, key in enumerate(['uu', 'uv', 'uw']):
+                        y_dict[key] = utils.pdf_from_array(sigma_modeled_joint[key], self.bins, self.domain)
+                        y = utils.take_safe_log(y_dict[key])
+                elif sum_stat == 'production_pdf_log':
+                    y_dict = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
+                np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
 
 

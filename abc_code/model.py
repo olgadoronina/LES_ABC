@@ -28,17 +28,20 @@ class NonlinearModel(object):
             self.N_params_in_task = algorithm['N_params_in_task']
         else:
             self.N_params_in_task = 0
-
-        if self.N_params_in_task == 0:
-            self.sigma_from_C = self.sigma_pdf_log
-        elif self.N_params_in_task == 1:
-            self.sigma_from_C = self.sigma_from_C_1param
-        elif self.N_params_in_task == 2:
-            self.sigma_from_C = self.sigma_from_C_2param
-        else:
-            self.Reynolds_stresses_from_C = self.sigma_from_C_2param
-            logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
-                self.N_params_in_task))
+        if self.pdf_params['summary statistics'] == 'sigma_pdf_log':
+            if self.N_params_in_task == 0:
+                self.sigma_from_C = self.sigma_pdf_log
+            elif self.N_params_in_task == 1:
+                self.sigma_from_C = self.sigma_from_C_1param
+            elif self.N_params_in_task == 2:
+                self.sigma_from_C = self.sigma_from_C_2param
+            else:
+                self.Reynolds_stresses_from_C = self.sigma_from_C_2param
+                logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
+                    self.N_params_in_task))
+        elif self.pdf_params['summary statistics'] == 'production_pdf_log':
+            if self.N_params_in_task == 0:
+                self.sigma_from_C = self.production_pdf_log
         logging.info('\n')
         logging.info('Nonlinear model with {}'.format(self.sigma_from_C.__name__))
 
@@ -251,14 +254,13 @@ class NonlinearModel(object):
             sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
         return sigma_pdf
 
-    # def production_pdf_log(self, C):
-    #     self.sigma_field_from_C(C)
-    #
-    #     sigma_pdf = dict()
-    #     for key, value in self.sigma.items():
-    #         production =
-    #         sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
-    #     return sigma_pdf
+    def production_pdf_log(self, C):
+        self.sigma_field_from_C(C)
+
+        for key, value in self.sigma.items():
+            production = self.sigma
+            sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
+        return sigma_pdf
 
     def sigma_field_from_C(self, C):
         """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.
