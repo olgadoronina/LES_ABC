@@ -426,6 +426,8 @@ def plot_compare_tau(visua, output, sum_stat, scale='LES'):
         ax.set_xlabel(r'$P$')
         ax.set_ylabel('ln(pdf)')
         plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
+
 
 
     # # Plot max joint pdf

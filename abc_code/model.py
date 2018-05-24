@@ -14,6 +14,7 @@ class NonlinearModel(object):
         self.N_each = algorithm['N_each']
         self.N_params = model_params['N_params']
         self.S_mod = self.calc_strain_mod(data)
+        self.S = data.S
         if model_params['homogeneous']:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
@@ -28,7 +29,7 @@ class NonlinearModel(object):
             self.N_params_in_task = algorithm['N_params_in_task']
         else:
             self.N_params_in_task = 0
-        if self.pdf_params['summary statistics'] == 'sigma_pdf_log':
+        if self.pdf_params['summary_statistics'] == 'sigma_pdf_log':
             if self.N_params_in_task == 0:
                 self.sigma_from_C = self.sigma_pdf_log
             elif self.N_params_in_task == 1:
@@ -39,7 +40,7 @@ class NonlinearModel(object):
                 self.Reynolds_stresses_from_C = self.sigma_from_C_2param
                 logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
                     self.N_params_in_task))
-        elif self.pdf_params['summary statistics'] == 'production_pdf_log':
+        elif self.pdf_params['summary_statistics'] == 'production_pdf_log':
             if self.N_params_in_task == 0:
                 self.sigma_from_C = self.production_pdf_log
         logging.info('\n')
@@ -249,18 +250,18 @@ class NonlinearModel(object):
     ####################################################################################################################
     def sigma_pdf_log(self, C):
         self.sigma_field_from_C(C)
-        sigma_pdf = dict()
-        for key, value in self.sigma.items():
-            sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
+        sigma_pdf = np.empty((len(self.elements_in_tensor), self.pdf_params['bins']))
+        for ind, key in enumerate(self.elements_in_tensor):
+            sigma_pdf[ind] = utils.pdf_from_array(self.sigma[key], self.pdf_params['bins'], self.pdf_params['domain'])
         return sigma_pdf
 
     def production_pdf_log(self, C):
         self.sigma_field_from_C(C)
-
+        production = 0
         for key, value in self.sigma.items():
-            production = self.sigma
-            sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
-        return sigma_pdf
+            production += self.sigma[key]*self.S[key]
+        production = np.array([utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain'])])
+        return production
 
     def sigma_field_from_C(self, C):
         """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.

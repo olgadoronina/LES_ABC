@@ -2,6 +2,8 @@ import abc_code.global_var as g
 import numpy as np
 from abc_code import utils
 
+keys = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
+
 
 ########################################################################################################################
 ## Distance functions
@@ -9,8 +11,8 @@ from abc_code import utils
 def calc_dist(C, dist_func):
     pdf = g.TEST_Model.sigma_from_C(C)
     distance = 0
-    for key in g.TEST_Model.elements_in_tensor:
-        d = dist_func(pdf_modeled=pdf[key], key=key, axis=0)
+    for i in range(len(pdf)):
+        d = dist_func(pdf_modeled=pdf[i], key=keys[i], axis=0)
         distance += d
     return distance
 

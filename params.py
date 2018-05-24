@@ -24,11 +24,11 @@ model = {'order': 1,           # order of eddy-viscosity model
          'N_params_force': 1}
 ########################################################################################################################
 compare_pdf = {'bins': 100,                 # for pdf comparison
-               # 'domain': [-0.45, 0.45],     # for sigma pdf comparison
-               'domain': [-5, 5],     # for production pdf comparison
+               'domain': [-0.45, 0.45],     # for sigma pdf comparison
+               # 'domain': [-5, 5],     # for production pdf comparison
                # domain = [-0.7, 0.7]      # for pdf comparison
                'distance': 'L2log',
-               'summary_statistics': 'production_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
+               'summary_statistics': 'sigma_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
 ########################################################################################################################
 # abs algorithm
 abc = {'algorithm': 'acc-rej',    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'

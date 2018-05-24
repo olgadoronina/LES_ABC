@@ -126,8 +126,8 @@ class PostprocessABC(object):
         # calc min dist pdf
         if sum_stat == 'sigma_pdf_log':
             y = np.empty((3, self.bins))
-            for ind, key in enumerate(['uu', 'uv', 'uw']):
-                y[ind] = utils.take_safe_log(sigma_modeled_dist[key])
+            for ind in range(3):
+                y[ind] = utils.take_safe_log(sigma_modeled_dist[ind])
         elif sum_stat == 'production_pdf_log':
             y = utils.take_safe_log(sigma_modeled_dist)
         np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
@@ -137,18 +137,17 @@ class PostprocessABC(object):
             # np.savetxt(os.path.join(output['output_path'], 'sum_stat_max_marginal'), y)
 
         # calc max joint pdf
-        if C_final_joint:
-            for i in range(len(C_final_joint)):
-                sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
-
-                if sum_stat == 'sigma_pdf_log':
-                    y_dict = dict()
-                    for ind, key in enumerate(['uu', 'uv', 'uw']):
-                        y_dict[key] = utils.pdf_from_array(sigma_modeled_joint[key], self.bins, self.domain)
-                        y = utils.take_safe_log(y_dict[key])
-                elif sum_stat == 'production_pdf_log':
-                    y_dict = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
-                np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
+        # if C_final_joint:
+        #     for i in range(len(C_final_joint)):
+        #         sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
+        #
+        #         if sum_stat == 'sigma_pdf_log':
+        #             for ind in range(3):
+        #                 tmp = utils.pdf_from_array(sigma_modeled_joint[ind], self.bins, self.domain)
+        #                 y = utils.take_safe_log(tmp)
+        #         elif sum_stat == 'production_pdf_log':
+        #             y_dict = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
+        #         np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
 
 
