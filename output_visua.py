@@ -5,17 +5,17 @@ import numpy as np
 import postproc.plotting as plotting
 import init
 import postproc.postprocess as postprocess
-from params import output
+from params import path
 import os
 
 
-uniform = 1
-calibration = 0
+uniform = 0
+calibration = 1
 IMCMC = 0
 
-filename_calibration_all = os.path.join(output['plot_path'],'calibration_all.npz')
-filename_calibration = os.path.join(output['plot_path'], 'calibration.npz')
-filename_accepted = os.path.join(output['plot_path'], 'accepted.npz')
+filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
+filename_calibration = os.path.join(path['output'], 'calibration.npz')
+filename_accepted = os.path.join(path['output'], 'accepted.npz')
 
 if calibration:
     filename = filename_calibration
@@ -42,11 +42,11 @@ if calibration:
     num_bin_joint = 10
     N_each = 10
     dist = np.load(filename_calibration_all)['S_init'][:, -1]
-    plotting.dist_pdf(dist, params.x, params.output['output_path'])
+    plotting.dist_pdf(dist, params.algorithm['x'], g.path['visua'])
 
 else:
-    num_bin_joint = 20
-    N_each = 100
+    num_bin_joint = 10
+    N_each = 10
     C_limits = params.C_limits
     # C_limits = np.zeros((10, 2))
     # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
@@ -63,7 +63,7 @@ postproc = postprocess.PostprocessABC(C_limits, eps, num_bin_joint, params)
 #
 #
 if uniform:
-    new_eps = 2000
+    new_eps = 3737.29
     g.accepted = g.accepted[g.dist < new_eps]
     g.dist = g.dist[g.dist < new_eps]
     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
@@ -73,16 +73,17 @@ if uniform:
 postproc.calc_final_C()
 postproc.calc_marginal_pdf()
 
-plotting.plot_marginal_pdf(params.model['N_params'], params.output['output_path'],
-                           params.output['plot_path'], params.C_limits)
-if not calibration:
+plotting.plot_marginal_pdf(params.model['N_params'], g.path['output'],
+                           g.path['visua'], params.C_limits)
+# if not calibration:
     #
     # postproc.plot_eps()
-    # postproc.plot_scatter()
-    # # postproc.scatter_animation()
-    postproc.calc_compare_sum_stat(scale='LES')
-    # postproc.plot_compare_tau(scale='TEST_M', MCMC=0)
-    # postproc.plot_compare_tau(scale='TEST', MCMC=0)
+    # plotting.plot_scatter(params.model['N_params'], params.C_limits, g.path['visua'], g.accepted, g.dist)
+    # postproc.calc_compare_sum_stat(scale='TEST')
+    # plotting.plot_compare_tau(g.path['visua'], g.path['output'], scale='TEST')
+    # postproc.calc_compare_sum_stat(scale='TEST_M')
+    # plotting.plot_compare_tau(g.path['visua'], g.path['output'], scale='TEST_M')
+
 
 
 

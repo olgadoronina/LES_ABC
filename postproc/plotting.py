@@ -309,9 +309,10 @@ def dist_pdf(dist, x, folder):
 ########################################################################################################################
 #
 ########################################################################################################################
-def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
+params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
-    params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
+
+def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
 
     max_value = 0.0
     data = dict()
@@ -324,7 +325,7 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
     cmaplist[0] = 'white' # force the first color entry to be white
-    cmap = cmap.from_list('Custom cmap', cmaplist, max_value+1)
+    cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
     fig = plt.figure(figsize=(7, 6.5))
 
     for i in range(N_params):
@@ -351,11 +352,12 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
                 ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                 ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                 ext = (edges[0, 0], edges[0, -1], edges[1, 0], edges[1, -1])
-                # ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
-                im = ax.imshow(data[str(i)+str(j)].T, origin='lower', cmap=cmap, aspect='auto', vmin=0, vmax=2, extent=ext)
+
+                im = ax.imshow(data[str(i)+str(j)].T, origin='lower', cmap=cmap, aspect='auto',
+                               extent=ext, vmin=0, vmax=max_value)
     cax = plt.axes([0.1, 0.05, 0.075, 0.1])
-    plt.colorbar(im, cax=cax, ticks=np.arange(max_value+1))
-    # plt.legend(loc='lower left', bbox_to_anchor=(-6.5, 3.5), fancybox=True, shadow=True)
+    plt.colorbar(im, cax=cax) #, ticks=np.arange(max_value+1))
+    plt.legend(loc='lower left', bbox_to_anchor=(-6.5, 3.5), fancybox=True, shadow=True)
 
     if N_params == 3:
         fig.subplots_adjust(left=0.05, right=0.98, wspace=0.25, bottom=0.08, top=0.95)
@@ -364,169 +366,137 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
     elif N_params == 6:
         fig.subplots_adjust(left=0.05, right=0.98, wspace=0.45, hspace=0.35, bottom=0.08, top=0.98)
 
-    # fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.5)
     fig.savefig(plot_folder+'marginal')
     plt.close('all')
-    del fig
-
-    # def plot_scatter(self):
-    #
-    #     for i in range(self.N.params):
-    #         x = g.accepted[:, i]
-    #         fig = plt.figure(figsize=(3.2, 2.8))
-    #         ax = plt.axes()
-    #         ax.axis(xmin=self.C_limits[i, 0], xmax=self.C_limits[i, 1], ymax=self.eps + 1)
-    #         ax.scatter(x, g.dist, color='blue')
-    #         ax.set_xlabel(self.params_names[i])
-    #         ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
-    #         fig.subplots_adjust(left=0.19, right=0.95, bottom=0.15, top=0.9)
-    #         fig.savefig(self.folder + self.params_names[i][1:-1])
-    #     gc.collect()
-
-    # def plot_compare_tau(self, MCMC, scale='LES'):
-    #
-    #     if self.N_params == 1:
-    #         C_final_dist_new = self.C_final_dist[0].copy()
-    #     else:
-    #         C_final_dist_new = self.C_final_dist.copy()
-    #     C_final_joint = 0
-    #     if len(self.C_final_joint) < 5 and self.N_params != 1:
-    #         # if len(self.C_final_joint) == 1:
-    #         #     C_final_joint = self.C_final_joint[0].copy()
-    #         #  else:
-    #         C_final_joint = self.C_final_joint.copy()
-    #     C_final_marginal = self.C_final_marginal
-    #
-    #     fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
-    #
-    #     # create pdfs
-    #     if scale == 'LES':
-    #         titles = [r'$\widetilde{\sigma}_{11}$', r'$\widetilde{\sigma}_{12}$', r'$\widetilde{\sigma}_{13}$']
-    #         current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
-    #     if scale == 'TEST_M':
-    #         titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-    #         current_model = model.NonlinearModel(g.TEST_sp, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
-    #     if scale == 'TEST':
-    #         titles = [r'$\widehat{\sigma}_{11}$', r'$\widehat{\sigma}_{12}$', r'$\widehat{\sigma}_{13}$']
-    #         current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
-    #
-    #     tau_modeled_dist = current_model.sigma_from_C(C_final_dist_new)
-    #     tau_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
-    #
-    #     for ind, key in enumerate(['uu', 'uv', 'uw']):
-    #         # Plot true pdf
-    #         if scale == 'LES':
-    #             x, y = utils.pdf_from_array_with_x(g.LES.tau_true[key].flatten(), g.bins, g.domain)
-    #             y = utils.take_safe_log(y)
-    #         if scale == 'TEST':
-    #             x, y = utils.pdf_from_array_with_x(g.TEST.tau_true[key].flatten(), g.bins, g.domain)
-    #             y = utils.take_safe_log(y)
-    #         if scale == 'TEST_M':
-    #             x, y = utils.pdf_from_array_with_x(g.TEST_sp.tau_true[key].flatten(), g.bins, g.domain)
-    #             y = utils.take_safe_log(y)
-    #         axarr[ind].plot(x, y, 'r', linewidth=2, label='true')
-    #         axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
-    #         # plot min dist pdf
-    #         x, y = utils.pdf_from_array_with_x(tau_modeled_dist[key].flatten(), g.bins, g.domain)
-    #         y = utils.take_safe_log(y)
-    #         axarr[ind].plot(x, y, 'g', linewidth=2, label='modeled dist')
-    #         # # plot max marginal
-    #         # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
-    #         # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
-    #         axarr[ind].set_xlabel(titles[ind])
-    #
-    #     # Plot max joint pdf
-    #     if C_final_joint:
-    #         for i in range(len(C_final_joint)):
-    #             tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
-    #             y_dict = dict()
-    #             for ind, key in enumerate(['uu', 'uv', 'uw']):
-    #                 x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
-    #                 y = utils.take_safe_log(y_dict[key])
-    #                 axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
-    #
-    #             np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
-    #
-    #     axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
-    #     axarr[0].set_ylabel('ln(pdf)')
-    #     plt.legend(loc=0)
-    #     fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
-    #     # axarr[0].set_yscale('log', basey=np.e)
-    #     fig.savefig(self.folder + scale)
-    #     del fig, axarr
-    #     gc.collect()
-
-    # def plot_eps(self):
-    #     num_eps = 6
-    #     eps = np.linspace(200, 4000, num_eps)
-    #
-    #     # eps = np.append(8.877, eps)
-    #
-    #     C_mean = np.empty((self.N.params, num_eps))
-    #     C_max = np.empty_like(C_mean)
-    #     C_std = np.empty((self.N.params, num_eps))
-    #     C_h = np.empty((self.N.params, num_eps))
-    #
-    #     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-    #     for ind, new_eps in enumerate(eps):
-    #         g.accepted = np.load('./plots/accepted.npz')['C']
-    #         g.dist = np.load('./plots/accepted.npz')['dist']
-    #
-    #         g.accepted = g.accepted[g.dist < new_eps]
-    #         g.dist = g.dist[g.dist < new_eps]
-    #         logging.info('eps = {}: accepted {} values ({}%)'.format(new_eps,
-    #             len(g.accepted), round(len(g.accepted) / (g.N.total) * 100, 2)))
-    #         for i in range(self.N.params):
-    #             data = g.accepted[:, i]
-    #             C_std[i, ind] = np.std(data)
-    #             C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
-    #
-    #             x, y = utils.pdf_from_array_with_x(data, bins=self.N.each, range=self.C_limits[i])
-    #             C_max[i, ind] = x[np.argmax(y)]
-    #             axarr[i].plot(x, y, label=r'$\epsilon = {}$'.format(new_eps))
-    #             axarr[i].set_xlabel(self.params_names[i])
-    #
-    #     axarr[0].set_ylabel('marginal pdf')
-    #     # Put a legend below current axis
-    #     legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
-    #     # frame = legend.get_frame()
-    #     # frame.set_alpha(1)
-    #     fig.subplots_adjust(left=0.08, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
-    #     fig.savefig(self.folder + 'eps_marginal')
-    #
-    #     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-    #     for i in range(self.N.params):
-    #         axarr[i].plot(eps, C_mean[i], 'b.-', label='mean')
-    #         axarr[i].plot(eps, C_max[i], 'g.-', label='max')
-    #         axarr[i].set_title(self.params_names[i])
-    #         axarr[i].set_xlabel('epsilon')
-    #         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-    #     axarr[0].set_ylabel(r'$C_i$')
-    #     plt.legend(loc=0)
-    #     fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-    #     fig.savefig(self.folder + 'eps_plot')
 
 
+def plot_scatter(N_params, C_limits, visua, accepted, dist):
 
-        # fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-        # for i in range(self.N.params):
-        #     axarr[i].plot(eps, C_std[i], 'b.-')
-        #     axarr[i].set_title(self.params_names[i])
-        #     axarr[i].set_xlabel('epsilon')
-        #     axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-        #     # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
-        # axarr[0].set_ylabel(r'std($C_i$)')
-        # fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-        # fig.savefig(self.folder + 'eps_std')
-        #
-        #
-        # fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-        # for i in range(self.N.params):
-        #     axarr[i].plot(eps, C_h[i], 'b.-')
-        #     axarr[i].set_title(self.params_names[i])
-        #     axarr[i].set_xlabel('epsilon')
-        #     axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-        #     # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
-        # axarr[0].set_ylabel(r'$95\%$ confident interval')
-        # fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-        # fig.savefig(self.folder + 'eps_h')
+    for i in range(N_params):
+        x = accepted[:, i]
+        fig = plt.figure(figsize=(3.2, 2.8))
+        ax = plt.axes()
+        ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=np.max(dist) + 1)
+        ax.scatter(x, dist, color='blue')
+        ax.set_xlabel(params_names[i])
+        ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
+        fig.subplots_adjust(left=0.19, right=0.95, bottom=0.15, top=0.9)
+        fig.savefig(os.path.join(visua, 'scatter_plot_'+params_names[i][1:-1]))
+    plt.close('all')
+
+
+def plot_compare_tau(visua, output, scale='LES'):
+
+    fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
+    titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+    x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))
+    y_true = dict()
+    y_min_dist = dict()
+    for ind, key in enumerate(['uu', 'uv', 'uw']):
+        # Plot true pdf
+        y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
+        axarr[ind].plot(x, y_true[key], 'r', linewidth=2, label='true')
+        # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+        # plot min dist pdf
+        y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
+        axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+        # # plot max marginal
+        # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
+        # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
+        axarr[ind].set_xlabel(titles[ind])
+
+    # # Plot max joint pdf
+    # if C_final_joint:
+    #     for i in range(len(C_final_joint)):
+    #         tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
+    #         y_dict = dict()
+    #         for ind, key in enumerate(['uu', 'uv', 'uw']):
+    #             x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
+    #             y = utils.take_safe_log(y_dict[key])
+    #             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
+    #
+    #         np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
+    #
+    # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
+
+    axarr[0].set_ylabel('ln(pdf)')
+    plt.legend(loc=0)
+    fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
+    # axarr[0].set_yscale('log', basey=np.e)
+    fig.savefig(os.path.join(visua, 'compare_sum_stat_' + scale))
+    plt.close('all')
+
+# def plot_eps(self):
+#     num_eps = 6
+#     eps = np.linspace(200, 4000, num_eps)
+#
+#     # eps = np.append(8.877, eps)
+#
+#     C_mean = np.empty((self.N.params, num_eps))
+#     C_max = np.empty_like(C_mean)
+#     C_std = np.empty((self.N.params, num_eps))
+#     C_h = np.empty((self.N.params, num_eps))
+#
+#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+#     for ind, new_eps in enumerate(eps):
+#         g.accepted = np.load('./plots/accepted.npz')['C']
+#         g.dist = np.load('./plots/accepted.npz')['dist']
+#
+#         g.accepted = g.accepted[g.dist < new_eps]
+#         g.dist = g.dist[g.dist < new_eps]
+#         logging.info('eps = {}: accepted {} values ({}%)'.format(new_eps,
+#             len(g.accepted), round(len(g.accepted) / (g.N.total) * 100, 2)))
+#         for i in range(self.N.params):
+#             data = g.accepted[:, i]
+#             C_std[i, ind] = np.std(data)
+#             C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
+#
+#             x, y = utils.pdf_from_array_with_x(data, bins=self.N.each, range=self.C_limits[i])
+#             C_max[i, ind] = x[np.argmax(y)]
+#             axarr[i].plot(x, y, label=r'$\epsilon = {}$'.format(new_eps))
+#             axarr[i].set_xlabel(self.params_names[i])
+#
+#     axarr[0].set_ylabel('marginal pdf')
+#     # Put a legend below current axis
+#     legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
+#     # frame = legend.get_frame()
+#     # frame.set_alpha(1)
+#     fig.subplots_adjust(left=0.08, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
+#     fig.savefig(self.folder + 'eps_marginal')
+#
+#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+#     for i in range(self.N.params):
+#         axarr[i].plot(eps, C_mean[i], 'b.-', label='mean')
+#         axarr[i].plot(eps, C_max[i], 'g.-', label='max')
+#         axarr[i].set_title(self.params_names[i])
+#         axarr[i].set_xlabel('epsilon')
+#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+#     axarr[0].set_ylabel(r'$C_i$')
+#     plt.legend(loc=0)
+#     fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+#     fig.savefig(self.folder + 'eps_plot')
+#
+#
+#
+#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+#     for i in range(self.N.params):
+#         axarr[i].plot(eps, C_std[i], 'b.-')
+#         axarr[i].set_title(self.params_names[i])
+#         axarr[i].set_xlabel('epsilon')
+#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+#         # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+#     axarr[0].set_ylabel(r'std($C_i$)')
+#     fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+#     fig.savefig(self.folder + 'eps_std')
+#
+#
+#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+#     for i in range(self.N.params):
+#         axarr[i].plot(eps, C_h[i], 'b.-')
+#         axarr[i].set_title(self.params_names[i])
+#         axarr[i].set_xlabel('epsilon')
+#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+#         # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+#     axarr[0].set_ylabel(r'$95\%$ confident interval')
+#     fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+#     fig.savefig(self.folder + 'eps_h')

@@ -251,6 +251,15 @@ class NonlinearModel(object):
             sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
         return sigma_pdf
 
+    # def production_pdf_log(self, C):
+    #     self.sigma_field_from_C(C)
+    #
+    #     sigma_pdf = dict()
+    #     for key, value in self.sigma.items():
+    #         production =
+    #         sigma_pdf[key] = utils.pdf_from_array(value, self.pdf_params['bins'], self.pdf_params['domain'])
+    #     return sigma_pdf
+
     def sigma_field_from_C(self, C):
         """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.
         :param C: list of constant parameters
@@ -269,7 +278,8 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N_each)
-        C_last = np.linspace(self.C_limits[self.N.params - 1, 0], self.C_limits[self.N.params - 1, 1], self.N_each)
+        # C_last = np.linspace(self.C_limits[self.N.params - 1, 0], self.C_limits[self.N.params - 1, 1], self.N_each)
+        C_last = utils.uniform_grid(self.C_limits[self.N.params - 1], self.N_each)
         for i in self.elements_in_tensor:
             sigma = np.zeros(self.M ** 3)
             for j in range(self.N_params - self.N_params_in_task):
@@ -298,9 +308,10 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N_each ** 2)
-        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
-        C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
-
+        # C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N_each)
+        # C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
+        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N_each)
         for i in self.elements_in_tensor:
             sigma = np.zeros(self.M ** 3)
             for j in range(self.N_params - self.N_params_in_task):
@@ -333,7 +344,8 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N_each)
-        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        # C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N_each)
         for i in self.elements_in_tensor:
             sigma = np.zeros(self.M ** 3)
             for j in range(self.N_params - self.N_params_in_task):
@@ -361,8 +373,10 @@ class NonlinearModel(object):
         :return: list of accepted params with distance [[C0, ..., Cn, dist], [...], [...]]
         """
         dist = np.zeros(self.N_each ** 2)
-        C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
-        C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
+        # C_last = np.linspace(self.C_limits[-1, 0], self.C_limits[-1, 1], self.N_each)
+        # C_before_last = np.linspace(self.C_limits[-2, 0], self.C_limits[-2, 1], self.N_each)
+        C_last = utils.uniform_grid(self.C_limits[-1], self.N_each)
+        C_before_last = utils.uniform_grid(self.C_limits[-2], self.N_each)
 
         for i in self.elements_in_tensor:
             self.sigma = np.zeros(self.M ** 3)

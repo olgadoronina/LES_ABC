@@ -3,7 +3,8 @@ import os
 import numpy as np
 
 import abc_code.utils as utils
-from params import output
+from abc_code import global_var as g
+
 
 
 class Data(object):
@@ -16,14 +17,13 @@ class Data(object):
         self.R = self.calc_rotation_tensor()
         if pdf_params['summary_statistics'] == 'sigma_pdf_log':
             self.sum_stat_true = self.deviatoric_stresses_pdf(pdf_params)
-            np.savetxt(os.path.join(output['output_path'], 'sum_stat_true'),
+            np.savetxt(os.path.join(g.path['output'], 'sum_stat_true'),
                        [self.sum_stat_true['uu'], self.sum_stat_true['uv'], self.sum_stat_true['uw']])
         elif pdf_params['summary_statistics'] == 'production_pdf_log':
             self.sum_stat_true = self.production_rate_pdf(pdf_params)
-            np.savetxt(os.path.join(output['output_path'], 'sum_stat_true'), self.sum_stat_true)
+            np.savetxt(os.path.join(g.path['output'], 'sum_stat_true'), self.sum_stat_true)
         elif pdf_params['summary_statistics'] == 'production_mean':
             self.sum_stat_true = self.production_rate_mean()
-
 
     def field_gradient(self):
         """Calculate tensor of gradients of self.field.

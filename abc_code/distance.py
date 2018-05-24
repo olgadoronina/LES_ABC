@@ -8,11 +8,11 @@ from abc_code import utils
 ########################################################################################################################
 def calc_dist(C, dist_func):
     pdf = g.TEST_Model.sigma_from_C(C)
-    dist = 0
+    distance = 0
     for key in g.TEST_Model.elements_in_tensor:
         d = dist_func(pdf_modeled=pdf[key], key=key, axis=0)
-        dist += d
-    return dist
+        distance += d
+    return distance
 
 #
 # def distance_between_pdf_KL(pdf_modeled, key, axis=1):
@@ -54,7 +54,7 @@ def calc_dist(C, dist_func):
 #     return dist
 
 
-def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
+def distance_sigma_pdf_LSElog(pdf_modeled, key, axis=1):
     """ Calculate statistical distance between two pdf as mean((ln(P1)-ln(P2))^2).
     :param pdf_modeled: array of modeled pdf
     :param key: tensor component(key of dict)
@@ -65,7 +65,7 @@ def distance_between_pdf_LSElog(pdf_modeled, key, axis=1):
     return dist
 
 
-def distance_between_pdf_L1log(pdf_modeled, key, axis=1):
+def distance_sigma_pdf_L1log(pdf_modeled, key, axis=1):
     """Calculate statistical distance between two pdf as
     :param pdf_modeled: array of modeled pdf
     :return:            scalar of calculated distance

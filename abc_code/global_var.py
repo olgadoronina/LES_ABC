@@ -5,6 +5,8 @@ import numpy as np
 TINY = 1e-05
 TINY_log = np.log(TINY)
 
+path = None
+
 pdf_params = None
 std = None
 eps = None

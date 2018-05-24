@@ -5,7 +5,7 @@ import numpy as np
 import abc_code.global_var as g
 import abc_code.model as model
 import abc_code.utils as utils
-from params import output
+from params import path
 
 
 ########################################################################################################################
@@ -23,6 +23,7 @@ class PostprocessABC(object):
         self.model_params = params.model
         self.abc_algorithm = params.abc['algorithm']
         self.algorithm = params.algorithm
+        self.pdf_params = params.compare_pdf
         self.bins = params.compare_pdf['bins']
         self.domain = params.compare_pdf['domain']
         if self.N_params != len(g.accepted[0]):
@@ -47,16 +48,16 @@ class PostprocessABC(object):
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
             logging.info('Estimated parameter: {}'.format(self.C_final_dist[0][0]))
             logging.info('Min distance: {}'.format(g.dist[np.argmin(g.dist)]))
-            np.savetxt(os.path.join(output['output_path'], 'C_final_dist'), self.C_final_dist)
+            np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
         else:
             # C_final_dist
             minim = np.argmin(g.dist)
             self.C_final_dist = g.accepted[minim, :]
             C_final_dist = self.C_final_dist
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
-            np.savetxt(os.path.join(output['output_path'], 'C_final_dist'), self.C_final_dist)
+            np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
             # C_final_joint
-            H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint)
+            H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint, range=self.C_limits)
             logging.debug('Max number in bin: {}'.format(np.max(H)))
             logging.debug('Mean number in bin: {}'.format(np.mean(H)))
             edges = np.array(edges)
@@ -67,7 +68,7 @@ class PostprocessABC(object):
                 for j in range(self.N_params):
                     point.append(C_bin[j, i[j]])
                 self.C_final_joint.append(point)
-            np.savetxt(os.path.join(output['output_path'], 'C_final_joint'), self.C_final_joint)
+            np.savetxt(os.path.join(path['output'], 'C_final_joint'), self.C_final_joint)
             if len(ind) > 10:
                 logging.warning('Can not estimate parameters from joint pdf!'
                                 'Too many bins ({} bins, max value {}) '
@@ -86,11 +87,13 @@ class PostprocessABC(object):
                         # max = x[np.argmax(y)]
                         # print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
                         # self.C_final_marginal[i] = max
-                        np.savetxt(os.path.join(output['output_path'], 'marginal'+str(i)), [x, y])
+                        np.savetxt(os.path.join(path['output'], 'marginal'+str(i)), [x, y])
                     elif i < j:
-                        H, xedges, yedges = np.histogram2d(x=g.accepted[:, j], y=g.accepted[:, i], bins=self.num_bin_joint)
-                        np.savetxt(os.path.join(output['output_path'], 'marginal' + str(i)+str(j)), H)
-                        np.savetxt(os.path.join(output['output_path'], 'marginal_bins' + str(i) + str(j)), [xedges, yedges])
+                        H, xedges, yedges = np.histogram2d(x=g.accepted[:, j], y=g.accepted[:, i],
+                                                           bins=self.num_bin_joint,
+                                                           range=[self.C_limits[j], self.C_limits[i]])
+                        np.savetxt(os.path.join(path['output'], 'marginal' + str(i)+str(j)), H)
+                        np.savetxt(os.path.join(path['output'], 'marginal_bins' + str(i) + str(j)), [xedges, yedges])
 
     def calc_compare_sum_stat(self, scale='LES'):
 
@@ -100,28 +103,28 @@ class PostprocessABC(object):
             C_final_dist_new = self.C_final_dist.copy()
         C_final_joint = 0
         if len(self.C_final_joint) < 4 and self.N_params != 1:
-            # if len(self.C_final_joint) == 1:
-            #     C_final_joint = self.C_final_joint[0].copy()
-            #  else:
             C_final_joint = self.C_final_joint.copy()
         C_final_marginal = self.C_final_marginal
 
         # create pdfs
         if scale == 'LES':
-            current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
+            current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm,
+                                                 self.C_limits, self.pdf_params)
         if scale == 'TEST_M':
-            current_model = model.NonlinearModel(g.TEST_sp, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
+            current_model = model.NonlinearModel(g.TEST_sp, self.model_params, self.abc_algorithm, self.algorithm,
+                                                 self.C_limits,  self.pdf_params)
         if scale == 'TEST':
-            current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm, self.C_limits)
+            current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm,
+                                                 self.C_limits,  self.pdf_params)
 
         sigma_modeled_dist = current_model.sigma_from_C(C_final_dist_new)
-        # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
 
+        # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
+        y = np.empty((3, self.bins))
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             # plot min dist pdf
-            y = utils.pdf_from_array(sigma_modeled_dist[key].flatten(), self.bins, self.domain)
-            y = utils.take_safe_log(y)
-            np.savetxt(os.path.join(output['output_path'], 'sum_stat_min_dist'), y)
+            y[ind] = utils.take_safe_log(sigma_modeled_dist[key])
+        np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
             # # plot max marginal
             # y = utils.pdf_from_array(sigma_modeled_marginal[key].flatten(), self.bins, self.domain)
             # y = utils.take_safe_log(y)
@@ -134,7 +137,7 @@ class PostprocessABC(object):
                 for ind, key in enumerate(['uu', 'uv', 'uw']):
                     y_dict[key] = utils.pdf_from_array(sigma_modeled_joint[key].flatten(), self.bins, self.domain)
                     y = utils.take_safe_log(y_dict[key])
-                    np.savetxt(os.path.join(output['output_path'], 'sum_stat_min_dist'), y)
+                    np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
 
 

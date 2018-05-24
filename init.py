@@ -13,7 +13,7 @@ class CreateParams:
 
         self.physical_case = params.physical_case
         self.data = params.data
-        self.output = params.output
+        g.path = params.path
         self.parallel = params.parallel
         self.abc = params.abc
 
@@ -30,7 +30,7 @@ class CreateParams:
             '############################################################################'.format(
                 'Physical case parameters:\n{}\n'.format(self.physical_case),
                 'Data parameters:\n{}\n'.format(self.data),
-                'Output path: \n{}\n'.format(self.output),
+                'Output path: \n{}\n'.format(g.path),
                 'Parrallel regime parameters:\n{}\n'.format(self.parallel),
                 'Parameters of pdf comparison:\n{}\n'.format(self.compare_pdf),
                 'Limits for coefficients:\n{}\n'.format(self.C_limits),
@@ -45,7 +45,7 @@ class CreateParams:
         g.pdf_params = compare_pdf
         edges = np.linspace(compare_pdf['domain'][0], compare_pdf['domain'][1], compare_pdf['bins'] + 1)
         x = (edges[1:] + edges[:-1]) / 2
-        np.savetxt(os.path.join(self.output['output_path'], 'sum_stat_bins'), x)
+        np.savetxt(os.path.join(g.path['output'], 'sum_stat_bins'), x)
         return compare_pdf
 
     def define_model_params(self, params):

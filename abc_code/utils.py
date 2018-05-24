@@ -6,7 +6,6 @@ import scipy.stats
 from numpy.fft import fftfreq, fftn, ifftn
 from time import time
 
-import abc_code.abc_class as abc_class
 from abc_code.sobol_seq import i4_sobol_generate
 import itertools
 
@@ -15,14 +14,6 @@ def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>1}:{:0>2}:{:05.2f} \t {}".format(int(hours), int(minutes), seconds, label))
-
-
-def get_prior(x):
-    d = (g.C_limits[:, 1]-g.C_limits[:, 0]) / g.N.each
-    ind = np.floor_divide((x - g.C_limits[:, 0]), d)   # find nearest point
-    ind = tuple(ind.astype(np.int8, copy=False))
-    y = g.prior[ind]
-    return y
 
 
 def pdf_from_array_with_x(array, bins, range):
@@ -58,11 +49,11 @@ def baseconvert(x, newbase, number_digits):
         r = [0] + r
     return r
 
-#
-# def uniform_grid(C_limits, N_each):
-#     C = np.linspace(C_limits[0], C_limits[1], N_each)
-#     return C
 
+def uniform_grid(C_limits, N_each):
+    C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
+    C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
+    return C_tmp
 
 def mean_confidence_interval(data, confidence=0.95):
     a = 1.0 * np.array(data)
@@ -228,14 +219,17 @@ def sampling_uniform_grid(N_each, N_params_in_task, C_limits):
     """
     N_params = len(C_limits)
     if N_params == 1:
-        C1 = np.linspace(C_limits[0, 0], C_limits[0, 1], N_each)
+        # C1 = np.linspace(C_limits[0, 0], C_limits[0, 1], N_each)
+        C1 = uniform_grid(C_limits[0], N_each)
         C_array = []
         for i in C1:
             C_array.append([i])
+        print(C_array)
     else:
         C = np.empty((N_params - N_params_in_task, N_each))
         for i in range(N_params - N_params_in_task):
-            C[i, :] = np.linspace(C_limits[i, 0], C_limits[i, 1], N_each)
+            # C[i, :] = np.linspace(C_limits[i, 0], C_limits[i, 1], N_each)
+            C[i, :] = uniform_grid(C_limits[i], N_each)
         permutation = itertools.product(*C)
         C_array = list(map(list, permutation))
     logging.debug('Form C_array as uniform grid: {} samples\n'.format(len(C_array)))

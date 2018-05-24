@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 import numpy as np
 
 import abc_code.global_var as g
@@ -7,13 +8,13 @@ import abc_code.data as data
 import abc_code.model as model
 import abc_code.parallel as parallel
 import abc_code.abc_class as abc_class
-from params import output
+from params import path
 import init
 
 
 def main():
 
-    logPath = output['output_path']
+    logPath = path['output']
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(logPath, 'ABC_log')), logging.StreamHandler()],
@@ -25,7 +26,7 @@ def main():
     logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
 
     ####################################################################################################################
-    # Initialize data
+    # Preprocess
     ####################################################################################################################
     params = init.CreateParams()
     init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
@@ -35,12 +36,16 @@ def main():
     if params.parallel['N_proc'] > 1:
         g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])
 
-    abc = abc_class.ABC(params.abc, params.algorithm, params.model['N_params'], params.parallel['N_proc'],
-                        params.C_limits)
     ####################################################################################################################
     # ABC algorithm
     ####################################################################################################################
+    abc = abc_class.ABC(params.abc, params.algorithm, params.model['N_params'], params.parallel['N_proc'],
+                        params.C_limits)
     abc.main_loop()
+    np.savez(os.path.join(g.path['output'], 'accepted.npz'), C=g.accepted, dist=g.dist)
+
+    logging.info('Accepted parameters and distances saved in {}'.format(os.path.join(g.path['output'], 'accepted.npz')))
+
 
 if __name__ == '__main__':
     main()

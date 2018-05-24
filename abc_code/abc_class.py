@@ -6,7 +6,7 @@ import numpy as np
 import abc_code.global_var as g
 from abc_code import utils
 from abc_code import distance as dist
-from params import output
+
 
 
 class ABC(object):
@@ -84,18 +84,20 @@ class ABC(object):
             if self.N_params_in_task > 0:
                 S_init = [chunk[:] for item in S_init for chunk in item]
 
-            np.savez(os.path.join(output['output_path'],'calibration_all.npz'),  S_init=np.array(S_init))
-            logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration_all.npz')
-
+            np.savez(os.path.join(g.path['output'],'calibration_all.npz'),  S_init=np.array(S_init))
+            logging.info('Accepted parameters and distances saved in {}'.format(os.path.join(g.path['output'],
+                                                                                             'calibration_all.npz')))
         else:
-            S_init = list(np.load('./plots/calibration_all.npz')['S_init'])
+            S_init = list(np.load(os.path.join(g.path['output'],'calibration_all.npz'))['S_init'])
 
+        # Define epsilon
         logging.info('x = {}'.format(self.algorithm['x']))
         S_init.sort(key=lambda y: y[-1])
         S_init = np.array(S_init)
         g.eps = np.percentile(S_init, q=int(self.algorithm['x'] * 100), axis=0)[-1]
         logging.info('eps after calibration step = {}'.format(g.eps))
 
+        # Define std
         S_init = S_init[np.where(S_init[:, -1] < g.eps)]
         g.std = self.algorithm['phi']*np.std(S_init[:, :-1], axis=0)
         logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
@@ -114,11 +116,12 @@ class ABC(object):
         np.set_printoptions(precision=3)
         logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
         self.C_array = C_start.tolist()
-        np.savez('./plots/calibration.npz', C=S_init[:, :-1], dist=S_init[:, -1])
-        logging.info('Accepted parameters and distances saved in ./ABC/plots/calibration.npz')
-        exit()
+        np.savez(os.path.join(g.path['output'], 'calibration.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
+        logging.info('Accepted parameters and distances saved in {}'.format(os.path.join(g.path['output'],
+                                                                                         'calibration.npz')))
         ####################################################################################################################
         # Markov chains
+        exit()
         self.main_loop_MCMC()
 
     def main_loop_MCMC(self):
@@ -183,7 +186,7 @@ class ABC(object):
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
-dist_func = dist.distance_production_L2log
+dist_func = dist.distance_sigma_L2log
 
 
 def calibration_function_single_value(C):
