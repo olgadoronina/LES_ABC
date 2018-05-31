@@ -5,13 +5,17 @@ import numpy as np
 import postproc.plotting as plotting
 import init
 import postproc.postprocess as postprocess
-from params import path
 import os
 
+path_base = './ABC/'
+path = {'output': os.path.join(path_base, 'output'),
+        'visua': os.path.join(path_base, 'plots')}
+if not os.path.isdir(path['visua']):
+    os.makedirs(path['visua'])
 
-uniform = 1
+uniform = 0
 calibration = 0
-IMCMC = 0
+IMCMC = 1
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
 filename_calibration = os.path.join(path['output'], 'calibration.npz')
@@ -45,8 +49,8 @@ if calibration:
     plotting.dist_pdf(dist, params.algorithm['x'], g.path['visua'])
 
 else:
-    num_bin_joint = 10
-    N_each = 10
+    num_bin_joint = 20
+    N_each = 100
     C_limits = params.C_limits
     # C_limits = np.zeros((10, 2))
     # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
@@ -63,7 +67,7 @@ postproc = postprocess.PostprocessABC(C_limits, eps, num_bin_joint, params)
 #
 #
 if uniform:
-    new_eps = 3737.29
+    new_eps = 10
     g.accepted = g.accepted[g.dist < new_eps]
     g.dist = g.dist[g.dist < new_eps]
     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
@@ -71,18 +75,18 @@ if uniform:
 #
 #
 postproc.calc_final_C()
-# postproc.calc_marginal_pdf()
-#
-# plotting.plot_marginal_pdf(params.model['N_params'], g.path['output'],
-#                            g.path['visua'], params.C_limits)
+postproc.calc_marginal_pdf()
+
+plotting.plot_marginal_pdf(params.model['N_params'], path['output'],
+                           path['visua'], params.C_limits)
 if not calibration:
 
     # postproc.plot_eps()
-    plotting.plot_scatter(params.model['N_params'], params.C_limits, g.path['visua'], g.accepted, g.dist)
+    # plotting.plot_scatter(params.model['N_params'], params.C_limits, path['visua'], g.accepted, g.dist)
     postproc.calc_compare_sum_stat(params.compare_pdf['summary_statistics'], scale='TEST')
-    plotting.plot_compare_tau(g.path['visua'], g.path['output'], params.compare_pdf['summary_statistics'], scale='TEST')
+    plotting.plot_compare_tau(g.path['visua'], path['output'], params.compare_pdf['summary_statistics'], scale='TEST')
     postproc.calc_compare_sum_stat(params.compare_pdf['summary_statistics'], scale='TEST_M')
-    plotting.plot_compare_tau(g.path['visua'], g.path['output'], params.compare_pdf['summary_statistics'], scale='TEST_M')
+    plotting.plot_compare_tau(g.path['visua'], path['output'], params.compare_pdf['summary_statistics'], scale='TEST_M')
 
 
 

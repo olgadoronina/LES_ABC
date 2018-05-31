@@ -11,6 +11,9 @@ pdf_params = None
 std = None
 eps = None
 
+N_chain = None
+C_limits = None
+
 HIT = None
 LES = None
 LES_sp = None

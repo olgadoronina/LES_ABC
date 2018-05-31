@@ -339,7 +339,9 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
                 # ax.axvline(max, linestyle='--', color='r', label='max')
                 ax.axvline(c_final_dist[i], linestyle='--', color='g', label='min dist')
                 c_final_joint = np.loadtxt(os.path.join(output, 'C_final_joint'))
-                if len(c_final_joint) < 4:
+                if len(c_final_joint.shape) == 1:
+                    ax.axvline(c_final_joint[i], linestyle='--', color='b', label='joint max')
+                elif len(c_final_joint) < 4:
                     for C in c_final_joint:
                         ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
@@ -421,28 +423,28 @@ def plot_compare_tau(visua, output, sum_stat, scale='LES'):
         y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
         ax.plot(x, y_min_dist, 'g', linewidth=2, label='modeled dist')
         # # plot max marginal
-        # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
-        # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
+        y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))
+        ax.plot(x, y_max_joint, 'b', linewidth=2, label='modeled dist')
         ax.set_xlabel(r'$P$')
         ax.set_ylabel('ln(pdf)')
         plt.legend(loc=0)
         fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
 
-
-
-    # # Plot max joint pdf
-    # if C_final_joint:
-    #     for i in range(len(C_final_joint)):
-    #         tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
-    #         y_dict = dict()
-    #         for ind, key in enumerate(['uu', 'uv', 'uw']):
-    #             x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
-    #             y = utils.take_safe_log(y_dict[key])
-    #             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
-    #
-    #         np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
-    #
-    # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
+        # Plot max joint pdf
+        # y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
+        # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+        # if C_final_joint:
+        #     for i in range(len(C_final_joint)):
+        #         tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
+        #         y_dict = dict()
+        #         for ind, key in enumerate(['uu', 'uv', 'uw']):
+        #             x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
+        #             y = utils.take_safe_log(y_dict[key])
+        #             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
+        #
+        #         np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
+        #
+        # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
 
 
 

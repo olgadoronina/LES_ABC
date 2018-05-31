@@ -121,7 +121,6 @@ class ABC(object):
                                                                                          'calibration.npz')))
         ####################################################################################################################
         # Markov chains
-        exit()
         self.main_loop_MCMC()
 
     def main_loop_MCMC(self):
@@ -186,7 +185,7 @@ class ABC(object):
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
-dist_func = dist.distance_sigma_L2log
+dist_func = dist.distance_production_L2log
 
 
 def calibration_function_single_value(C):
@@ -227,10 +226,12 @@ def work_function_multiple_values(C):
 
 def work_function_MCMC(C_init):
 
-    N = g.N.chain
+    N = g.N_chain
     C_limits = g.C_limits
 
     std = g.std
+    eps = g.eps
+
     result = []
 
     from tqdm import tqdm
@@ -260,7 +261,7 @@ def work_function_MCMC(C_init):
                         break
                 distance = dist.calc_dist(c, dist_func)
                 counter_dist += 1
-                if distance <= g.eps:
+                if distance <= eps:
                     a = list(c[:])
                     a.append(distance)
                     result.append(a)

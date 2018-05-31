@@ -13,6 +13,7 @@ class CreateParams:
 
         self.physical_case = params.physical_case
         self.data = params.data
+        self.check_pathes(params.path)
         g.path = params.path
         self.parallel = params.parallel
         self.abc = params.abc
@@ -20,6 +21,7 @@ class CreateParams:
         self.compare_pdf = self.define_compare_pdf_params()
         self.model = self.define_model_params(params.model)
         self.C_limits = np.array(params.C_limits[:self.model['N_params']])
+        g.C_limits = self.C_limits
 
         self.algorithm = self.define_algorithm_params(self.abc)
 
@@ -39,6 +41,10 @@ class CreateParams:
                 'Algorithm:\n{}\n'.format(self.algorithm)))
 
         self.print_params_summary()
+
+    def check_pathes(self, path):
+        if not os.path.isdir(path['output']):
+            os.makedirs(path['output'])
 
     def define_compare_pdf_params(self):
         compare_pdf = params.compare_pdf
@@ -74,6 +80,7 @@ class CreateParams:
             algorithm['std'] = np.sqrt(self.C_limits[1]-self.C_limits[0]) * algorithm['var_multiplier']
             algorithm = self.define_chain_params(algorithm, self.parallel['N_proc'])
             g.eps = algorithm['eps']
+            g.N_chain = algorithm['N_chain']
         elif abc['algorithm'] == 'IMCMC':
             algorithm = params.algorithm['IMCMC']
             assert algorithm['sampling'] in ['uniform', 'random', 'sobol'], \
@@ -85,6 +92,7 @@ class CreateParams:
                 logging.warning('Does not work for IMCMC and N_params_in_task = 1, set N_params_in_task = 2')
                 algorithm['N_params_in_task'] = 2
             algorithm['N_total'] = algorithm['N_each'] ** (self.model['N_params'] - algorithm['N_params_in_task'])
+            g.N_chain = algorithm['N_chain']
         elif abc['algorithm'] == 'AGM_MH':
             algorithm = params.algorithm['AGM_MH']
             algorithm['std'] = np.sqrt(self.C_limits[1] - self.C_limits[0]) * algorithm['var_multiplier']

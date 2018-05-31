@@ -137,17 +137,17 @@ class PostprocessABC(object):
             # np.savetxt(os.path.join(output['output_path'], 'sum_stat_max_marginal'), y)
 
         # calc max joint pdf
-        # if C_final_joint:
-        #     for i in range(len(C_final_joint)):
-        #         sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
-        #
-        #         if sum_stat == 'sigma_pdf_log':
-        #             for ind in range(3):
-        #                 tmp = utils.pdf_from_array(sigma_modeled_joint[ind], self.bins, self.domain)
-        #                 y = utils.take_safe_log(tmp)
-        #         elif sum_stat == 'production_pdf_log':
-        #             y_dict = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
-        #         np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
+        if C_final_joint:
+            for i in range(len(C_final_joint)):
+                sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
+                if sum_stat == 'sigma_pdf_log':
+                    for ind in range(3):
+                        tmp = utils.pdf_from_array(sigma_modeled_joint[ind], self.bins, self.domain)
+                        y = utils.take_safe_log(tmp)
+                elif sum_stat == 'production_pdf_log':
+                    tmp = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
+                    y = utils.take_safe_log(tmp)
+                np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
 
 
