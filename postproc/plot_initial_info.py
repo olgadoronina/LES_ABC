@@ -1,6 +1,6 @@
 import params
 import plotting
-import data
+import abc_code.data as data
 import logging
 import os
 import numpy as np
@@ -9,9 +9,17 @@ from numpy.fft import fftfreq, fftn, ifftn
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 spectra = 0
-folder = './plots/init_info_'+params.data['data_name']
+load = 1
+
+folder = os.path.join('../ABC/plots/data_plots', params.data['data_name'])
+folder_data = os.path.join('../ABC/data_input/', params.data['data_name'])
 if not os.path.isdir(folder):
     os.makedirs(folder)
+    load = 0
+if not os.path.isdir(folder_data):
+    logging.error('Incorrect data path: {}'.format(folder_data))
+    exit()
+logging.debug('\ninput: {}\noutput: {}'.format(folder_data, folder))
 
 
 def shell_average(spect3D, N_point, k_3d):
@@ -65,14 +73,14 @@ def spectral_density(vel_array, dx, N_points, fname):
 def load_HIT_data():
     datafile = dict()
     if params.data['data_name'] == 'JHU_data':
-        datafile['u'] = params.data['data_path'] + 'HIT_u.bin'
-        datafile['v'] = params.data['data_path'] + 'HIT_v.bin'
-        datafile['w'] = params.data['data_path'] + 'HIT_w.bin'
+        datafile['u'] = os.path.join(folder_data, 'HIT_u.bin')
+        datafile['v'] = os.path.join(folder_data, 'HIT_v.bin')
+        datafile['w'] = os.path.join(folder_data, 'HIT_w.bin')
         type_of_bin_data = np.float32
     elif params.data['data_name'] == 'CU_data':
-        datafile['u'] = params.data['data_path'] + 'Velocity1_003.rst'
-        datafile['v'] = params.data['data_path'] + 'Velocity2_003.rst'
-        datafile['w'] = params.data['data_path'] + 'Velocity3_003.rst'
+        datafile['u'] = os.path.join(folder_data, 'Velocity1_003.rst')
+        datafile['v'] = os.path.join(folder_data, 'Velocity2_003.rst')
+        datafile['w'] = os.path.join(folder_data, 'Velocity3_003.rst')
         type_of_bin_data = np.float64
 
     HIT_data = dict()
@@ -133,20 +141,30 @@ def main():
     dx = [params.physical_case['lx']/params.physical_case['N_point']] * 3
     logging.info('Load HIT data')
     HIT_data = load_HIT_data()
-    logging.info('Filter HIT data')
-    LES_data = filter3d(data=HIT_data, scale_k=params.physical_case['LES_scale'], dx=dx,
-                        N_points=[params.physical_case['N_point']]*3)
+
+    if load:  # Load filtered data from file
+        logging.info("Load LES data")
+        loadfile_LES = os.path.join(folder, 'LES.npz')
+        LES_data = np.load(loadfile_LES)
+
+    else:
+        logging.info('Filter HIT data')
+        LES_data = filter3d(data=HIT_data, scale_k=params.physical_case['LES_scale'], dx=dx,
+                            N_points=[params.physical_case['N_point']]*3)
+        logging.info('Writing file')
+        np.savez(os.path.join(folder, 'LES.npz'), **LES_data)
+
     TEST_data = None
     if params.physical_case['TEST_scale']:
         TEST_data = filter3d(data=HIT_data, scale_k=params.physical_case['TEST_scale'], dx=dx,
                              N_points=[params.physical_case['N_point']]*3)
 
     LES_delta = 1 / params.physical_case['LES_scale']
-    LES = data.Data(LES_data, LES_delta, dx, params.compare_pdf, params.abc['summary_statistics'])
-    TEST = None
+    # LES = data.Data(LES_data, LES_delta, dx, params.compare_pdf)
+    # TEST = None
     if params.physical_case['TEST_scale']:
         TEST_delta = 1 / params.physical_case['TEST_scale']
-        TEST = data.Data(TEST_data, TEST_delta, dx, params.compare_pdf, params.abc['summary_statistics'])
+    #     TEST = data.Data(TEST_data, TEST_delta, dx, params.compare_pdf)
 
     if spectra:
         logging.info('Calculate LES spectra')

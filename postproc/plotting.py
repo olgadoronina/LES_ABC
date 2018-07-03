@@ -7,22 +7,32 @@ mpl.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import abc_code.utils
+
 
 # mpl.style.use(['dark_background','mystyle'])
 # mpl.style.use(['mystyle'])
+
+fig_width_pt = 246.0  # Get this from LaTeX using "The column width is: \the\columnwidth \\"
+inches_per_pt = 1.0/72.27               # Convert pt to inches
+golden_mean = (np.sqrt(5)-1.0)/2.0         # Aesthetic ratio
+fig_width = fig_width_pt*inches_per_pt  # width in inches
+fig_height = fig_width*golden_mean       # height in inches
+fig_size = [fig_width, fig_height]
 
 # mpl.rcParams['figure.figsize'] = 6.5, 2.2
 # plt.rcParams['figure.autolayout'] = True
 
 mpl.rcParams['font.size'] = 10
+mpl.rcParams['axes.titlesize'] = 1.2 * plt.rcParams['font.size']
+mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
+mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
+mpl.rcParams['xtick.labelsize'] = 0.8*plt.rcParams['font.size']
+mpl.rcParams['ytick.labelsize'] = 0.8*plt.rcParams['font.size']
+
 mpl.rcParams['font.family'] = 'Times New Roman'
 mpl.rc('text', usetex=True)
-mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
-mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
-mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
-mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
+
+
 # plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
 mpl.rcParams['xtick.major.size'] = 3
 mpl.rcParams['xtick.minor.size'] = 3
@@ -46,7 +56,8 @@ def imagesc(Arrays, map_bounds, titles, name=None):
 
     axis = [0, 2 * np.pi, 0, 2 * np.pi]
     if len(Arrays) > 1:
-        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(6.5, 3))
+        fig, axes = plt.subplots(nrows=1, ncols=len(Arrays), sharey=True, figsize=(fig_width, 0.5*fig_width))
+        # plt.axes([0.125, 0.2, 0.95 - 0.125, 0.95 - 0.2])
         k = 0
         for ax in axes.flat:
             im = ax.imshow(Arrays[k].T, origin='lower', cmap=cmap, norm=norm, interpolation="nearest", extent=axis)
@@ -57,8 +68,9 @@ def imagesc(Arrays, map_bounds, titles, name=None):
             ax.yaxis.set_major_locator(ticker.MultipleLocator(2))
             k += 1
         axes[0].set_ylabel(r'$y$')
-        cbar_ax = fig.add_axes([0.89, 0.18, 0.017, 0.68])  # ([0.85, 0.15, 0.05, 0.68])
-        fig.subplots_adjust(left=0.07, right=0.87, wspace=0.1, bottom=0.2, top=0.9)
+        # cbar_ax = fig.add_axes([0.89, 0.18, 0.017, 0.68])  # ([0.85, 0.15, 0.05, 0.68])
+        cbar_ax = fig.add_axes([0.83, 0.21, 0.017, 0.67])
+        fig.subplots_adjust(left=0.11, right=0.8, wspace=0.1, bottom=0.2, top=0.9)
         fig.colorbar(im, cax=cbar_ax, ax=axes.ravel().tolist())
     else:
         fig = plt.figure(figsize=(6.5, 5))
@@ -376,41 +388,44 @@ def plot_scatter(N_params, C_limits, visua, accepted, dist):
 
     for i in range(N_params):
         x = accepted[:, i]
-        fig = plt.figure(figsize=(3.2, 2.8))
+        fig = plt.figure(figsize=(0.75*fig_width,0.5*fig_width))
         ax = plt.axes()
-        ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=np.max(dist) + 1)
-        ax.scatter(x, dist, color='blue')
+        ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymax=1.1*np.max(dist))
+        ax.scatter(x, dist, marker=".", color='blue')
         ax.set_xlabel(params_names[i])
         ax.set_ylabel(r'$\sum_{i,j}\rho(\mathcal{S}_{ij}^{\mathcal{F}},\mathcal{S}_{ij})$')
-        fig.subplots_adjust(left=0.19, right=0.95, bottom=0.15, top=0.9)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+        fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
         fig.savefig(os.path.join(visua, 'scatter_plot_'+params_names[i][1:-1]))
     plt.close('all')
 
 
-def plot_compare_tau(visua, output, sum_stat, scale='LES'):
+def plot_compare_tau(visua, output, sum_stat, scale):
 
     x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))
     if sum_stat == 'sigma_pdf_log':
 
-        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.5))
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(fig_width, 0.5*fig_width))
         titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
         y_true = dict()
         y_min_dist = dict()
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             # Plot true pdf
             y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
-            axarr[ind].plot(x, y_true[key], 'r', linewidth=2, label='true')
-            # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+            axarr[ind].plot(x, y_true[key], 'r', linewidth=1, label='true')
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.4))
             # plot min dist pdf
             y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
             # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
-            axarr[ind].set_xlabel(titles[ind])
-        axarr[0].set_ylabel('ln(pdf)')
-        plt.legend(loc=0)
-        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.18, top=0.9)
+            axarr[ind].set_xlabel(titles[ind], labelpad=2)
+        axarr[0].set_ylabel('ln(pdf)', labelpad=2)
+        axarr[0].yaxis.set_major_locator(ticker.MultipleLocator(2))
+        fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, bottom=0.22, top=0.80)
+
+        axarr[1].legend(loc='upper center', bbox_to_anchor=(0.5, 1.35), fancybox=False, shadow=False, ncol=3)
 
     elif sum_stat == 'production_pdf_log':
         fig = plt.figure(figsize=(4, 3))
@@ -423,12 +438,12 @@ def plot_compare_tau(visua, output, sum_stat, scale='LES'):
         y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
         ax.plot(x, y_min_dist, 'g', linewidth=2, label='modeled dist')
         # # plot max marginal
-        y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))
-        ax.plot(x, y_max_joint, 'b', linewidth=2, label='modeled dist')
-        ax.set_xlabel(r'$P$')
-        ax.set_ylabel('ln(pdf)')
-        plt.legend(loc=0)
-        fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
+        # y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))
+        # ax.plot(x, y_max_joint, 'b', linewidth=2, label='modeled dist')
+        # ax.set_xlabel(r'$P$')
+        # ax.set_ylabel('ln(pdf)')
+        # plt.legend(loc=0)
+        # fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
 
         # Plot max joint pdf
         # y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
@@ -525,3 +540,40 @@ def plot_compare_tau(visua, output, sum_stat, scale='LES'):
 #     axarr[0].set_ylabel(r'$95\%$ confident interval')
 #     fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
 #     fig.savefig(self.folder + 'eps_h')
+
+
+def plot_sum_stat(path, name):
+
+    sum_stat = np.loadtxt(os.path.join(path['output'], 'sum_stat_true'))
+    bins = np.loadtxt(os.path.join(path['output'], 'sum_stat_bins'))
+
+    if name == 'sigma_pdf_log':
+        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
+        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+
+        for i in range(len(sum_stat)):
+            axarr[i].plot(bins, sum_stat[i], 'r', linewidth=2)
+            axarr[i].xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+            axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(0.45))
+            axarr[i].set_xlabel(titles[i])
+
+        axarr[0].axis(xmin=-0.5, xmax=0.5)
+        axarr[0].set_ylabel('ln(pdf)')
+        # axarr[0].set_yscale('log')
+        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
+
+    elif name == 'production_pdf_log':
+        fig = plt.figure(figsize=(4, 3))
+        ax = plt.gca()
+        title = r'$\widetilde{P}$'
+
+        ax.plot(bins, sum_stat, 'r', linewidth=2)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+        ax.axis(xmin=-5, xmax=5)
+        ax.set_xlabel(title)
+        ax.set_ylabel('ln(pdf)')
+        # ax.set_yscale('log')
+        fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
+
+    fig.savefig(os.path.join(path['visua'], name))
+    plt.close('all')

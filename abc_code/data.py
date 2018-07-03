@@ -25,6 +25,8 @@ class Data(object):
         elif pdf_params['summary_statistics'] == 'production_mean':
             self.sum_stat_true = self.production_rate_mean()
 
+        print(2*0.000185*np.mean(self.calc_strain_mod()))
+
     def field_gradient(self):
         """Calculate tensor of gradients of self.field.
         :return:      dictionary of gradient tensor
@@ -61,11 +63,11 @@ class Data(object):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
         :return:       array of |S| in each point of domain
         """
-        S_mod_sqr = 0
+        S_mod = 0
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
-                S_mod_sqr += 2*np.multiply(self.S[i + j], self.S[i + j])
-        return np.sqrt(S_mod_sqr)
+                S_mod += np.multiply(self.S[i + j], self.S[i + j])
+        return S_mod
 
     def calc_tau(self):
         """Calculate Reynolds stresses field using DNS data.
@@ -101,6 +103,9 @@ class Data(object):
         :return: log of pdf of production rate
         """
         tau = self.calc_tau()
+        trace = tau['uu'] + tau['vv'] + tau['ww']
+        for i in ['uu', 'vv', 'ww']:
+            tau[i] -= 1 / 3 * trace
         prod_rate = 0
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:

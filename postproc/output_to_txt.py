@@ -1,13 +1,13 @@
-import os
 import logging
-import numpy as np
-
+import abc_code.data as data
 import abc_code.global_var as g
+import numpy as np
+# import postproc.plotting as plotting
+import init
+import os
+import yaml
 import abc_code.model as model
 import abc_code.utils as utils
-from params import path
-
-
 ########################################################################################################################
 ## class PostprocessABC
 ########################################################################################################################
@@ -18,14 +18,14 @@ class PostprocessABC(object):
         logging.info('\nPostprocessing')
         assert len(g.accepted) != 0, 'Oops! No accepted values'
         self.num_bin_joint = num_bin_joint
-        self.N_params = params.model['N_params']
-        self.N_each = params.algorithm['N_each']
-        self.model_params = params.model
-        self.abc_algorithm = params.abc['algorithm']
-        self.algorithm = params.algorithm
-        self.pdf_params = params.compare_pdf
-        self.bins = params.compare_pdf['bins']
-        self.domain = params.compare_pdf['domain']
+        self.N_params = params['model']['N_params']
+        self.N_each = params['algorithm']['N_each']
+        self.model_params = params['model']
+        self.abc_algorithm = params['abc']['algorithm']
+        self.algorithm = params['algorithm']
+        self.pdf_params = params['compare_pdf']
+        self.bins = params['compare_pdf']['bins']
+        self.domain = params['compare_pdf']['domain']
         if self.N_params != len(g.accepted[0]):
             self.N_params = len(g.accepted[0])
             logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N_params))
@@ -47,15 +47,21 @@ class PostprocessABC(object):
             # C_final_dist only
             self.C_final_dist = [[g.accepted[:, 0][np.argmin(g.dist)]]]
             logging.info('Estimated parameter: {}'.format(self.C_final_dist[0][0]))
-            logging.info('Min distance: {}'.format(g.dist[np.argmin(g.dist)]))
+            min_dist = g.dist[np.argmin(g.dist)]
+            logging.info('Min distance: {}'.format(min_dist))
             np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
+            f = open(os.path.join(path['output'], 'C_final_dist'), 'a')
+            np.savetxt(f, np.array([min_dist]))
+            f.close()
         else:
             # C_final_dist
             minim = np.argmin(g.dist)
             self.C_final_dist = g.accepted[minim, :]
             C_final_dist = self.C_final_dist
+            min_dist = g.dist[minim]
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
+            np.savetxt(os.path.join(path['output'], 'C_final_dist'), min_dist)
             # C_final_joint
             H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint, range=self.C_limits)
             logging.debug('Max number in bin: {}'.format(np.max(H)))
@@ -152,4 +158,83 @@ class PostprocessABC(object):
 
 
 
+path_base = '../ABC/'
+path = {'output': os.path.join(path_base, 'output'),
+        'visua': os.path.join(path_base, 'plots')}
+# if not os.path.isdir(path['visua']):
+#     os.makedirs(path['visua'])
 
+uniform = 1
+calibration = 0
+IMCMC = 0
+
+filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
+filename_calibration = os.path.join(path['output'], 'calibration.npz')
+filename_accepted = os.path.join(path['output'], 'accepted.npz')
+if calibration:
+    filename = filename_calibration
+else:
+    filename = filename_accepted
+
+
+logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
+# ####################################################################################################################
+# # Initial data
+# ####################################################################################################################
+params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
+g.path = params['path']
+print(params)
+init.LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
+g.TEST_sp = data.DataSparse(g.TEST, params['abc']['num_training_points'])
+
+
+########################
+g.accepted = np.load(filename)['C']
+g.dist = np.load(filename)['dist']
+########################
+
+if calibration:
+    C_limits = params['C_limits']
+    num_bin_joint = 10
+    N_each = 10
+    dist = np.load(filename_calibration_all)['S_init'][:, -1]
+    # plotting.dist_pdf(dist, params['algorithm']['x'], params['path']['visua'])
+
+else:
+    num_bin_joint = 20
+    N_each = 100
+    C_limits = params['C_limits']
+    # C_limits = np.zeros((10, 2))
+    # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+    # C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+    # C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+    # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+    # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
+    # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
+# # # #########################
+
+eps = g.eps
+params['algorithm']['N_each'] = N_each
+postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
+#
+#
+# if uniform:
+#     new_eps = 10
+#     g.accepted = g.accepted[g.dist < new_eps]
+#     g.dist = g.dist[g.dist < new_eps]
+#     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+#                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
+#
+#
+postproc.calc_final_C()
+# postproc.calc_marginal_pdf()
+
+# plotting.plot_marginal_pdf(params.model['N_params'], path['output'],
+#                            path['visua'], params.C_limits)
+if not calibration:
+
+    # postproc.plot_eps()
+
+    postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
+
+    postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

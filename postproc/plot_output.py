@@ -1,65 +1,38 @@
 import os
-import matplotlib as mpl
-mpl.use('pdf')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+import yaml
 import numpy as np
-from params import output
+import plotting
+import logging
 
-mpl.rcParams['font.size'] = 10
-mpl.rcParams['font.family'] = 'Times New Roman'
-mpl.rc('text', usetex=True)
-mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
-mpl.rcParams['axes.titlesize'] = 1.5 * plt.rcParams['font.size']
-mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
-mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
-# plt.rcParams['savefig.dpi'] = 2 * plt.rcParams['savefig.dpi']
-mpl.rcParams['xtick.major.size'] = 3
-mpl.rcParams['xtick.minor.size'] = 2
-mpl.rcParams['xtick.major.width'] = 1
-mpl.rcParams['xtick.minor.width'] = 0.5
-mpl.rcParams['ytick.major.size'] = 3
-mpl.rcParams['ytick.minor.size'] = 2
-mpl.rcParams['ytick.major.width'] = 1
-mpl.rcParams['ytick.minor.width'] = 0.5
-plt.rcParams['axes.linewidth'] = 1
+path_base = '../ABC/'
+path = {'output': os.path.join(path_base, 'output'),
+        'visua': os.path.join(path_base, 'plots')}
+if not os.path.isdir(path['visua']):
+    os.makedirs(path['visua'])
 
+params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
 
-def plot_sum_stat(name):
+########################
+calibration = 0
+filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
+filename_calibration = os.path.join(path['output'], 'calibration.npz')
+filename_accepted = os.path.join(path['output'], 'accepted.npz')
+if calibration:
+    filename = filename_calibration
+else:
+    filename = filename_accepted
+accepted = np.load(filename)['C']
+dist = np.load(filename)['dist']
 
-    sum_stat = np.loadtxt(os.path.join(output['output_path'], 'sum_stat_true'))
-    bins = np.loadtxt(os.path.join(output['output_path'], 'sum_stat_bins'))
+new_eps = 3000
+accepted = accepted[dist < new_eps]
+dist = dist[dist < new_eps]
+logging.info('accepted {} values ({}%)'.format(len(accepted),
+                                               round(len(accepted) / params['algorithm']['N_total'] * 100, 2)))
 
-    if name == 'sigma_pdf_log':
-        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(6.5, 2.4))
-        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
+plotting.plot_scatter(params['model']['N_params'], params['C_limits'], path['visua'], accepted, dist)
+########################
+# plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
+plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST_M')
 
-        for i in range(len(sum_stat)):
-            axarr[i].plot(bins, sum_stat[i], 'r', linewidth=2)
-            axarr[i].xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-            axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(0.45))
-            axarr[i].set_xlabel(titles[i])
-
-        axarr[0].axis(xmin=-0.5, xmax=0.5)
-        axarr[0].set_ylabel('ln(pdf)')
-        # axarr[0].set_yscale('log')
-        fig.subplots_adjust(left=0.1, right=0.95, wspace=0.1, bottom=0.2, top=0.9)
-
-    elif name == 'production_pdf_log':
-        fig = plt.figure(figsize=(4, 3))
-        ax = plt.gca()
-        title = r'$\widetilde{P}$'
-
-        ax.plot(bins, sum_stat, 'r', linewidth=2)
-        ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-        ax.axis(xmin=-5, xmax=5)
-        ax.set_xlabel(title)
-        ax.set_ylabel('ln(pdf)')
-        # ax.set_yscale('log')
-        fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
-
-    fig.savefig(os.path.join(output['plot_path'], name))
-    plt.close('all')
-
-plot_sum_stat('production_pdf_log')
+# plotting.plot_sum_stat(path, params['compare_pdf']['summary_statistics'])

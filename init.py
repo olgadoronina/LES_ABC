@@ -4,6 +4,7 @@ import abc_code.utils as utils
 import abc_code.global_var as g
 import numpy as np
 import os
+import yaml
 import params
 
 class CreateParams:
@@ -11,16 +12,38 @@ class CreateParams:
 
     def __init__(self):
 
-        self.physical_case = params.physical_case
-        self.data = params.data
-        self.check_pathes(params.path)
-        g.path = params.path
-        self.parallel = params.parallel
-        self.abc = params.abc
+        params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
+
+        # self.physical_case = params.physical_case
+        # self.data = params.data
+        # self.check_pathes(params.path)
+        # g.path = params.path
+        # self.parallel = params.parallel
+        # self.abc = params.abc
+        #
+        # self.compare_pdf = self.define_compare_pdf_params()
+        # self.model = self.define_model_params(params.model)
+        # self.C_limits = np.array(params.C_limits[:self.model['N_params']])
+        # g.C_limits = self.C_limits
+        #
+        # self.algorithm = self.define_algorithm_params(self.abc)
+
+        self.physical_case = params['physical_case']
+        self.physical_case['LES_scale'] = self.physical_case['LES_scale']/2/np.pi
+        if self.physical_case['TEST_scale'] == 'None':
+            self.physical_case['TEST_scale'] = None
+        if self.physical_case['lx'] == '2pi':
+            self.physical_case['lx'] = 2*np.pi
+
+        self.data = params['data']
+        self.check_pathes(params['path'])
+        g.path = params['path']
+        self.parallel = params['parallel']
+        self.abc = params['abc']
 
         self.compare_pdf = self.define_compare_pdf_params()
-        self.model = self.define_model_params(params.model)
-        self.C_limits = np.array(params.C_limits[:self.model['N_params']])
+        self.model = self.define_model_params(params['model'])
+        self.C_limits = np.array(params['C_limits'][:self.model['N_params']])
         g.C_limits = self.C_limits
 
         self.algorithm = self.define_algorithm_params(self.abc)
@@ -41,6 +64,8 @@ class CreateParams:
                 'Algorithm:\n{}\n'.format(self.algorithm)))
 
         self.print_params_summary()
+        self.print_params_to_file()
+
 
     def check_pathes(self, path):
         if not os.path.isdir(path['output']):
@@ -128,6 +153,21 @@ class CreateParams:
         logging.info('Number of parameters = {}'.format(self.model['N_params']))
         logging.info('Number of processors = {}\n'.format(self.parallel['N_proc']))
 
+    def print_params_to_file(self):
+
+        param_dict = {'physical_case': self.physical_case,
+                      'data': self.data,
+                      'path': g.path,
+                      'parallel': self.parallel,
+                      'compare_pdf': self.compare_pdf,
+                      'C_limits': self.C_limits,
+                      'model': self.model,
+                      'abc': self.abc,
+                      'algorithm': self.algorithm}
+        with open(os.path.join(g.path['output'], 'output_params.yml'), 'w') as outfile:
+            yaml.dump(param_dict, outfile, default_flow_style=False)
+
+
 
 def load_HIT_data(data_params, case_params):
     datafile = dict()
@@ -175,7 +215,7 @@ def LES_TEST_data(data_params, case_params, pdf_params):
 
         logging.info('Filter HIT data')
         LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
-                                  dx=dx, N_points=case_params['N_points'])
+                                  dx=dx, N_points=[case_params['N_point']]*3)
         TEST_data = None
         logging.info('Writing file')
         np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
