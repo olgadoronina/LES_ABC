@@ -5,7 +5,7 @@ import abc_code.global_var as g
 import numpy as np
 import os
 import yaml
-import params
+
 
 class CreateParams:
     """Define all input parameters using params.py file and store it in object"""
@@ -41,12 +41,12 @@ class CreateParams:
         self.parallel = params['parallel']
         self.abc = params['abc']
 
-        self.compare_pdf = self.define_compare_pdf_params()
+        self.compare_pdf = self.define_compare_pdf_params(params)
         self.model = self.define_model_params(params['model'])
         self.C_limits = np.array(params['C_limits'][:self.model['N_params']])
         g.C_limits = self.C_limits
 
-        self.algorithm = self.define_algorithm_params(self.abc)
+        self.algorithm = self.define_algorithm_params(self.abc, params)
 
         logging.debug(
             'INPUT PARAMETERS:\n'
@@ -71,8 +71,8 @@ class CreateParams:
         if not os.path.isdir(path['output']):
             os.makedirs(path['output'])
 
-    def define_compare_pdf_params(self):
-        compare_pdf = params.compare_pdf
+    def define_compare_pdf_params(self, params):
+        compare_pdf = params['compare_pdf']
         g.pdf_params = compare_pdf
         edges = np.linspace(compare_pdf['domain'][0], compare_pdf['domain'][1], compare_pdf['bins'] + 1)
         x = (edges[1:] + edges[:-1]) / 2
@@ -89,11 +89,11 @@ class CreateParams:
         model['homogeneous'] = self.physical_case['homogeneous']
         return model
 
-    def define_algorithm_params(self, abc):
+    def define_algorithm_params(self, abc, params):
 
         algorithm = dict()
         if abc['algorithm'] == 'acc-rej':
-            algorithm = params.algorithm['acc-rej']
+            algorithm = params['algorithm']['acc-rej']
             assert algorithm['sampling'] in ['uniform', 'random', 'sobol'], \
                 logging.error('Incorrect sampling type {}'.format(algorithm['sampling']))
             if self.model['N_params'] == 1 or algorithm['sampling'] != 'uniform':
@@ -107,7 +107,7 @@ class CreateParams:
             g.eps = algorithm['eps']
             g.N_chain = algorithm['N_chain']
         elif abc['algorithm'] == 'IMCMC':
-            algorithm = params.algorithm['IMCMC']
+            algorithm = params['algorithm']['IMCMC']
             assert algorithm['sampling'] in ['uniform', 'random', 'sobol'], \
                 logging.error('Incorrect sampling type {}'.format(algorithm['sampling']))
             algorithm = self.define_chain_params(algorithm, self.parallel['N_proc'])

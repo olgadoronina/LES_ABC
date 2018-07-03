@@ -5,6 +5,7 @@ import numpy as np
 # import postproc.plotting as plotting
 import init
 import os
+import sys
 import yaml
 import abc_code.model as model
 import abc_code.utils as utils
@@ -157,8 +158,8 @@ class PostprocessABC(object):
 
 
 
-
-path_base = '../ABC/'
+print(os.path.dirname(sys.modules['__main__'].__file__))
+path_base = os.path.join(os.path.dirname(sys.modules['__main__'].__file__), 'ABC')
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 # if not os.path.isdir(path['visua']):
@@ -176,6 +177,7 @@ if calibration:
 else:
     filename = filename_accepted
 
+print(filename)
 
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 # ####################################################################################################################
@@ -183,6 +185,7 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 # ####################################################################################################################
 params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
 g.path = params['path']
+params['data']['data_path'] = os.path.join(path_base, 'data_input/'+params['data']['data_name'])
 print(params)
 init.LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
 g.TEST_sp = data.DataSparse(g.TEST, params['abc']['num_training_points'])

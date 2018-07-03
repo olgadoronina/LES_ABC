@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import yaml
 import numpy as np
 
 import abc_code.global_var as g
@@ -8,11 +9,11 @@ import abc_code.data as data
 import abc_code.model as model
 import abc_code.parallel as parallel
 import abc_code.abc_class as abc_class
-from params import path
 import init
 
 
 def main():
+    path = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))['path']
 
     logPath = path['output']
     logging.basicConfig(
