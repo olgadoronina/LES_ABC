@@ -158,8 +158,8 @@ class PostprocessABC(object):
 
 
 
-print(os.path.dirname(sys.modules['__main__'].__file__))
-path_base = os.path.join(os.path.dirname(sys.modules['__main__'].__file__), 'ABC')
+
+path_base = './ABC/3_params_sigma_uniform/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 # if not os.path.isdir(path['visua']):
@@ -232,8 +232,7 @@ postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 postproc.calc_final_C()
 # postproc.calc_marginal_pdf()
 
-# plotting.plot_marginal_pdf(params.model['N_params'], path['output'],
-#                            path['visua'], params.C_limits)
+
 if not calibration:
 
     # postproc.plot_eps()

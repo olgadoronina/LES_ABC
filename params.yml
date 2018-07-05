@@ -38,7 +38,7 @@ compare_pdf:
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'IMCMC'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'acc-rej'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
 ################################################################################################################
 # Define only one of the following
@@ -47,7 +47,7 @@ algorithm:
   acc-rej:
       sampling: 'uniform'  # 'uniform', 'random', 'sobol'
       eps: 5000
-      N_each: 1000
+      N_each: 100
       N_params_in_task: 0  # only 0, 1 or 2  #only 0 and 2 for calibration
   ############################################################################################################
   MCMC':
