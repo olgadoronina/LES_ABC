@@ -426,6 +426,7 @@ def plot_compare_tau(visua, output, sum_stat, scale):
         titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
         y_true = dict()
         y_min_dist = dict()
+        y_max_joint = dict()
         for ind, key in enumerate(['uu', 'uv', 'uw']):
             # Plot true pdf
             y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
@@ -433,7 +434,10 @@ def plot_compare_tau(visua, output, sum_stat, scale):
             axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.4))
             # plot min dist pdf
             y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled')
+            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
+            # plot max joint
+            y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+            axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled max')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
             # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
@@ -442,7 +446,7 @@ def plot_compare_tau(visua, output, sum_stat, scale):
         axarr[0].yaxis.set_major_locator(ticker.MultipleLocator(2))
         fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, bottom=0.22, top=0.80)
 
-        axarr[1].legend(loc='upper center', bbox_to_anchor=(0.5, 1.35), fancybox=False, shadow=False, ncol=3)
+        axarr[1].legend(loc='upper center', bbox_to_anchor=(0.3, 1.35), fancybox=False, shadow=False, ncol=3)
 
     elif sum_stat == 'production_pdf_log':
         fig = plt.figure(figsize=(4, 3))
@@ -482,82 +486,6 @@ def plot_compare_tau(visua, output, sum_stat, scale):
 
     fig.savefig(os.path.join(visua, 'compare_sum_stat_' + scale))
     plt.close('all')
-
-# def plot_eps(self):
-#     num_eps = 6
-#     eps = np.linspace(200, 4000, num_eps)
-#
-#     # eps = np.append(8.877, eps)
-#
-#     C_mean = np.empty((self.N.params, num_eps))
-#     C_max = np.empty_like(C_mean)
-#     C_std = np.empty((self.N.params, num_eps))
-#     C_h = np.empty((self.N.params, num_eps))
-#
-#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-#     for ind, new_eps in enumerate(eps):
-#         g.accepted = np.load('./plots/accepted.npz')['C']
-#         g.dist = np.load('./plots/accepted.npz')['dist']
-#
-#         g.accepted = g.accepted[g.dist < new_eps]
-#         g.dist = g.dist[g.dist < new_eps]
-#         logging.info('eps = {}: accepted {} values ({}%)'.format(new_eps,
-#             len(g.accepted), round(len(g.accepted) / (g.N.total) * 100, 2)))
-#         for i in range(self.N.params):
-#             data = g.accepted[:, i]
-#             C_std[i, ind] = np.std(data)
-#             C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
-#
-#             x, y = utils.pdf_from_array_with_x(data, bins=self.N.each, range=self.C_limits[i])
-#             C_max[i, ind] = x[np.argmax(y)]
-#             axarr[i].plot(x, y, label=r'$\epsilon = {}$'.format(new_eps))
-#             axarr[i].set_xlabel(self.params_names[i])
-#
-#     axarr[0].set_ylabel('marginal pdf')
-#     # Put a legend below current axis
-#     legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
-#     # frame = legend.get_frame()
-#     # frame.set_alpha(1)
-#     fig.subplots_adjust(left=0.08, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
-#     fig.savefig(self.folder + 'eps_marginal')
-#
-#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-#     for i in range(self.N.params):
-#         axarr[i].plot(eps, C_mean[i], 'b.-', label='mean')
-#         axarr[i].plot(eps, C_max[i], 'g.-', label='max')
-#         axarr[i].set_title(self.params_names[i])
-#         axarr[i].set_xlabel('epsilon')
-#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-#     axarr[0].set_ylabel(r'$C_i$')
-#     plt.legend(loc=0)
-#     fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-#     fig.savefig(self.folder + 'eps_plot')
-#
-#
-#
-#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-#     for i in range(self.N.params):
-#         axarr[i].plot(eps, C_std[i], 'b.-')
-#         axarr[i].set_title(self.params_names[i])
-#         axarr[i].set_xlabel('epsilon')
-#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-#         # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
-#     axarr[0].set_ylabel(r'std($C_i$)')
-#     fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-#     fig.savefig(self.folder + 'eps_std')
-#
-#
-#     fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-#     for i in range(self.N.params):
-#         axarr[i].plot(eps, C_h[i], 'b.-')
-#         axarr[i].set_title(self.params_names[i])
-#         axarr[i].set_xlabel('epsilon')
-#         axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-#         # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
-#     axarr[0].set_ylabel(r'$95\%$ confident interval')
-#     fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-#     fig.savefig(self.folder + 'eps_h')
-
 
 def plot_sum_stat(path, name):
 

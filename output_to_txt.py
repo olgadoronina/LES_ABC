@@ -9,6 +9,8 @@ import sys
 import yaml
 import abc_code.model as model
 import abc_code.utils as utils
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 ########################################################################################################################
 ## class PostprocessABC
 ########################################################################################################################
@@ -21,6 +23,7 @@ class PostprocessABC(object):
         self.num_bin_joint = num_bin_joint
         self.N_params = params['model']['N_params']
         self.N_each = params['algorithm']['N_each']
+        self.N_total = params['algorithm']['N_total']
         self.model_params = params['model']
         self.abc_algorithm = params['abc']['algorithm']
         self.algorithm = params['algorithm']
@@ -62,7 +65,7 @@ class PostprocessABC(object):
             min_dist = g.dist[minim]
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
-            np.savetxt(os.path.join(path['output'], 'C_final_dist'), min_dist)
+            # np.savetxt(os.path.join(path['output'], 'C_final_dist'), min_dist)
             # C_final_joint
             H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint, range=self.C_limits)
             logging.debug('Max number in bin: {}'.format(np.max(H)))
@@ -107,15 +110,15 @@ class PostprocessABC(object):
     def calc_compare_sum_stat(self, sum_stat, scale='LES'):
 
         if self.N_params == 1:
-            C_final_dist_new = self.C_final_dist[0].copy()
+            C_final_dist = self.C_final_dist[0].copy()
         else:
-            C_final_dist_new = self.C_final_dist.copy()
+            C_final_dist = self.C_final_dist.copy()
         C_final_joint = 0
         if len(self.C_final_joint) < 4 and self.N_params != 1:
             C_final_joint = self.C_final_joint.copy()
-        C_final_marginal = self.C_final_marginal
+        # C_final_marginal = self.C_final_marginal
 
-        # create pdfs
+        # create model
         if scale == 'LES':
             current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm,
                                                  self.C_limits, self.pdf_params)
@@ -126,7 +129,7 @@ class PostprocessABC(object):
             current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm,
                                                  self.C_limits,  self.pdf_params)
 
-        sigma_modeled_dist = current_model.sigma_from_C(C_final_dist_new)
+        sigma_modeled_dist = current_model.sigma_from_C(C_final_dist)
 
         # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
 
@@ -145,29 +148,114 @@ class PostprocessABC(object):
 
         # calc max joint pdf
         if C_final_joint:
+
             for i in range(len(C_final_joint)):
                 sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
                 if sum_stat == 'sigma_pdf_log':
+                    y = np.empty((3, self.bins))
                     for ind in range(3):
-                        tmp = utils.pdf_from_array(sigma_modeled_joint[ind], self.bins, self.domain)
-                        y = utils.take_safe_log(tmp)
+                        y[ind] = utils.take_safe_log(sigma_modeled_joint[ind])
                 elif sum_stat == 'production_pdf_log':
                     tmp = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
                     y = utils.take_safe_log(tmp)
                 np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
+    def plot_eps(self):
+
+        num_eps = 15
+        eps = np.linspace(300, 5000, num_eps)
+
+        C_mean = np.empty((self.N_params, num_eps))
+        C_max = np.empty_like(C_mean)
+        C_std = np.empty((self.N_params, num_eps))
+        C_h = np.empty((self.N_params, num_eps))
+        percent_accepted = np.empty(num_eps)
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for ind, new_eps in enumerate(eps):
+            accepted = g.accepted.copy()
+            dist = g.dist.copy()
+
+            accepted = accepted[dist < new_eps]
+            # dist = g.dist[dist < new_eps]
+            logging.info('eps = {}: accepted {} values ({}%)'.format(new_eps,
+                len(accepted), round(len(accepted) / (self.N_total) * 100, 2)))
+            percent_accepted[ind] = len(accepted) / (self.N_total) * 100
+            for i in range(self.N_params):
+                data = accepted[:, i]
+                C_std[i, ind] = np.std(data)
+                C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
+
+                x, y = utils.pdf_from_array_with_x(data, bins=self.N_each, range=self.C_limits[i])
+                C_max[i, ind] = x[np.argmax(y)]
+                axarr[i].plot(x, y, label=r'$\epsilon \approx {}$'.format(np.round(new_eps)))
+                axarr[i].set_xlabel(self.params_names[i])
+
+        axarr[0].set_ylabel('marginal pdf')
+        # Put a legend below current axis
+        legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
+        # frame = legend.get_frame()
+        # frame.set_alpha(1)
+        fig.subplots_adjust(left=0.15, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
+        fig.savefig(os.path.join(path['visua'],'eps_marginal'))
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N_params):
+            axarr[i].plot(eps, C_mean[i], 'b.-', label='mean')
+            axarr[i].plot(eps, C_max[i], 'g.-', label='max')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+        axarr[0].set_ylabel(r'$C_i$')
+        plt.legend(loc=0)
+        fig.subplots_adjust(left=0.1, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(os.path.join(path['visua'],'eps_plot'))
+
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N_params):
+            axarr[i].plot(eps, C_std[i], 'b.-')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        axarr[0].set_ylabel(r'std($C_i$)')
+        fig.subplots_adjust(left=0.15, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(os.path.join(path['visua'], 'eps_std'))
+
+
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N_params):
+            axarr[i].plot(eps, C_h[i], 'b.-')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        axarr[0].set_ylabel(r'$95\%$ confident interval')
+        fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(os.path.join(path['visua'], 'eps_h'))
+
+        fig = plt.figure(figsize=(4, 3))
+        ax = plt.gca()
+        ax.plot(eps, percent_accepted, 'b.-')
+        ax.set_xlabel('epsilon')
+            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        ax.set_ylabel('accepted samples in percents [%]')
+        fig.subplots_adjust(left=0.12, right=0.97, bottom=0.2, top=0.85)
+        fig.savefig(os.path.join(path['visua'], 'percent_accepted'))
 
 
 
-path_base = './ABC/3_params_sigma_uniform/'
+path_base = './ABC/3_params_sigma_imcmc/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
-# if not os.path.isdir(path['visua']):
-#     os.makedirs(path['visua'])
+if not os.path.isdir(path['visua']):
+    os.makedirs(path['visua'])
 
-uniform = 1
+uniform = 0
 calibration = 0
-IMCMC = 0
+IMCMC = 1
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
 filename_calibration = os.path.join(path['output'], 'calibration.npz')
@@ -185,7 +273,7 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 # ####################################################################################################################
 params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
 g.path = params['path']
-params['data']['data_path'] = os.path.join(path_base, 'data_input/'+params['data']['data_name'])
+params['data']['data_path'] = os.path.join('./ABC/data_input/'+params['data']['data_name'])
 print(params)
 init.LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
 g.TEST_sp = data.DataSparse(g.TEST, params['abc']['num_training_points'])
@@ -220,17 +308,17 @@ eps = g.eps
 params['algorithm']['N_each'] = N_each
 postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 #
-#
-# if uniform:
-#     new_eps = 10
-#     g.accepted = g.accepted[g.dist < new_eps]
-#     g.dist = g.dist[g.dist < new_eps]
-#     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
-#                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
+# #
+if uniform:
+    new_eps = 3500
+    g.accepted = g.accepted[g.dist < new_eps]
+    g.dist = g.dist[g.dist < new_eps]
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+                                                   round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
 #
 #
 postproc.calc_final_C()
-# postproc.calc_marginal_pdf()
+postproc.calc_marginal_pdf()
 
 
 if not calibration:
@@ -238,5 +326,4 @@ if not calibration:
     # postproc.plot_eps()
 
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
-
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

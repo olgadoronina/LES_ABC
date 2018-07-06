@@ -4,7 +4,7 @@ import numpy as np
 import plotting
 import logging
 
-path_base = '../ABC/3_params_sigma_uniform'
+path_base = '../ABC/3_params_sigma_imcmc'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
@@ -24,16 +24,13 @@ else:
 accepted = np.load(filename)['C']
 dist = np.load(filename)['dist']
 
-# new_eps = 3000
-# accepted = accepted[dist < new_eps]
-# dist = dist[dist < new_eps]
-# logging.info('accepted {} values ({}%)'.format(len(accepted),
-#                                                round(len(accepted) / params['algorithm']['N_total'] * 100, 2)))
+
 
 # plotting.plot_scatter(params['model']['N_params'], params['C_limits'], path['visua'], accepted, dist)
 ########################
-plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
-# plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST_M')
+if not calibration:
+    plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
+    plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST_M')
 
 plotting.plot_marginal_pdf(params['model']['N_params'], path['output'], path['visua'], params['C_limits'])
 

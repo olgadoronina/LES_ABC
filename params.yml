@@ -22,8 +22,8 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 2           # order of eddy-viscosity model
-  N_params_force: 3
+  order': 1           # order of eddy-viscosity model
+  N_params_force: 1
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
@@ -38,7 +38,7 @@ compare_pdf:
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'acc-rej'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'IMCMC'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
 ################################################################################################################
 # Define only one of the following
@@ -63,7 +63,7 @@ algorithm:
       x: 0.1                 # percent of accepted for calibration step
       phi: 1
       # MCMC
-      'N_total_chain': 300000
+      'N_total_chain': 100000
   ############################################################################################################
   AGM-MH:
       N_gaussians: 30

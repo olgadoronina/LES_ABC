@@ -14,6 +14,13 @@ class NonlinearModel(object):
         self.N_each = algorithm['N_each']
         self.N_params = model_params['N_params']
         self.S_mod = self.calc_strain_mod(data)
+
+        den = 4.77*np.mean((self.S_mod)**3)
+        print(np.mean(np.absolute(self.S_mod)**3))
+        print(data.delta, den)
+        print('Cs = ', np.sqrt(0.103/den))
+        exit()
+
         self.S = data.S
         if model_params['homogeneous']:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
