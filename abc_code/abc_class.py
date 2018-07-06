@@ -229,11 +229,13 @@ def work_function_MCMC(C_init):
 
     N = g.N_chain
     C_limits = g.C_limits
+    N_params = len(C_init)
 
     std = g.std
     eps = g.eps
 
     result = []
+    s_d = 2.4/np.sqrt(N_params)         # correct covariance according dimensionality
 
     from tqdm import tqdm
     with tqdm(total=N) as pbar:
@@ -255,7 +257,7 @@ def work_function_MCMC(C_init):
                     if i < 50:
                         c = np.random.normal(result[-1][:-1], std)
                     else:
-                        covariance_matrix = np.cov(np.array(result)[-50:, :-1].T)
+                        covariance_matrix = s_d*np.cov(np.array(result)[-50:, :-1].T)
                         c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
                     counter_sample += 1
                     if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
