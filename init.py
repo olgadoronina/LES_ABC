@@ -101,8 +101,8 @@ class CreateParams:
             algorithm['N_total'] = algorithm['N_each'] ** (self.model['N_params'])
             g.eps = algorithm['eps']
         elif abc['algorithm'] == 'MCMC':
-            algorithm = params.algorithm['MCMC']
-            algorithm['std'] = np.sqrt(self.C_limits[1]-self.C_limits[0]) * algorithm['var_multiplier']
+            algorithm = params['algorithm']['MCMC']
+            algorithm['std'] = np.sqrt(self.C_limits[:,1]-self.C_limits[:,0]) * algorithm['var_multiplier']
             algorithm = self.define_chain_params(algorithm, self.parallel['N_proc'])
             g.eps = algorithm['eps']
             g.N_chain = algorithm['N_chain']
@@ -226,20 +226,20 @@ def LES_TEST_data(data_params, case_params, pdf_params):
             np.savez(os.path.join(data_params['data_path'], 'TEST.npz'), **TEST_data)
 
     if case_params['TEST_scale']:
-        LES_dx = [1 / case_params['LES_scale']]*3
-        TEST_dx = [1 / case_params['TEST_scale']]*3
+        LES_delta = 1 / case_params['LES_scale']
+        TEST_delta = 1 / case_params['TEST_scale']
         logging.info('Create LES class')
-        g.LES = data.Data(LES_data, case_params['LES_scale'], LES_dx, pdf_params)
+        g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
         logging.info('Create TEST class')
-        g.TEST = data.Data(TEST_data, case_params['TEST_scale'], TEST_dx, pdf_params)
+        g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
         del TEST_data, LES_data
     else:
-        DNS_delta = 1/dx[0]
-        LES_dx = [1 / case_params['LES_scale']]*3
+        DNS_delta = case_params['lx']/case_params['N_point']
+        LES_delta = 1 / case_params['LES_scale']
         logging.info('Create LES class')
         g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
         logging.info('Create TEST class')
-        g.TEST = data.Data(LES_data, case_params['LES_scale'], LES_dx, pdf_params)
+        g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
         del HIT_data, LES_data
 
 

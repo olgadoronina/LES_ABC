@@ -13,7 +13,7 @@ class Data(object):
         self.field = data_dict
         self.dx = dx
         self.delta = delta
-        print(self.delta, self.dx)
+
         self.S = self.calc_strain_tensor()
         self.R = self.calc_rotation_tensor()
         if pdf_params['summary_statistics'] == 'sigma_pdf_log':
@@ -25,9 +25,6 @@ class Data(object):
             np.savetxt(os.path.join(g.path['output'], 'sum_stat_true'), self.sum_stat_true)
         elif pdf_params['summary_statistics'] == 'production_mean':
             self.sum_stat_true = self.production_rate_mean()
-
-        num = 2 * 0.000185 * np.mean(self.calc_strain_mod()/np.sqrt(2))
-        print('num = ', num)
 
     def field_gradient(self):
         """Calculate tensor of gradients of self.field.

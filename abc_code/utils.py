@@ -7,6 +7,7 @@ from numpy.fft import fftfreq, fftn, ifftn
 from time import time
 
 from abc_code.sobol_seq import i4_sobol_generate
+import abc_code.distance as dist
 import itertools
 
 
@@ -158,8 +159,8 @@ def sampling_initial_for_MCMC(N_proc, C_limits, eps):
     C_array = []
     while len(C_array) <= N_proc:
         c = np.random.uniform(C_limits[:, 0], C_limits[:, 1])
-        dist = dist.calc_dist(c)
-        if dist <= eps:
+        d = dist.calc_dist(c)
+        if d <= eps:
             C_array.append(c)
             logging.info('C_start = {}'.format(c))
 

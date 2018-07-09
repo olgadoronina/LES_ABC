@@ -11,15 +11,13 @@ class NonlinearModel(object):
         self.M = data.field['uu'].shape[0]
         self.C_limits = C_limits
         self.pdf_params = pdf_params
-        self.N_each = algorithm['N_each']
+        if 'N_each' in algorithm.keys():
+            self.N_each = algorithm['N_each']
         self.N_params = model_params['N_params']
         self.S_mod = self.calc_strain_mod(data)
 
-        den = 4.77*np.mean((self.S_mod)**3)
-        print(np.mean(np.absolute(self.S_mod)**3))
-        print(data.delta, den)
-        print('Cs = ', np.sqrt(0.103/den))
-        exit()
+        # den = 4.77*np.mean((self.S_mod)**3)
+        # print('Cs = ', np.sqrt(0.103/den))
 
         self.S = data.S
         if model_params['homogeneous']:

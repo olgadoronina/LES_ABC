@@ -22,8 +22,8 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 1           # order of eddy-viscosity model
-  N_params_force: 1
+  order': 2           # order of eddy-viscosity model
+  N_params_force: 3
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
@@ -47,11 +47,11 @@ algorithm:
   acc-rej:
       sampling: 'uniform'  # 'uniform', 'random', 'sobol'
       eps: 5000
-      N_each: 100
+      N_each: 1000
       N_params_in_task: 0  # only 0, 1 or 2  #only 0 and 2 for calibration
   ############################################################################################################
-  MCMC':
-      N_total_chain: 1e7
+  MCMC:
+      N_total_chain: 1000
       eps: 5000
       var_multiplier: 0.5
   ############################################################################################################
@@ -63,7 +63,7 @@ algorithm:
       x: 0.1                 # percent of accepted for calibration step
       phi: 1
       # MCMC
-      'N_total_chain': 100000
+      'N_total_chain': 1000
   ############################################################################################################
   AGM-MH:
       N_gaussians: 30

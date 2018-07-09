@@ -247,15 +247,15 @@ class PostprocessABC(object):
 
 
 
-path_base = './ABC/3_params_sigma_imcmc/'
+path_base = './ABC/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
 
-uniform = 0
+uniform = 1
 calibration = 0
-IMCMC = 1
+IMCMC = 0
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
 filename_calibration = os.path.join(path['output'], 'calibration.npz')

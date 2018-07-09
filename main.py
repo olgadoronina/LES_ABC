@@ -13,7 +13,11 @@ import init
 
 
 def main():
-    path = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))['path']
+    if len(sys.argv) > 1:
+        input_path = sys.argv[1]
+    else:
+        input_path = os.path.join('./', 'params.yml')
+    path = yaml.load(open(input_path, 'r'))['path']
 
     logPath = path['output']
     logging.basicConfig(

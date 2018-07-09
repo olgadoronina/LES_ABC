@@ -4,7 +4,7 @@ import numpy as np
 import plotting
 import logging
 
-path_base = '../ABC/3_params_sigma_imcmc'
+path_base = '../ABC/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
@@ -26,12 +26,12 @@ dist = np.load(filename)['dist']
 
 
 
-# plotting.plot_scatter(params['model']['N_params'], params['C_limits'], path['visua'], accepted, dist)
+plotting.plot_scatter(params['model']['N_params'], params['C_limits'], path['visua'], accepted, dist)
 ########################
 if not calibration:
     plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
     plotting.plot_compare_tau(path['visua'], path['output'], params['compare_pdf']['summary_statistics'], scale='TEST_M')
 
-plotting.plot_marginal_pdf(params['model']['N_params'], path['output'], path['visua'], params['C_limits'])
+# plotting.plot_marginal_pdf(params['model']['N_params'], path['output'], path['visua'], params['C_limits'])
 
 # plotting.plot_sum_stat(path, params['compare_pdf']['summary_statistics'])

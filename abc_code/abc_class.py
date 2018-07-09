@@ -15,9 +15,12 @@ class ABC(object):
 
         self.N_params = N_params
         self.N_proc = N_proc
-        self.N_each = algorithm['N_each']
-        self.N_total = algorithm['N_total']
-        self.N_params_in_task = algorithm['N_params_in_task']
+        if 'N_each' in algorithm.keys():
+            self.N_each = algorithm['N_each']
+        if 'N_total' in algorithm.keys():
+            self.N_total = algorithm['N_total']
+        if 'N_params_in_task' in algorithm.keys():
+            self.N_params_in_task = algorithm['N_params_in_task']
         self.M = abc['num_training_points']
         self.C_limits = C_limits
         self.algorithm = algorithm
@@ -237,40 +240,59 @@ def work_function_MCMC(C_init):
     result = []
     s_d = 2.4/np.sqrt(N_params)         # correct covariance according dimensionality
 
-    from tqdm import tqdm
-    with tqdm(total=N) as pbar:
-
-        # add first param
-        distance = dist.calc_dist(C_init, dist_func)
-        a = C_init[:]
-        a.append(distance)
-        result.append(a)
-        pbar.update()
+    # add first param
+    distance = dist.calc_dist(C_init, dist_func)
+    a = C_init[:]
+    a.append(distance)
+    result.append(a)
     ####################################################################################################################
+
+    def mcmc_loop(counter_sample, counter_dist):
+        while True:
+            while True:
+                # print(i, counter_dist, counter_sample)
+                if i < 50:
+                    c = s_d * np.random.normal(result[-1][:-1], std)
+                else:
+                    covariance_matrix = s_d * np.cov(np.array(result)[-50:, :-1].T)
+                    c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                counter_sample += 1
+                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+                    break
+            distance = dist.calc_dist(c, dist_func)
+            counter_dist += 1
+            if distance <= eps:
+                a = list(c[:])
+                a.append(distance)
+                result.append(a)
+                break
+        return counter_sample, counter_dist
+
+    try:
+        from tqdm import tqdm
+        tqdm_flag = 1
+    except ImportError:
+        tqdm_flag = 0
+
+    if tqdm_flag:
+        with tqdm(total=N) as pbar:
+            pbar.update()
+            # Markov Chain
+            counter_sample = 0
+            counter_dist = 0
+            for i in range(1, N):
+                counter_sample, counter_dist = mcmc_loop(counter_sample, counter_dist)
+                pbar.update()
+            pbar.close()
+    else:
         # Markov Chain
         counter_sample = 0
         counter_dist = 0
         for i in range(1, N):
-            while True:
-                while True:
-                    # print(i, counter_dist, counter_sample)
-                    if i < 50:
-                        c = np.random.normal(result[-1][:-1], std)
-                    else:
-                        covariance_matrix = s_d*np.cov(np.array(result)[-50:, :-1].T)
-                        c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
-                    counter_sample += 1
-                    if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                        break
-                distance = dist.calc_dist(c, dist_func)
-                counter_dist += 1
-                if distance <= eps:
-                    a = list(c[:])
-                    a.append(distance)
-                    result.append(a)
-                    pbar.update()
-                    break
-        pbar.close()
+            counter_sample, counter_dist = mcmc_loop(counter_sample, counter_dist)
+            if i%10000 == 0:
+                logging.info("Accepted {} samples", i)
+
     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
     print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
