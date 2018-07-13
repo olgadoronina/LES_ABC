@@ -289,7 +289,7 @@ def work_function_MCMC(C_init):
         counter_dist = 0
         for i in range(1, N):
             counter_sample, counter_dist = mcmc_loop(i, counter_sample, counter_dist)
-            if i%100 == 0:
+            if i%1000 == 0:
                 logging.info("{}: Accepted {} samples".format(mp.current_process().name ,i))
 
     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
@@ -299,110 +299,110 @@ def work_function_MCMC(C_init):
     return result
 
 
-def work_function_gaussian_mixture(C_init):
-    epsilon = 1e-6
-    C_limits = g.C_limits
-    result = []
-    ############################################################################
-    # Initialization
-    ############################################################################
-    # a)
-    T_tot = g.N.chain
-    # T_tot = 10
-    T_train = int(100*g.N.params)
-    T_stop = int(0.9*T_tot)
-    assert T_train < T_stop/2, "T_train = {} is bigger then T_stop/2 = {}".format(T_train, T_stop/2)
-    N = g.N.gaussians  # Number of Gaussians
-    print(T_train, T_stop, T_tot, N)
-
-    # b) Proposal
-    mu = np.empty((N, g.N.params))
-    cov = np.empty((N, g.N.params, g.N.params))
-    for i in range(N):
-        mu[i] = C_init[i]
-    for i in range(N):
-        cov[i] = np.diag(g.std**2)
-    weights = np.ones(N)/N
-
-    # c) Auxiliary parameters
-    m = np.ones(N)
-
-    ############################################################################
-    # MH steps
-    ############################################################################
-    from tqdm import tqdm
-    with tqdm(total=T_tot) as pbar:
-        counter_sample = 0
-        counter_dist = 0
-        counter_update = 0
-        for step in range(T_tot):
-            if T_train < step < T_stop:
-                ###########################
-                #  Update proposal
-                ###########################
-                counter_update += 1
-                # Find the closest Gaussian
-                j = np.argmin(np.linalg.norm(mu - c, axis=1))
-                m[j] += 1
-                # update mu and cov
-                mu[j] = 1 / m[j] * c + (m[j] - 1) / m[j] * mu[j]
-                cov[j] = (np.outer(c - mu[j], (c - mu[j]).T) / m[j] + epsilon * np.identity(g.N.params))/(m[j] - 1) + \
-                         (m[j] - 2) / (m[j] - 1) * cov[j]
-                # update weights
-                for i in range(N):
-                    weights[i] = m[i] / (N + counter_update)
-
-                # for j in range(N):
-                #     lambda_, v = np.linalg.eig(cov[j])
-                #     lambda_ = np.sqrt(lambda_)
-                #     ell = Ellipse(xy=(mu[j, 0], mu[j, 1]),
-                #                   width=lambda_[0], height=lambda_[1],
-                #                   angle=np.rad2deg(np.arccos(v[0, 0])))
-                #     # ell.set_facecolor('none')
-                #     ax.add_artist(ell)
-                #
-                #     ax.scatter(mu[j, 0], mu[j, 1])
-                # ax.axis([-1, 1, -1, 1])
-                # fig.savefig('./plots/gaussian_mixture' + str(i))
-
-                # mu, cov, weights = update_proposal(mu, cov, weights, m, c, i)
-
-            while True:
-                while True:
-                    # print(i, counter_dist, counter_sample)
-
-                    # Sample from gaussian mixture proposal
-                    ind = np.random.choice(np.arange(N), p=weights)
-                    c = np.random.multivariate_normal(mu[ind], cov=cov[ind])
-                    counter_sample += 1
-
-                    if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                        break
-
-                dist = dist.calc_dist(c, dist_func)
-                counter_dist += 1
-                if dist <= g.eps:
-                    # prior_new = utils.get_prior(c)
-                    # prior_old = utils.get_prior(result[-1][:-1])
-                    # if prior_new == 0:
-                    #     h = 0
-                    # elif prior_old == 0:
-                    #     h = 1
-                    # else:
-                    #     h = min(1, np.divide(prior_new, prior_old))  # np.divide return 0 for division by 0
-                    #
-                    # if h > 0 and np.random.random() < h:
-                    a = list(c[:])
-                    a.append(dist)
-                    result.append(a)
-                    pbar.update()
-                    break
-        pbar.close()
-    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
-    print('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
-    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
-    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
-    return result
+# def work_function_gaussian_mixture(C_init):
+#     epsilon = 1e-6
+#     C_limits = g.C_limits
+#     result = []
+#     ############################################################################
+#     # Initialization
+#     ############################################################################
+#     # a)
+#     T_tot = g.N.chain
+#     # T_tot = 10
+#     T_train = int(100*g.N.params)
+#     T_stop = int(0.9*T_tot)
+#     assert T_train < T_stop/2, "T_train = {} is bigger then T_stop/2 = {}".format(T_train, T_stop/2)
+#     N = g.N.gaussians  # Number of Gaussians
+#     print(T_train, T_stop, T_tot, N)
+#
+#     # b) Proposal
+#     mu = np.empty((N, g.N.params))
+#     cov = np.empty((N, g.N.params, g.N.params))
+#     for i in range(N):
+#         mu[i] = C_init[i]
+#     for i in range(N):
+#         cov[i] = np.diag(g.std**2)
+#     weights = np.ones(N)/N
+#
+#     # c) Auxiliary parameters
+#     m = np.ones(N)
+#
+#     ############################################################################
+#     # MH steps
+#     ############################################################################
+#     from tqdm import tqdm
+#     with tqdm(total=T_tot) as pbar:
+#         counter_sample = 0
+#         counter_dist = 0
+#         counter_update = 0
+#         for step in range(T_tot):
+#             if T_train < step < T_stop:
+#                 ###########################
+#                 #  Update proposal
+#                 ###########################
+#                 counter_update += 1
+#                 # Find the closest Gaussian
+#                 j = np.argmin(np.linalg.norm(mu - c, axis=1))
+#                 m[j] += 1
+#                 # update mu and cov
+#                 mu[j] = 1 / m[j] * c + (m[j] - 1) / m[j] * mu[j]
+#                 cov[j] = (np.outer(c - mu[j], (c - mu[j]).T) / m[j] + epsilon * np.identity(g.N.params))/(m[j] - 1) + \
+#                          (m[j] - 2) / (m[j] - 1) * cov[j]
+#                 # update weights
+#                 for i in range(N):
+#                     weights[i] = m[i] / (N + counter_update)
+#
+#                 # for j in range(N):
+#                 #     lambda_, v = np.linalg.eig(cov[j])
+#                 #     lambda_ = np.sqrt(lambda_)
+#                 #     ell = Ellipse(xy=(mu[j, 0], mu[j, 1]),
+#                 #                   width=lambda_[0], height=lambda_[1],
+#                 #                   angle=np.rad2deg(np.arccos(v[0, 0])))
+#                 #     # ell.set_facecolor('none')
+#                 #     ax.add_artist(ell)
+#                 #
+#                 #     ax.scatter(mu[j, 0], mu[j, 1])
+#                 # ax.axis([-1, 1, -1, 1])
+#                 # fig.savefig('./plots/gaussian_mixture' + str(i))
+#
+#                 # mu, cov, weights = update_proposal(mu, cov, weights, m, c, i)
+#
+#             while True:
+#                 while True:
+#                     # print(i, counter_dist, counter_sample)
+#
+#                     # Sample from gaussian mixture proposal
+#                     ind = np.random.choice(np.arange(N), p=weights)
+#                     c = np.random.multivariate_normal(mu[ind], cov=cov[ind])
+#                     counter_sample += 1
+#
+#                     if not(False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+#                         break
+#
+#                 dist = dist.calc_dist(c, dist_func)
+#                 counter_dist += 1
+#                 if dist <= g.eps:
+#                     # prior_new = utils.get_prior(c)
+#                     # prior_old = utils.get_prior(result[-1][:-1])
+#                     # if prior_new == 0:
+#                     #     h = 0
+#                     # elif prior_old == 0:
+#                     #     h = 1
+#                     # else:
+#                     #     h = min(1, np.divide(prior_new, prior_old))  # np.divide return 0 for division by 0
+#                     #
+#                     # if h > 0 and np.random.random() < h:
+#                     a = list(c[:])
+#                     a.append(dist)
+#                     result.append(a)
+#                     pbar.update()
+#                     break
+#         pbar.close()
+#     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
+#     print('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
+#     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, T_tot))
+#     logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, T_tot))
+#     return result
 
 # ############
 # #

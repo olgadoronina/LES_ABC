@@ -11,6 +11,7 @@ class Parallel(object):
         self.bar = progressbar
         # logging.info('\n')
         logging.info('Parallel regime: {} workers'.format(processes))
+        logging.info('Available {} workers'.format(mp.cpu_count()))
 
     def run(self, func, tasks):
 
