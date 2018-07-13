@@ -436,8 +436,8 @@ def plot_compare_tau(visua, output, sum_stat, scale):
             y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
             axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
             # plot max joint
-            # y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
-            # axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled max')
+            y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+            axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled max')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
             # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')

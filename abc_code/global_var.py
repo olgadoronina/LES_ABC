@@ -14,9 +14,9 @@ eps = None
 N_chain = None
 C_limits = None
 
-HIT = None
+# HIT = None
 LES = None
-LES_sp = None
+# LES_sp = None
 TEST = None
 TEST_sp = None
 TEST_Model = None

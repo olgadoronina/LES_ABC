@@ -7,6 +7,7 @@ from numpy.fft import fftfreq, fftn, ifftn
 from time import time
 
 from abc_code.sobol_seq import i4_sobol_generate
+from fast_histogram import histogram1d
 import abc_code.distance as dist
 import itertools
 
@@ -30,9 +31,14 @@ def pdf_from_array_improved(array, bins, domain, N_each):
     return pdf
 
 
-def pdf_from_array(array, bins, range):
+def pdf_from_array_np(array, bins, range):
     pdf, _ = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
+
+def pdf_from_array(array, bins, range):
+    pdf = histogram1d(array.flatten(), bins=bins, range=range)
+    norm = np.sum(pdf)/bins
+    return pdf/norm
 
 
 def baseconvert(x, newbase, number_digits):

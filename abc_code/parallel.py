@@ -30,7 +30,6 @@ class Parallel(object):
             while not self.results.ready():
                 done = len(tasks) - self.results._number_left * self.results._chunksize
                 logging.info("Done {}% ({}/{})".format(int(done/len(tasks)*100), done, len(tasks)))
-                sleep(1)
             pool.close()
             pool.join()
         else:

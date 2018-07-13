@@ -1,8 +1,10 @@
+from __future__ import division
 import logging
 import sys
 import os
 import yaml
 import numpy as np
+
 
 import abc_code.global_var as g
 import abc_code.data as data
@@ -38,6 +40,9 @@ def main():
     g.TEST_sp = data.DataSparse(g.TEST, params.abc['num_training_points'])
     g.TEST_Model = model.NonlinearModel(g.TEST_sp, params.model, params.abc['algorithm'], params.algorithm,
                                         params.C_limits, params.compare_pdf)
+    g.LES = None
+    g.TEST = None
+
     if params.parallel['N_proc'] > 1:
         g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])
 

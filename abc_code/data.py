@@ -18,11 +18,12 @@ class Data(object):
         self.R = self.calc_rotation_tensor()
         if pdf_params['summary_statistics'] == 'sigma_pdf_log':
             self.sum_stat_true = self.deviatoric_stresses_pdf(pdf_params)
-            np.savetxt(os.path.join(g.path['output'], 'sum_stat_true'),
-                       [self.sum_stat_true['uu'], self.sum_stat_true['uv'], self.sum_stat_true['uw']])
+            with open(os.path.join(g.path['output'], 'sum_stat_true'), 'w') as f:
+                np.savetxt(f, [self.sum_stat_true['uu'], self.sum_stat_true['uv'], self.sum_stat_true['uw']])
         elif pdf_params['summary_statistics'] == 'production_pdf_log':
             self.sum_stat_true = self.production_rate_pdf(pdf_params)
-            np.savetxt(os.path.join(g.path['output'], 'sum_stat_true'), self.sum_stat_true)
+            with open(os.path.join(g.path['output'], 'sum_stat_true'), 'w') as f:
+                np.savetxt(f, self.sum_stat_true)
         elif pdf_params['summary_statistics'] == 'production_mean':
             self.sum_stat_true = self.production_rate_mean()
 

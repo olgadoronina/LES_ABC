@@ -2,6 +2,7 @@ import logging
 from time import time
 import os
 import numpy as np
+import multiprocessing as mp
 
 import abc_code.global_var as g
 from abc_code import utils
@@ -227,7 +228,7 @@ def work_function_multiple_values(C):
     """
     return g.TEST_Model.sigma_from_C(C, dist_func)
 
-
+# @profile
 def work_function_MCMC(C_init):
 
     N = g.N_chain
@@ -237,34 +238,32 @@ def work_function_MCMC(C_init):
     std = g.std
     eps = g.eps
 
-    result = []
+    result = np.empty((N, N_params+1), dtype=np.float32)
     s_d = 2.4/np.sqrt(N_params)         # correct covariance according dimensionality
 
     # add first param
     distance = dist.calc_dist(C_init, dist_func)
-    a = C_init[:]
-    a.append(distance)
-    result.append(a)
+    result[0, :-1] = C_init
+    result[0, -1] = distance
     ####################################################################################################################
 
-    def mcmc_loop(counter_sample, counter_dist):
+    def mcmc_loop(i, counter_sample, counter_dist):
         while True:
             while True:
                 # print(i, counter_dist, counter_sample)
                 if i < 50:
-                    c = s_d * np.random.normal(result[-1][:-1], std)
+                    c = s_d * np.random.normal(result[i-1, :-1], std)
                 else:
-                    covariance_matrix = s_d * np.cov(np.array(result)[-50:, :-1].T)
-                    c = np.random.multivariate_normal(result[-1][:-1], cov=covariance_matrix)
+                    covariance_matrix = s_d * np.cov(result[i-50:i, :-1].T)
+                    c = np.random.multivariate_normal(result[i-1, :-1], cov=covariance_matrix)
                 counter_sample += 1
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             distance = dist.calc_dist(c, dist_func)
             counter_dist += 1
             if distance <= eps:
-                a = list(c[:])
-                a.append(distance)
-                result.append(a)
+                result[i, :-1] = c
+                result[i, -1] = distance
                 break
         return counter_sample, counter_dist
 
@@ -274,14 +273,14 @@ def work_function_MCMC(C_init):
     except ImportError:
         tqdm_flag = 0
 
-    if tqdm_flag:
+    if tqdm_flag == 5:
         with tqdm(total=N) as pbar:
             pbar.update()
             # Markov Chain
             counter_sample = 0
             counter_dist = 0
             for i in range(1, N):
-                counter_sample, counter_dist = mcmc_loop(counter_sample, counter_dist)
+                counter_sample, counter_dist = mcmc_loop(i, counter_sample, counter_dist)
                 pbar.update()
             pbar.close()
     else:
@@ -289,9 +288,9 @@ def work_function_MCMC(C_init):
         counter_sample = 0
         counter_dist = 0
         for i in range(1, N):
-            counter_sample, counter_dist = mcmc_loop(counter_sample, counter_dist)
-            if i%10000 == 0:
-                logging.info("Accepted {} samples", i)
+            counter_sample, counter_dist = mcmc_loop(i, counter_sample, counter_dist)
+            if i%100 == 0:
+                logging.info("{}: Accepted {} samples".format(mp.current_process().name ,i))
 
     print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
     print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))

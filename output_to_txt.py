@@ -1,8 +1,9 @@
 import logging
 import abc_code.data as data
 import abc_code.global_var as g
+
 import numpy as np
-# import postproc.plotting as plotting
+import postproc.plotting as plotting
 import init
 import os
 import sys
@@ -62,7 +63,7 @@ class PostprocessABC(object):
             minim = np.argmin(g.dist)
             self.C_final_dist = g.accepted[minim, :]
             C_final_dist = self.C_final_dist
-            min_dist = g.dist[minim]
+            # min_dist = g.dist[minim]
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
             # np.savetxt(os.path.join(path['output'], 'C_final_dist'), min_dist)
@@ -170,6 +171,8 @@ class PostprocessABC(object):
         C_std = np.empty((self.N_params, num_eps))
         C_h = np.empty((self.N_params, num_eps))
         percent_accepted = np.empty(num_eps)
+        max_joint = []
+        min_dist = np.empty((self.N_params, num_eps))
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
         for ind, new_eps in enumerate(eps):
@@ -177,23 +180,38 @@ class PostprocessABC(object):
             dist = g.dist.copy()
 
             accepted = accepted[dist < new_eps]
-            # dist = g.dist[dist < new_eps]
+            dist = g.dist[dist < new_eps]
             logging.info('eps = {}: accepted {} values ({}%)'.format(new_eps,
                 len(accepted), round(len(accepted) / (self.N_total) * 100, 2)))
             percent_accepted[ind] = len(accepted) / (self.N_total) * 100
+
+            minim = np.argmin(dist)
+            C_final_dist = accepted[minim, :]
+            min_dist[:,ind] = C_final_dist
+            # C_final_joint
+            H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint, range=self.C_limits)
+            edges = np.array(edges)
+            C_bin = (edges[:, :-1] + edges[:, 1:]) / 2  # shift value in the center of the bin
+            index = np.argwhere(H == np.max(H))
+            C_final_joint = []
+            for i in index:
+                point = []
+                for j in range(self.N_params):
+                    point.append(C_bin[j, i[j]])
+                C_final_joint.append(point)
+            max_joint.append(C_final_joint)
+
             for i in range(self.N_params):
                 data = accepted[:, i]
                 C_std[i, ind] = np.std(data)
                 C_mean[i, ind], C_h[i, ind] = utils.mean_confidence_interval(data, confidence=0.95)
-
                 x, y = utils.pdf_from_array_with_x(data, bins=self.N_each, range=self.C_limits[i])
                 C_max[i, ind] = x[np.argmax(y)]
                 axarr[i].plot(x, y, label=r'$\epsilon \approx {}$'.format(np.round(new_eps)))
                 axarr[i].set_xlabel(self.params_names[i])
 
         axarr[0].set_ylabel('marginal pdf')
-        # Put a legend below current axis
-        legend = plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
+        plt.legend(loc='upper center', bbox_to_anchor=(1., 1.1))
         # frame = legend.get_frame()
         # frame.set_alpha(1)
         fig.subplots_adjust(left=0.15, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
@@ -245,9 +263,24 @@ class PostprocessABC(object):
         fig.subplots_adjust(left=0.12, right=0.97, bottom=0.2, top=0.85)
         fig.savefig(os.path.join(path['visua'], 'percent_accepted'))
 
+        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        for i in range(self.N_params):
+            axarr[i].plot(eps, min_dist[i], 'g.')
+            axarr[i].set_title(self.params_names[i])
+            axarr[i].set_xlabel('epsilon')
+            for ind in range(num_eps):
+                print(max_joint[ind])
+                for j in max_joint[ind]:
+                    axarr[i].scatter(eps[ind], j[i], color='b')
+            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        axarr[0].set_ylabel(r'$C_i$')
+        fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        fig.savefig(os.path.join(path['visua'], 'eps_parameter'))
 
 
-path_base = './ABC/'
+
+path_base = './ABC/3_params_sigma_uniform/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
@@ -272,17 +305,41 @@ logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging
 # # Initial data
 # ####################################################################################################################
 params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
-g.path = params['path']
+# params['path']['output'] = os.path.join(path_base, params['path']['output'])
+# params['path']['visua'] = os.path.join(path_base, params['path']['visua'])
+# g.path = params['path']
+g.path = path
 params['data']['data_path'] = os.path.join('./ABC/data_input/'+params['data']['data_name'])
 print(params)
 init.LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
 g.TEST_sp = data.DataSparse(g.TEST, params['abc']['num_training_points'])
 
+#
+# S_init = list(np.load(os.path.join(g.path['output'],'calibration_all.npz'))['S_init'])
+# x = 0.01
+# # Define epsilon
+# logging.info('x = {}'.format(params['algorithm']['x']))
+# S_init.sort(key=lambda y: y[-1])
+# S_init = np.array(S_init)
+# g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
+# logging.info('eps after calibration step = {}'.format(g.eps))
+#
+# print(S_init[:10, -1])
+#
+# plotting.dist_pdf(S_init[:, -1], x, g.path['visua'])
+#
+# # Define std
+# S_init = S_init[np.where(S_init[:, -1] < g.eps)]
+# g.std = params['algorithm']['phi']*np.std(S_init[:, :-1], axis=0)
+# logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
+#
+#
+# exit()
 
-########################
+#######################
 g.accepted = np.load(filename)['C']
 g.dist = np.load(filename)['dist']
-########################
+#######################
 
 if calibration:
     C_limits = params['C_limits']
@@ -309,21 +366,21 @@ params['algorithm']['N_each'] = N_each
 postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 #
 # #
-if uniform:
-    new_eps = 3500
-    g.accepted = g.accepted[g.dist < new_eps]
-    g.dist = g.dist[g.dist < new_eps]
-    logging.info('accepted {} values ({}%)'.format(len(g.accepted),
-                                                   round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
+# if uniform:
+#     new_eps = 3500
+#     g.accepted = g.accepted[g.dist < new_eps]
+#     g.dist = g.dist[g.dist < new_eps]
+#     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+#                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
 #
-#
+
 postproc.calc_final_C()
 postproc.calc_marginal_pdf()
 
 
 if not calibration:
 
-    # postproc.plot_eps()
+    postproc.plot_eps()
 
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

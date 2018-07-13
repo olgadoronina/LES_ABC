@@ -16,8 +16,9 @@ class NonlinearModel(object):
         self.N_params = model_params['N_params']
         self.S_mod = self.calc_strain_mod(data)
 
-        # den = 4.77*np.mean((self.S_mod)**3)
-        # print('Cs = ', np.sqrt(0.103/den))
+        den = data.delta**2*np.mean((self.S_mod)**3)
+        print(data.delta, np.mean((self.S_mod)**3))
+        print('Cs = ', np.sqrt(0.103/den))
 
         self.S = data.S
         if model_params['homogeneous']:
@@ -50,6 +51,10 @@ class NonlinearModel(object):
                 self.sigma_from_C = self.production_pdf_log
         logging.info('\n')
         logging.info('Nonlinear model with {}'.format(self.sigma_from_C.__name__))
+
+        del self.S
+        del self.S_mod
+
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
