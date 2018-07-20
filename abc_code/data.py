@@ -133,28 +133,27 @@ class DataSparse(object):
 
         if load:
             sparse_data = np.load(os.path.join(path, 'TEST_sp.npz'))
-            self.M = sparse_data['M']
-            self.delta = sparse_data['delta']
-            # self.field = sparse_data['field']
-            self.S = np.load(os.path.join(path, 'S_sp.npz'))
-            self.R = np.load(os.path.join(path, 'R_sp.npz'))
-            self.sum_stat_true = np.load(os.path.join(path, 'stat_sp.npz'))
+            self.M = sparse_data['M'].item()
+            self.delta = sparse_data['delta'].item()
+            self.sum_stat_true = sparse_data['sum_stat_true'].item()
+            print(self.sum_stat_true.keys())
+            self.S = sparse_data['S'].item()
+            print(self.S.keys())
+            self.R = sparse_data['R'].item()
+
             logging.info('Training data shape is ' + str(self.S['uu'].shape))
         else:
             logging.info('Sparse data')
             self.M = n_training
             self.delta = data.delta
-
             # Sparse data
-            self.field = self.sparse_dict(data.field)
+            # self.field = self.sparse_dict(data.field)
             self.S = self.sparse_dict(data.S)
             self.R = self.sparse_dict(data.R)
             self.sum_stat_true = data.sum_stat_true
             logging.info('Training data shape is ' + str(self.S['uu'].shape))
-            np.savez(os.path.join(path, 'TEST_sp.npz'), M=self.M, delta=self.delta)
-            np.savez(os.path.join(path, 'S_sp.npz'), **self.S)
-            np.savez(os.path.join(path, 'R_sp.npz'), **self.R)
-            np.savez(os.path.join(path, 'stat_sp.npz'), **self.sum_stat_true)
+            np.savez(os.path.join(path, 'TEST_sp.npz'), M=self.M, delta=self.delta, sum_stat_true=self.sum_stat_true,
+                     S=self.S, R=self.R)
 
 
     def sparse_array(self, data_value):
