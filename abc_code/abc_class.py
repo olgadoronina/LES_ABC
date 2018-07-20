@@ -40,12 +40,12 @@ class ABC(object):
             self.calibration = calibration_function_single_value
             if algorithm['N_params_in_task'] > 0:
                 self.calibration = calibration_function_multiple_values
-        elif abc['algorithm'] == 'AGM_MH':  # Gaussian mixture
-            logging.info('ABC algorithm: Gaussian Mixture')
-            self.C_array = utils.sampling_initial_for_gaussian_mixture(N_proc, algorithm['N_gaussians'],
-                                                                       C_limits, algorithm['eps'])
-            self.main_loop = self.main_loop_gaussian_mixture
-            self.work_func = work_function_gaussian_mixture
+        # elif abc['algorithm'] == 'AGM_MH':  # Gaussian mixture
+        #     logging.info('ABC algorithm: Gaussian Mixture')
+        #     self.C_array = utils.sampling_initial_for_gaussian_mixture(N_proc, algorithm['N_gaussians'],
+        #                                                                C_limits, algorithm['eps'])
+        #     self.main_loop = self.main_loop_gaussian_mixture
+        #     self.work_func = work_function_gaussian_mixture
         else:                   # Uniform
             logging.info('ABC algorithm: Uniform grid sampling')
             self.main_loop = self.main_loop_uniform

@@ -15,7 +15,7 @@ import abc_code.parallel as parallel
 import abc_code.abc_class as abc_class
 import init
 
-@profile
+
 def main():
     comm = MPI.COMM_WORLD
     size = comm.Get_size()

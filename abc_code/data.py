@@ -138,7 +138,7 @@ class DataSparse(object):
             # self.field = sparse_data['field']
             self.S = np.load(os.path.join(path, 'S_sp.npz'))
             self.R = np.load(os.path.join(path, 'R_sp.npz'))
-            self.sum_stat_true = sparse_data['sum_stat_true']
+            self.sum_stat_true = np.load(os.path.join(path, 'stat_sp.npz'))
             logging.info('Training data shape is ' + str(self.S['uu'].shape))
         else:
             logging.info('Sparse data')
@@ -151,9 +151,10 @@ class DataSparse(object):
             self.R = self.sparse_dict(data.R)
             self.sum_stat_true = data.sum_stat_true
             logging.info('Training data shape is ' + str(self.S['uu'].shape))
-            np.savez(os.path.join(path, 'TEST_sp.npz'), M=self.M, delta=self.delta, sum_stat_true=self.sum_stat_true)
+            np.savez(os.path.join(path, 'TEST_sp.npz'), M=self.M, delta=self.delta)
             np.savez(os.path.join(path, 'S_sp.npz'), **self.S)
             np.savez(os.path.join(path, 'R_sp.npz'), **self.R)
+            np.savez(os.path.join(path, 'stat_sp.npz'), **self.sum_stat_true)
 
 
     def sparse_array(self, data_value):
