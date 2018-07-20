@@ -365,7 +365,8 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
                 ax.tick_params(axis='both', which='major', pad=0.8)
                 ax.set_xlabel(params_names[i], labelpad=2)
                 if i == 0:
-                    ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
+                    # ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
+                    ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 edges = np.loadtxt(os.path.join(output, 'marginal_bins'+str(i)+str(j)))
@@ -393,7 +394,7 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
         # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
         fig.subplots_adjust(left=0.02, right=0.98, wspace=0.28, hspace=0.1, bottom=0.1, top=0.98)
     elif N_params == 4:
-        fig.subplots_adjust(left=0.03, right=0.98, wspace=0.1, hspace=0.1, bottom=0.08, top=0.97)
+        fig.subplots_adjust(left=0.03, right=0.98, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
     elif N_params == 6:
         fig.subplots_adjust(left=0.05, right=0.98, wspace=0.45, hspace=0.35, bottom=0.08, top=0.98)
 

@@ -8,7 +8,6 @@ from abc_code import global_var as g
 
 
 class Data(object):
-
     def __init__(self, data_dict, delta, dx, pdf_params):
         self.field = data_dict
         self.dx = dx
@@ -130,18 +129,32 @@ class Data(object):
 
 class DataSparse(object):
 
-    def __init__(self, data, n_training):
+    def __init__(self, path, load, data=None, n_training=None):
 
-        logging.info('Sparse data')
-        self.M = n_training
-        self.delta = data.delta
+        if load:
+            sparse_data = np.load(os.path.join(path, 'TEST_sp.npz'))
+            self.M = sparse_data['M']
+            self.delta = sparse_data['delta']
+            # self.field = sparse_data['field']
+            self.S = np.load(os.path.join(path, 'S_sp.npz'))
+            self.R = np.load(os.path.join(path, 'R_sp.npz'))
+            self.sum_stat_true = sparse_data['sum_stat_true']
+            logging.info('Training data shape is ' + str(self.S['uu'].shape))
+        else:
+            logging.info('Sparse data')
+            self.M = n_training
+            self.delta = data.delta
 
-        # Sparse data
-        self.field = self.sparse_dict(data.field)
-        self.S = self.sparse_dict(data.S)
-        self.R = self.sparse_dict(data.R)
-        self.sum_stat_true = data.sum_stat_true
-        logging.info('Training data shape is ' + str(self.S['uu'].shape))
+            # Sparse data
+            self.field = self.sparse_dict(data.field)
+            self.S = self.sparse_dict(data.S)
+            self.R = self.sparse_dict(data.R)
+            self.sum_stat_true = data.sum_stat_true
+            logging.info('Training data shape is ' + str(self.S['uu'].shape))
+            np.savez(os.path.join(path, 'TEST_sp.npz'), M=self.M, delta=self.delta, sum_stat_true=self.sum_stat_true)
+            np.savez(os.path.join(path, 'S_sp.npz'), **self.S)
+            np.savez(os.path.join(path, 'R_sp.npz'), **self.R)
+
 
     def sparse_array(self, data_value):
 

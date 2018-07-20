@@ -88,7 +88,7 @@ class ABC(object):
             if self.N_params_in_task > 0:
                 S_init = [chunk[:] for item in S_init for chunk in item]
 
-            np.savez(os.path.join(g.path['output'],'calibration_all.npz'),  S_init=np.array(S_init))
+            np.savez(os.path.join(g.path['output'], 'calibration_all.npz'),  S_init=np.array(S_init))
             logging.info('Accepted parameters and distances saved in {}'.format(os.path.join(g.path['output'],
                                                                                              'calibration_all.npz')))
         else:

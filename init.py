@@ -77,7 +77,7 @@ class CreateParams:
         edges = np.linspace(compare_pdf['domain'][0], compare_pdf['domain'][1], compare_pdf['bins'] + 1)
         x = (edges[1:] + edges[:-1]) / 2
         with open(os.path.join(g.path['output'], 'sum_stat_bins'), 'wb') as f:
-            np.savetxt(f, x, )
+            np.savetxt(f, x)
         return compare_pdf
 
     def define_model_params(self, params):
@@ -198,50 +198,70 @@ def load_HIT_data(data_params, case_params):
 def LES_TEST_data(data_params, case_params, pdf_params):
 
     dx = np.array([case_params['lx']/case_params['N_point']]*3)
+    DNS_delta = case_params['lx'] / case_params['N_point']
+    LES_delta = 1 / case_params['LES_scale']
+    if case_params['TEST_scale']:
+        TEST_delta = 1 / case_params['TEST_scale']
 
     if data_params['load']:  # Load filtered data from file
-        logging.info("Load LES data")
-        loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
-        LES_data = np.load(loadfile_LES)
-
         if case_params['TEST_scale']:
+            logging.info("Load LES data")
+            loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
+            LES_data = np.load(loadfile_LES)
+            logging.info('Create LES class')
+            g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
+            del LES_data
             logging.info("Load TEST data")
             loadfile_TEST = os.path.join(data_params['data_path'], 'TEST.npz')
-            TEST_data = np.load(loadfile_TEST)
+            TEST_data = np.load(loadfile_TEST)  # Load filtered data from file
+            logging.info('Create TEST class')
+            g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
+            del TEST_data
         else:
-            HIT_data = load_HIT_data(data_params, case_params)
-
-    else:  # Filter HIT data
-        HIT_data = load_HIT_data(data_params, case_params)
-
-        logging.info('Filter HIT data')
-        LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
-                                  dx=dx, N_points=[case_params['N_point']]*3)
-        TEST_data = None
-        logging.info('Writing file')
-        np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
+            logging.info("Load LES data")
+            loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
+            LES_data = np.load(loadfile_LES)
+            logging.info('Create TEST class')
+            g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
+            del LES_delta
+    else:
         if case_params['TEST_scale']:
+            HIT_data = load_HIT_data(data_params, case_params)
+            logging.info('Filter HIT data')
+            LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
+                                      dx=dx, N_points=[case_params['N_point']] * 3)
+            logging.info('Writing file')
+            np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
+            logging.info('Create LES class')
+            g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
+            del LES_data
+            logging.info('Filter HIT data')
             TEST_data = utils.filter3d(data=HIT_data, scale_k=case_params['TEST_scale'],
                                        dx=dx, N_points=case_params['N_points'])
+            del HIT_data
             logging.info('Writing file')
             np.savez(os.path.join(data_params['data_path'], 'TEST.npz'), **TEST_data)
+            logging.info('Create TEST class')
+            g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
+            del TEST_data
+        else:
+            HIT_data = load_HIT_data(data_params, case_params)
+            logging.info('Filter HIT data')
+            LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
+                                      dx=dx, N_points=[case_params['N_point']] * 3)
+            logging.info('Writing file')
+            np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
+            logging.info('Create LES class')
+            g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
+            del HIT_data
+            LES_delta = 1 / case_params['LES_scale']
+            logging.info('Create TEST class')
+            g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
+            del LES_delta
 
-    if case_params['TEST_scale']:
-        LES_delta = 1 / case_params['LES_scale']
-        TEST_delta = 1 / case_params['TEST_scale']
-        logging.info('Create LES class')
-        g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
-        logging.info('Create TEST class')
-        g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
-        del TEST_data, LES_data
-    else:
-        DNS_delta = case_params['lx']/case_params['N_point']
-        LES_delta = 1 / case_params['LES_scale']
-        logging.info('Create LES class')
-        g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
-        logging.info('Create TEST class')
-        g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
-        del HIT_data, LES_data
+
+
+
 
 
 

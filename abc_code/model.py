@@ -8,7 +8,7 @@ import abc_code.utils as utils
 class NonlinearModel(object):
     def __init__(self, data, model_params, abc_algorithm, algorithm, C_limits, pdf_params):
 
-        self.M = data.field['uu'].shape[0]
+        self.M = data.M
         self.C_limits = C_limits
         self.pdf_params = pdf_params
         if 'N_each' in algorithm.keys():
