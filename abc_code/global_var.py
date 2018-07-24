@@ -14,12 +14,12 @@ eps = None
 N_chain = None
 C_limits = None
 
-# HIT = None
+
 LES = None
-# LES_sp = None
 TEST = None
 TEST_sp = None
 TEST_Model = None
+sum_stat_true = None
 
 par_process = None
 

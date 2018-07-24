@@ -22,7 +22,6 @@ def main():
     rank = comm.Get_rank()
     name = MPI.Get_processor_name()
 
-
     if len(sys.argv) > 1:
         input_path = sys.argv[1]
     else:
@@ -30,37 +29,81 @@ def main():
     path = yaml.load(open(input_path, 'r'))['path']
 
     logPath = path['output']
-
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(logPath, 'ABC_log_{}'.format(rank))), logging.StreamHandler()],
         level=logging.DEBUG)
 
-
-
     logging.debug('Name = {}, Rank {} of Size {}'.format(name, rank, size))
+    comm.Barrier()
     if rank == 0:
         logging.info('platform {}'.format(sys.platform))
         logging.info('python {}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]))
         logging.info('numpy {}'.format(np.__version__))
         logging.info('64 bit {}\n'.format(sys.maxsize > 2 ** 32))
-
         ####################################################################################################################
         # Preprocess
         ####################################################################################################################
 
     params = init.CreateParams()
-    if params.data['load']:
-        g.TEST_sp = data.DataSparse(os.path.join(params.data['data_path']), 1)
-    else:
-        init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-        g.TEST_sp = data.DataSparse(os.path.join(params.data['data_path']), 0, g.TEST, params.abc['num_training_points'])
+    if params.data['load'] == 0:
+        init.create_LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+        g.TEST_sp = data.DataSparse(params.data['data_path'], 0, g.TEST, params.abc['num_training_points'])
         g.LES = None
         g.TEST = None
+        path = os.path.join(params.data['data_path'], 'T.npz')
+        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
+                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
+    elif params.data['load'] == 1:
+        init.load_LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+        g.TEST_sp = data.DataSparse(params.data['data_path'], 0, g.TEST, params.abc['num_training_points'])
+        g.LES = None
+        g.TEST = None
+        path = os.path.join(params.data['data_path'], 'T.npz')
+        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
+                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
+    elif params.data['load'] == 2:
+        g.TEST_sp = data.DataSparse(params.data['data_path'], 1)
+        path = os.path.join(params.data['data_path'], 'T.npz')
+        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
+                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
+    elif params.data['load'] == 3:
+        path = os.path.join(params.data['data_path'], 'T.npz')
+        g.TEST_Model = model.NonlinearModel(path, 1, params.model, params.abc, params.algorithm, params.C_limits,
+                                            params.compare_pdf, params.abc['random'])
+        g.sum_stat_true = np.load(os.path.join(params.data['data_path'], 'sum_stat_true.npz'))
 
-    g.TEST_Model = model.NonlinearModel(g.TEST_sp, params.model, params.abc['algorithm'], params.algorithm,
-                                        params.C_limits, params.compare_pdf)
-    logging.debug('here')
+
+    #
+    # if params.abc['random']:
+    #     path = os.path.join(params.data['data_path'], 'T.npz')
+    #     if params.data['load']:
+    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+    #         g.TEST_sp = g.TEST
+    #         g.TEST_Model = model.NonlinearModel(path, 1, params.abc['num_training_points'], params.model,
+    #                                             params.abc['algorithm'], params.algorithm,
+    #                                             params.C_limits, params.compare_pdf, 1)
+    #     else:
+    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+    #         g.TEST_sp = g.TEST
+    #         g.TEST_Model = model.NonlinearModel(path, 0, params.abc['num_training_points'], params.model,
+    #                                             params.abc['algorithm'], params.algorithm,
+    #                                             params.C_limits, params.compare_pdf, 1, g.TEST)
+    #         g.LES = None
+    #         g.TEST = None
+    #
+    # else:
+    #     path = os.path.join(params.data['data_path'], 'TEST_sp.npz')
+    #     if params.data['load']:
+    #         g.TEST_sp = data.DataSparse(path, 1)
+    #     else:
+    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
+    #         g.TEST_sp = data.DataSparse(path, 0, g.TEST, params.abc['num_training_points'])
+    #         g.LES = None
+    #         g.TEST = None
+    #     path = os.path.join(params.data['data_path'], 'T.npz')
+    #     g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc['algorithm'], params.algorithm,
+    #                                         params.C_limits, params.compare_pdf, 0, g.TEST_sp)
 
         # comm.bcast(params, root=0)
         # logging.debug('done')
@@ -70,11 +113,10 @@ def main():
         # logging.debug('done')
 
     comm.Barrier()
-    logging.info('Model {}'.format(g.TEST_Model))
+    logging.info('Model {}, {}'.format(g.TEST_Model.Tensor['1']['uu'].shape, 64**3))
     logging.info('TEST_sp {}'.format(g.TEST_sp))
     if params.parallel['N_proc'] > 1:
         g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])
-
     ####################################################################################################################
     # ABC algorithm
     ####################################################################################################################

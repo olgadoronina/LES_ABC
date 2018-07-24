@@ -35,6 +35,7 @@ def pdf_from_array_np(array, bins, range):
     pdf, _ = np.histogram(array, bins=bins, range=range, normed=1)
     return pdf
 
+
 def pdf_from_array(array, bins, range):
     pdf = histogram1d(array.flatten(), bins=bins, range=range)
     norm = np.sum(pdf)/bins

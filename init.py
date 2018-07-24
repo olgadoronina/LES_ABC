@@ -14,20 +14,6 @@ class CreateParams:
 
         params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
 
-        # self.physical_case = params.physical_case
-        # self.data = params.data
-        # self.check_pathes(params.path)
-        # g.path = params.path
-        # self.parallel = params.parallel
-        # self.abc = params.abc
-        #
-        # self.compare_pdf = self.define_compare_pdf_params()
-        # self.model = self.define_model_params(params.model)
-        # self.C_limits = np.array(params.C_limits[:self.model['N_params']])
-        # g.C_limits = self.C_limits
-        #
-        # self.algorithm = self.define_algorithm_params(self.abc)
-
         self.physical_case = params['physical_case']
         self.physical_case['LES_scale'] = self.physical_case['LES_scale']/2/np.pi
         if self.physical_case['TEST_scale'] == 'None':
@@ -40,6 +26,8 @@ class CreateParams:
         g.path = params['path']
         self.parallel = params['parallel']
         self.abc = params['abc']
+        if params['abc']['random']:
+            self.abc['num_training_points'] = self.physical_case['N_point']
 
         self.compare_pdf = self.define_compare_pdf_params(params)
         self.model = self.define_model_params(params['model'])
@@ -65,7 +53,6 @@ class CreateParams:
 
         self.print_params_summary()
         self.print_params_to_file()
-
 
     def check_pathes(self, path):
         if not os.path.isdir(path['output']):
@@ -169,7 +156,6 @@ class CreateParams:
             yaml.dump(param_dict, outfile, default_flow_style=False)
 
 
-
 def load_HIT_data(data_params, case_params):
     datafile = dict()
     if data_params['data_name'] == 'JHU_data':
@@ -195,7 +181,36 @@ def load_HIT_data(data_params, case_params):
     return HIT_data
 
 
-def LES_TEST_data(data_params, case_params, pdf_params):
+def load_LES_TEST_data(data_params, case_params, pdf_params):
+
+    dx = np.array([case_params['lx'] / case_params['N_point']] * 3)
+    LES_delta = 1 / case_params['LES_scale']
+    if case_params['TEST_scale']:
+        TEST_delta = 1 / case_params['TEST_scale']
+
+    if case_params['TEST_scale']:
+        logging.info("Load LES data")
+        loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
+        LES_data = np.load(loadfile_LES)
+        logging.info('Create LES class')
+        g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
+        del LES_data
+        logging.info("Load TEST data")
+        loadfile_TEST = os.path.join(data_params['data_path'], 'TEST.npz')
+        TEST_data = np.load(loadfile_TEST)  # Load filtered data from file
+        logging.info('Create TEST class')
+        g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
+        del TEST_data
+    else:
+        logging.info("Load LES data")
+        loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
+        LES_data = np.load(loadfile_LES)
+        logging.info('Create TEST class')
+        g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
+        del LES_delta
+
+
+def create_LES_TEST_data(data_params, case_params, pdf_params):
 
     dx = np.array([case_params['lx']/case_params['N_point']]*3)
     DNS_delta = case_params['lx'] / case_params['N_point']
@@ -203,61 +218,40 @@ def LES_TEST_data(data_params, case_params, pdf_params):
     if case_params['TEST_scale']:
         TEST_delta = 1 / case_params['TEST_scale']
 
-    if data_params['load']:  # Load filtered data from file
-        if case_params['TEST_scale']:
-            logging.info("Load LES data")
-            loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
-            LES_data = np.load(loadfile_LES)
-            logging.info('Create LES class')
-            g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
-            del LES_data
-            logging.info("Load TEST data")
-            loadfile_TEST = os.path.join(data_params['data_path'], 'TEST.npz')
-            TEST_data = np.load(loadfile_TEST)  # Load filtered data from file
-            logging.info('Create TEST class')
-            g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
-            del TEST_data
-        else:
-            logging.info("Load LES data")
-            loadfile_LES = os.path.join(data_params['data_path'], 'LES.npz')
-            LES_data = np.load(loadfile_LES)
-            logging.info('Create TEST class')
-            g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
-            del LES_delta
+    if case_params['TEST_scale']:
+        HIT_data = load_HIT_data(data_params, case_params)
+        logging.info('Filter HIT data')
+        LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
+                                  dx=dx, N_points=[case_params['N_point']] * 3)
+        logging.info('Writing file')
+        np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
+        logging.info('Create LES class')
+        g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
+        del LES_data
+        logging.info('Filter HIT data')
+        TEST_data = utils.filter3d(data=HIT_data, scale_k=case_params['TEST_scale'],
+                                   dx=dx, N_points=case_params['N_points'])
+        del HIT_data
+        logging.info('Writing file')
+        np.savez(os.path.join(data_params['data_path'], 'TEST.npz'), **TEST_data)
+        logging.info('Create TEST class')
+        g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
+        del TEST_data
     else:
-        if case_params['TEST_scale']:
-            HIT_data = load_HIT_data(data_params, case_params)
-            logging.info('Filter HIT data')
-            LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
-                                      dx=dx, N_points=[case_params['N_point']] * 3)
-            logging.info('Writing file')
-            np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
-            logging.info('Create LES class')
-            g.LES = data.Data(LES_data, LES_delta, dx, pdf_params)
-            del LES_data
-            logging.info('Filter HIT data')
-            TEST_data = utils.filter3d(data=HIT_data, scale_k=case_params['TEST_scale'],
-                                       dx=dx, N_points=case_params['N_points'])
-            del HIT_data
-            logging.info('Writing file')
-            np.savez(os.path.join(data_params['data_path'], 'TEST.npz'), **TEST_data)
-            logging.info('Create TEST class')
-            g.TEST = data.Data(TEST_data, TEST_delta, dx, pdf_params)
-            del TEST_data
-        else:
-            HIT_data = load_HIT_data(data_params, case_params)
-            logging.info('Filter HIT data')
-            LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
-                                      dx=dx, N_points=[case_params['N_point']] * 3)
-            logging.info('Writing file')
-            np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
-            logging.info('Create LES class')
-            g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
-            del HIT_data
-            LES_delta = 1 / case_params['LES_scale']
-            logging.info('Create TEST class')
-            g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
-            del LES_delta
+        HIT_data = load_HIT_data(data_params, case_params)
+        logging.info('Filter HIT data')
+        LES_data = utils.filter3d(data=HIT_data, scale_k=case_params['LES_scale'],
+                                  dx=dx, N_points=[case_params['N_point']] * 3)
+        logging.info('Writing file')
+        np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
+        logging.info('Create LES class')
+        g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
+        np.savez(os.path.join(data_params['data_path'], 'sum_stat_true.npz'), **g.sum_stat_true)
+        del HIT_data
+        LES_delta = 1 / case_params['LES_scale']
+        logging.info('Create TEST class')
+        g.TEST = data.Data(LES_data, LES_delta, dx, pdf_params)
+        del LES_delta
 
 
 

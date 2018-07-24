@@ -3,8 +3,6 @@ import numpy as np
 from abc_code import utils
 
 keys = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
-
-
 ########################################################################################################################
 ## Distance functions
 ########################################################################################################################
@@ -63,7 +61,7 @@ def distance_sigma_pdf_LSElog(pdf_modeled, key, axis=1):
     :return: 1D array of calculated distance
     """
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.mean((log_modeled - g.TEST_sp.sum_stat_true[key]) ** 2, axis=axis)
+    dist = np.mean((log_modeled - g.sum_stat_true[key]) ** 2, axis=axis)
     return dist
 
 
@@ -74,7 +72,7 @@ def distance_sigma_pdf_L1log(pdf_modeled, key, axis=1):
     """
 
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.sum_stat_true[key]), axis=axis)
+    dist = 0.5 * np.sum(np.abs(log_modeled - g.sum_stat_true[key]), axis=axis)
     return dist
 
 
@@ -86,7 +84,7 @@ def distance_sigma_L2log(pdf_modeled, key, axis=1):
     :return:
     """
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.sum((log_modeled - g.TEST_sp.sum_stat_true[key]) ** 2, axis=axis)
+    dist = np.sum((log_modeled - g.sum_stat_true[key]) ** 2, axis=axis)
     return dist
 
 
@@ -100,7 +98,7 @@ def distance_production_L2log(pdf_modeled, key, axis=1):
     :return:
     """
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.sum((log_modeled - g.TEST_sp.sum_stat_true) ** 2, axis=axis)
+    dist = np.sum((log_modeled - g.sum_stat_true) ** 2, axis=axis)
     return dist
 
 
@@ -111,7 +109,7 @@ def distance_production_LSElog(pdf_modeled, key, axis=1):
     :return: 1D array of calculated distance
     """
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = np.mean((log_modeled - g.TEST_sp.sum_stat_true) ** 2, axis=axis)
+    dist = np.mean((log_modeled - g.sum_stat_true) ** 2, axis=axis)
     return dist
 
 
@@ -122,5 +120,5 @@ def distance_production_L1log(pdf_modeled, key, axis=1):
     """
 
     log_modeled = utils.take_safe_log(pdf_modeled)
-    dist = 0.5 * np.sum(np.abs(log_modeled - g.TEST_sp.sum_stat_true), axis=axis)
+    dist = 0.5 * np.sum(np.abs(log_modeled - g.sum_stat_true), axis=axis)
     return dist

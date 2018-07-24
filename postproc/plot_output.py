@@ -4,7 +4,7 @@ import numpy as np
 import plotting
 import logging
 
-path_base = '../ABC/3_params_sigma_imcmc_summit/'
+path_base = '../ABC/4_params_sigma_imcmc_sd/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):

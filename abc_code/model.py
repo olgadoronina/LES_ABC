@@ -6,31 +6,22 @@ import abc_code.utils as utils
 
 
 class NonlinearModel(object):
-    def __init__(self, data, model_params, abc_algorithm, algorithm, C_limits, pdf_params):
+    def __init__(self, path, load, model_params, abc, algorithm, C_limits, pdf_params, random, data=None):
 
-        self.M = data.M
+        self.M = abc['num_training_points']
         self.C_limits = C_limits
+        self.random = random
         self.pdf_params = pdf_params
         if 'N_each' in algorithm.keys():
             self.N_each = algorithm['N_each']
         self.N_params = model_params['N_params']
-
-        self.S_mod = self.calc_strain_mod(data)
-        den = data.delta**2*np.mean((self.S_mod)**3)
-        print(data.delta, np.mean((self.S_mod)**3))
-        print('Cs = ', np.sqrt(0.103/den))
-
         if model_params['homogeneous']:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww']
         else:
             self.elements_in_tensor = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 
         self.sigma = dict()
-        self.Tensor = dict()
-        for i in range(self.N_params):
-            self.Tensor[str(i)] = self.calc_tensor(data, number=i)
-
-        if abc_algorithm in ['acc-rej', 'IMCMC']:
+        if abc['algorithm'] in ['acc-rej', 'IMCMC']:
             self.N_params_in_task = algorithm['N_params_in_task']
         else:
             self.N_params_in_task = 0
@@ -48,11 +39,20 @@ class NonlinearModel(object):
         elif self.pdf_params['summary_statistics'] == 'production_pdf_log':
             if self.N_params_in_task == 0:
                 self.sigma_from_C = self.production_pdf_log
+        if load:
+            self.Tensor = dict()
+            for i in range(self.N_params):
+                self.Tensor[str(i)] = np.load(path)[str(i)].item()
+        else:
+            self.S_mod = self.calc_strain_mod(data)
+            self.Tensor = dict()
+            for i in range(self.N_params):
+                self.Tensor[str(i)] = self.calc_tensor(data, number=i)
+            np.savez(path, **self.Tensor)
+            del self.S_mod
+
         logging.info('\n')
         logging.info('Nonlinear model with {}'.format(self.sigma_from_C.__name__))
-
-        del self.S_mod
-
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -66,7 +66,6 @@ class NonlinearModel(object):
 
     def calc_tensor(self, data, number):
         """Calculate tensor T_i for nonlinear viscosity model
-
         :param data: data class object (sparse data)
         :param number: index of tensor
         :return:  dictionary of tensor
@@ -78,6 +77,7 @@ class NonlinearModel(object):
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
                     tensor[i + j] = np.multiply(self.S_mod, data.S[i + j])
+                    tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
@@ -91,6 +91,7 @@ class NonlinearModel(object):
                     for k in ['u', 'v', 'w']:
                         tensor[i + j] += np.multiply(data.S[i + k], data.R[k + j]) - \
                                          np.multiply(data.R[i + k], data.S[k + j])
+                    tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
@@ -109,6 +110,7 @@ class NonlinearModel(object):
                         tensor[i + j] += np.multiply(data.S[i + k], data.S[k + j])
                         if i == j:
                             tensor[i + j] -= 1 / 3 * S_S_inv
+                    tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
@@ -127,6 +129,7 @@ class NonlinearModel(object):
                         tensor[i + j] += np.multiply(data.R[i + k], data.R[k + j])
                         if i == j:
                             tensor[i + j] -= 1 / 3 * R_R_inv
+                    tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
             return tensor
@@ -145,6 +148,7 @@ class NonlinearModel(object):
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
         elif number == 5:
@@ -169,6 +173,7 @@ class NonlinearModel(object):
                         tensor1[i + j] -= 2 / 3 * S_R_R_inv
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
         elif number == 6:
@@ -186,6 +191,7 @@ class NonlinearModel(object):
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
         elif number == 7:
@@ -204,6 +210,7 @@ class NonlinearModel(object):
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
         elif number == 8:
@@ -230,6 +237,7 @@ class NonlinearModel(object):
                         tensor1[i + j] -= 2/3*S2_R2_inv
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
         elif number == 9:
@@ -251,6 +259,7 @@ class NonlinearModel(object):
                     tensor1[i + j] -= tensor2
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 3
+                    tensor1[i + j] = tensor1[i + j].flatten()
             return tensor1
 
     ####################################################################################################################
@@ -276,11 +285,17 @@ class NonlinearModel(object):
         :param C: list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
         """
-        for i in self.elements_in_tensor:
-            self.sigma[i] = np.zeros((self.M, self.M, self.M))
-            for j in range(self.N_params):
-                self.sigma[i] += C[j] * self.Tensor[str(j)][i]
-
+        if self.random:
+            ind = np.random.choice(256**3, size=self.random, replace=False)
+            for i in self.elements_in_tensor:
+                self.sigma[i] = np.zeros(self.random)
+                for j in range(self.N_params):
+                    self.sigma[i] += C[j] * self.Tensor[str(j)][i][ind]
+        else:
+            for i in self.elements_in_tensor:
+                self.sigma[i] = np.zeros(self.M**3)
+                for j in range(self.N_params):
+                    self.sigma[i] += C[j] * self.Tensor[str(j)][i]
 
     def sigma_from_C_1param(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.

@@ -280,15 +280,15 @@ class PostprocessABC(object):
 
 
 
-path_base = './ABC/3_params_sigma_uniform/'
+path_base = './ABC/4_params_sigma_imcmc_sd/'
 path = {'output': os.path.join(path_base, 'output'),
         'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
 
-uniform = 1
+uniform = 0
 calibration = 0
-IMCMC = 0
+IMCMC = 1
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
 filename_calibration = os.path.join(path['output'], 'calibration.npz')
@@ -380,7 +380,7 @@ postproc.calc_marginal_pdf()
 
 if not calibration:
 
-    postproc.plot_eps()
+    # postproc.plot_eps()
 
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
     postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')
