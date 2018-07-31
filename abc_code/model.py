@@ -46,8 +46,10 @@ class NonlinearModel(object):
         else:
             self.S_mod = self.calc_strain_mod(data)
             self.Tensor = dict()
+            logging.info('Calculate model tensors')
             for i in range(self.N_params):
                 self.Tensor[str(i)] = self.calc_tensor(data, number=i)
+                logging.info('Tensor {}'.format(i))
             np.savez(path, **self.Tensor)
             del self.S_mod
 
@@ -286,7 +288,7 @@ class NonlinearModel(object):
         :return: dict of modeled Reynolds stresses tensor
         """
         if self.random:
-            ind = np.random.choice(256**3, size=self.random, replace=False)
+            ind = np.random.randint(0, 256 ** 3, size=random)
             for i in self.elements_in_tensor:
                 self.sigma[i] = np.zeros(self.random)
                 for j in range(self.N_params):

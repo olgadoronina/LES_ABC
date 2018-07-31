@@ -228,7 +228,7 @@ def work_function_multiple_values(C):
     """
     return g.TEST_Model.sigma_from_C(C, dist_func)
 
-# @profile
+
 def work_function_MCMC(C_init):
 
     N = g.N_chain
@@ -239,24 +239,34 @@ def work_function_MCMC(C_init):
     eps = g.eps
 
     result = np.empty((N, N_params+1), dtype=np.float32)
-    s_d = 2.4/np.sqrt(N_params)         # correct covariance according dimensionality
+    s_d = 2.4**2/N_params         # correct covariance according dimensionality
+    t0 = 50  #initial period witout adaptation
 
     # add first param
     distance = dist.calc_dist(C_init, dist_func)
     result[0, :-1] = C_init
     result[0, -1] = distance
-    ####################################################################################################################
 
+    mean_prev = 0
+    cov_prev = 0
+
+    ####################################################################################################################
     def mcmc_loop(i, counter_sample, counter_dist):
+        nonlocal mean_prev, cov_prev
         while True:
             while True:
                 # print(i, counter_dist, counter_sample)
-                if i < 50:
-                    c = s_d * np.random.normal(result[i-1, :-1], std)
-                else:
-                    covariance_matrix = s_d * np.cov(result[i-50:i, :-1].T)
-                    c = np.random.multivariate_normal(result[i-1, :-1], cov=covariance_matrix)
                 counter_sample += 1
+                if i < t0:
+                    c = np.random.normal(result[i-1, :-1], std)
+                elif i == t0:
+                    mean_prev = np.mean(result[:t0, :-1], axis=0)
+                    cov_prev = s_d * np.cov(result[0:t0, :-1].T)
+
+                    c = np.random.multivariate_normal(result[i - 1, :-1], cov=cov_prev)
+                else:
+                    cov_prev, mean_prev = utils.covariance_recursive(result[i-1, :-1], i-1, cov_prev, mean_prev, s_d)
+                    c = np.random.multivariate_normal(result[i-1, :-1], cov=cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             distance = dist.calc_dist(c, dist_func)
@@ -273,7 +283,7 @@ def work_function_MCMC(C_init):
     except ImportError:
         tqdm_flag = 0
 
-    if tqdm_flag == 5:
+    if tqdm_flag == 1:
         with tqdm(total=N) as pbar:
             pbar.update()
             # Markov Chain

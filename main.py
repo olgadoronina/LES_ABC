@@ -74,44 +74,6 @@ def main():
         g.sum_stat_true = np.load(os.path.join(params.data['data_path'], 'sum_stat_true.npz'))
 
 
-    #
-    # if params.abc['random']:
-    #     path = os.path.join(params.data['data_path'], 'T.npz')
-    #     if params.data['load']:
-    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-    #         g.TEST_sp = g.TEST
-    #         g.TEST_Model = model.NonlinearModel(path, 1, params.abc['num_training_points'], params.model,
-    #                                             params.abc['algorithm'], params.algorithm,
-    #                                             params.C_limits, params.compare_pdf, 1)
-    #     else:
-    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-    #         g.TEST_sp = g.TEST
-    #         g.TEST_Model = model.NonlinearModel(path, 0, params.abc['num_training_points'], params.model,
-    #                                             params.abc['algorithm'], params.algorithm,
-    #                                             params.C_limits, params.compare_pdf, 1, g.TEST)
-    #         g.LES = None
-    #         g.TEST = None
-    #
-    # else:
-    #     path = os.path.join(params.data['data_path'], 'TEST_sp.npz')
-    #     if params.data['load']:
-    #         g.TEST_sp = data.DataSparse(path, 1)
-    #     else:
-    #         init.LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-    #         g.TEST_sp = data.DataSparse(path, 0, g.TEST, params.abc['num_training_points'])
-    #         g.LES = None
-    #         g.TEST = None
-    #     path = os.path.join(params.data['data_path'], 'T.npz')
-    #     g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc['algorithm'], params.algorithm,
-    #                                         params.C_limits, params.compare_pdf, 0, g.TEST_sp)
-
-        # comm.bcast(params, root=0)
-        # logging.debug('done')
-        # comm.bcast(g.TEST_Model, root=0)
-        # logging.debug('done')
-        # comm.bcast(g.TEST_sp, root=0)
-        # logging.debug('done')
-
     comm.Barrier()
     logging.info('Model {}, {}'.format(g.TEST_Model.Tensor['1']['uu'].shape, 64**3))
     logging.info('TEST_sp {}'.format(g.TEST_sp))

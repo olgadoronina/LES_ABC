@@ -78,6 +78,12 @@ def take_safe_log(x):
     log = np.log(x, out=log_fill, where=x > g.TINY)
     return log
 
+def covariance_recursive(x, t, cov_prev, mean_prev, s_d):
+    mean_new = t / (t + 1) * mean_prev + 1 / (t + 1) * x
+    cov = (t - 1) / t * cov_prev + \
+          s_d / t * (t * np.outer(mean_prev, mean_prev) - (t + 1) * np.outer(mean_new, mean_new) + np.outer(x, x))
+    return cov, mean_new
+
 
 def tophat_kernel(k, limit):
     """Create 3D array of Tophat filter.
