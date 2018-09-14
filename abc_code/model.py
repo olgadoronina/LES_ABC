@@ -8,7 +8,10 @@ import abc_code.utils as utils
 class NonlinearModel(object):
     def __init__(self, path, load, model_params, abc, algorithm, C_limits, pdf_params, random, data=None):
 
-        self.M = abc['num_training_points']
+        if data:
+            self.M = data.S['uu'].shape[0]
+        else:
+            self.M = abc['num_training_points']
         self.C_limits = C_limits
         self.random = random
         self.pdf_params = pdf_params
@@ -39,7 +42,8 @@ class NonlinearModel(object):
         elif self.pdf_params['summary_statistics'] == 'production_pdf_log':
             if self.N_params_in_task == 0:
                 self.sigma_from_C = self.production_pdf_log
-        if load:
+        if load and random:
+
             self.Tensor = dict()
             for i in range(self.N_params):
                 self.Tensor[str(i)] = np.load(path)[str(i)].item()
@@ -49,7 +53,7 @@ class NonlinearModel(object):
             logging.info('Calculate model tensors')
             for i in range(self.N_params):
                 self.Tensor[str(i)] = self.calc_tensor(data, number=i)
-                logging.info('Tensor {}'.format(i))
+                logging.info('Tensor {} , {}'.format(i, self.Tensor[str(i)].keys()))
             np.savez(path, **self.Tensor)
             del self.S_mod
 
@@ -82,6 +86,9 @@ class NonlinearModel(object):
                     tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
+            for key in list(tensor.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor[key]
             return tensor
 
         elif number == 1:
@@ -96,6 +103,9 @@ class NonlinearModel(object):
                     tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
+            for key in list(tensor.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor[key]
             return tensor
 
         elif number == 2:
@@ -115,6 +125,9 @@ class NonlinearModel(object):
                     tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
+            for key in list(tensor.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor[key]
             return tensor
 
         elif number == 3:
@@ -134,6 +147,9 @@ class NonlinearModel(object):
                     tensor[i + j] = tensor[i + j].flatten()
             for key, value in tensor.items():
                 value *= data.delta ** 2
+            for key in list(tensor.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor[key]
             return tensor
 
         elif number == 4:
@@ -151,6 +167,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
         elif number == 5:
@@ -176,6 +195,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
         elif number == 6:
@@ -194,6 +216,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
         elif number == 7:
@@ -213,6 +238,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
         elif number == 8:
@@ -240,6 +268,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 2
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
         elif number == 9:
@@ -262,6 +293,9 @@ class NonlinearModel(object):
                     tensor1[i + j] *= data.delta ** 2
                     tensor1[i + j] /= self.S_mod ** 3
                     tensor1[i + j] = tensor1[i + j].flatten()
+            for key in list(tensor1.keys()):
+                if key not in self.elements_in_tensor:
+                    del tensor1[key]
             return tensor1
 
     ####################################################################################################################
@@ -288,9 +322,9 @@ class NonlinearModel(object):
         :return: dict of modeled Reynolds stresses tensor
         """
         if self.random:
-            ind = np.random.randint(0, 256 ** 3, size=random)
+            ind = utils.rand_ind(self.random)
             for i in self.elements_in_tensor:
-                self.sigma[i] = np.zeros(self.random)
+                self.sigma[i] = np.zeros(len(ind))
                 for j in range(self.N_params):
                     self.sigma[i] += C[j] * self.Tensor[str(j)][i][ind]
         else:

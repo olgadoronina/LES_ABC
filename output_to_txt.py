@@ -12,6 +12,7 @@ import abc_code.model as model
 import abc_code.utils as utils
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 ########################################################################################################################
 ## class PostprocessABC
 ########################################################################################################################
@@ -26,7 +27,7 @@ class PostprocessABC(object):
         self.N_each = params['algorithm']['N_each']
         self.N_total = params['algorithm']['N_total']
         self.model_params = params['model']
-        self.abc_algorithm = params['abc']['algorithm']
+        self.abc = params['abc']
         self.algorithm = params['algorithm']
         self.pdf_params = params['compare_pdf']
         self.bins = params['compare_pdf']['bins']
@@ -35,6 +36,7 @@ class PostprocessABC(object):
             self.N_params = len(g.accepted[0])
             logging.warning('Wrong number of params in params.py. Use {} params'.format(self.N_params))
         self.C_limits = C_limits
+        self.C_limits_init = params['C_limits']
         self.eps = eps
 
         self.params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
@@ -88,24 +90,24 @@ class PostprocessABC(object):
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
 
 ########################################################################################################################
-    def calc_marginal_pdf(self):
+    def calc_marginal_pdf(self, name=''):
 
         if self.N_params != 1:
             for i in range(self.N_params):
                 for j in range(self.N_params):
                     if i == j:
                         # mean = np.mean(g.accepted[:, i])
-                        x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N_each, range=self.C_limits[i])
+                        x, y = utils.pdf_from_array_with_x(g.accepted[:, i], bins=self.N_each, range=self.C_limits_init[i])
                         # max = x[np.argmax(y)]
                         # print('{} marginal mean is {} and max is {}'. format(self.params_names[i], mean, max))
                         # self.C_final_marginal[i] = max
-                        np.savetxt(os.path.join(path['output'], 'marginal'+str(i)), [x, y])
+                        np.savetxt(os.path.join(path['output'], 'marginal'+ name +str(i)), [x, y])
                     elif i < j:
                         H, xedges, yedges = np.histogram2d(x=g.accepted[:, j], y=g.accepted[:, i],
                                                            bins=self.num_bin_joint,
                                                            range=[self.C_limits[j], self.C_limits[i]])
-                        np.savetxt(os.path.join(path['output'], 'marginal' + str(i)+str(j)), H)
-                        np.savetxt(os.path.join(path['output'], 'marginal_bins' + str(i) + str(j)), [xedges, yedges])
+                        np.savetxt(os.path.join(path['output'], 'marginal' + name + str(i)+str(j)), H)
+                        np.savetxt(os.path.join(path['output'], 'marginal_bins' + name + str(i) + str(j)), [xedges, yedges])
 
 ########################################################################################################################
     def calc_compare_sum_stat(self, sum_stat, scale='LES'):
@@ -121,14 +123,14 @@ class PostprocessABC(object):
 
         # create model
         if scale == 'LES':
-            current_model = model.NonlinearModel(g.LES, self.model_params, self.abc_algorithm, self.algorithm,
-                                                 self.C_limits, self.pdf_params)
+            current_model = model.NonlinearModel(g.path['data_path'], 0, self.model_params, self.abc_algorithm,
+                                                 self.algorithm, self.C_limits,  self.pdf_params, 0, g.LES)
         if scale == 'TEST_M':
-            current_model = model.NonlinearModel(g.TEST_sp, self.model_params, self.abc_algorithm, self.algorithm,
-                                                 self.C_limits,  self.pdf_params)
+            current_model = model.NonlinearModel(g.path['data_path'], 0, self.model_params, self.abc,
+                                                 self.algorithm, self.C_limits,  self.pdf_params, 0, g.TEST_sp)
         if scale == 'TEST':
-            current_model = model.NonlinearModel(g.TEST, self.model_params, self.abc_algorithm, self.algorithm,
-                                                 self.C_limits,  self.pdf_params)
+            current_model = model.NonlinearModel(g.path['data_path'], 0, self.model_params, self.abc,
+                                                 self.algorithm, self.C_limits,  self.pdf_params, 0, g.TEST)
 
         sigma_modeled_dist = current_model.sigma_from_C(C_final_dist)
 
@@ -164,7 +166,7 @@ class PostprocessABC(object):
     def plot_eps(self):
 
         num_eps = 15
-        eps = np.linspace(300, 5000, num_eps)
+        eps = np.linspace(500, 5000, num_eps)
 
         C_mean = np.empty((self.N_params, num_eps))
         C_max = np.empty_like(C_mean)
@@ -263,124 +265,93 @@ class PostprocessABC(object):
         fig.subplots_adjust(left=0.12, right=0.97, bottom=0.2, top=0.85)
         fig.savefig(os.path.join(path['visua'], 'percent_accepted'))
 
-        fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
-        for i in range(self.N_params):
-            axarr[i].plot(eps, min_dist[i], 'g.')
-            axarr[i].set_title(self.params_names[i])
-            axarr[i].set_xlabel('epsilon')
-            for ind in range(num_eps):
-                print(max_joint[ind])
-                for j in max_joint[ind]:
-                    axarr[i].scatter(eps[ind], j[i], color='b')
-            # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
-            # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
-        axarr[0].set_ylabel(r'$C_i$')
-        fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
-        fig.savefig(os.path.join(path['visua'], 'eps_parameter'))
+        # fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
+        # for i in range(self.N_params):
+        #     axarr[i].plot(eps, min_dist[i], 'g.')
+        #     axarr[i].set_title(self.params_names[i])
+        #     axarr[i].set_xlabel('epsilon')
+        #     for ind in range(num_eps):
+        #         print(max_joint[ind])
+        #         for j in max_joint[ind]:
+        #             axarr[i].scatter(eps[ind], j[i], color='b')
+        #     # axarr[i].xaxis.set_major_locator(ticker.MultipleLocator(5))
+        #     # axarr[i].axis(ymin=np.min(C_mean[i])-0.01*, ymax=np.max(C_mean[i])+0.1)
+        # axarr[0].set_ylabel(r'$C_i$')
+        # fig.subplots_adjust(left=0.12, right=0.97, wspace=0.4, bottom=0.2, top=0.85)
+        # fig.savefig(os.path.join(path['visua'], 'eps_parameter'))
 
 
-
-path_base = './ABC/4_params_sigma_imcmc_sd/'
-path = {'output': os.path.join(path_base, 'output'),
-        'visua': os.path.join(path_base, 'plots')}
+# ####################################################################################################################
+# # Script starts here
+# ####################################################################################################################
+path_base = './ABC/sigma_random/6_params2/'
+path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
+params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
+g.path = path
+params['data']['data_path'] = os.path.join('./ABC/data_input/'+params['data']['data_name'])
+g.path['data_path'] = params['data']['data_path']
+print(params)
 
-uniform = 0
-calibration = 0
-IMCMC = 1
+algorithm = params['abc']['algorithm']
 
 filename_calibration_all = os.path.join(path['output'], 'calibration_all.npz')
 filename_calibration = os.path.join(path['output'], 'calibration.npz')
-filename_accepted = os.path.join(path['output'], 'accepted.npz')
-if calibration:
-    filename = filename_calibration
-else:
-    filename = filename_accepted
+filename_accepted = os.path.join(path['output'], 'accepted_0.npz')
 
-print(filename)
-
-logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 # ####################################################################################################################
 # # Initial data
 # ####################################################################################################################
-params = yaml.load(open(os.path.join(path['output'], 'output_params.yml'), 'r'))
-# params['path']['output'] = os.path.join(path_base, params['path']['output'])
-# params['path']['visua'] = os.path.join(path_base, params['path']['visua'])
-# g.path = params['path']
-g.path = path
-params['data']['data_path'] = os.path.join('./ABC/data_input/'+params['data']['data_name'])
-print(params)
-init.LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
-g.TEST_sp = data.DataSparse(g.TEST, params['abc']['num_training_points'])
 
-#
-# S_init = list(np.load(os.path.join(g.path['output'],'calibration_all.npz'))['S_init'])
-# x = 0.01
-# # Define epsilon
-# logging.info('x = {}'.format(params['algorithm']['x']))
-# S_init.sort(key=lambda y: y[-1])
-# S_init = np.array(S_init)
-# g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
-# logging.info('eps after calibration step = {}'.format(g.eps))
-#
-# print(S_init[:10, -1])
-#
-# plotting.dist_pdf(S_init[:, -1], x, g.path['visua'])
-#
-# # Define std
-# S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-# g.std = params['algorithm']['phi']*np.std(S_init[:, :-1], axis=0)
-# logging.info('std for each parameter after calibration step:\n{}'.format(g.std))
-#
-#
-# exit()
-
+init.load_LES_TEST_data(params['data'], params['physical_case'], params['compare_pdf'])
+if params['abc']['random'] == 0:
+    g.TEST_sp = data.DataSparse(params['data']['data_path'], 0, g.TEST, params['abc']['num_training_points'])
 #######################
-g.accepted = np.load(filename)['C']
-g.dist = np.load(filename)['dist']
-#######################
+if algorithm == 'IMCMC':
+    # Calibration
+    g.accepted = np.load(filename_calibration)['C']
+    g.dist = np.load(filename_calibration)['dist']
 
-if calibration:
     C_limits = params['C_limits']
     num_bin_joint = 10
     N_each = 10
     dist = np.load(filename_calibration_all)['S_init'][:, -1]
     # plotting.dist_pdf(dist, params['algorithm']['x'], params['path']['visua'])
+    eps = g.eps
+    params['algorithm']['N_each'] = N_each
+    postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
+    postproc.calc_marginal_pdf('_calibration_')
 
-else:
-    num_bin_joint = 20
-    N_each = 100
-    C_limits = params['C_limits']
-    # C_limits = np.zeros((10, 2))
-    # C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-    # C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-    # C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-    # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
-    # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
-    # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
-# # # #########################
+
+g.accepted = np.load(filename_accepted)['C']
+g.dist = np.load(filename_accepted)['dist']
+num_bin_joint = 20
+N_each = 100
+# C_limits = params['C_limits']
+C_limits = np.zeros((10, 2))
+C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
+C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
+print(C_limits)
 
 eps = g.eps
 params['algorithm']['N_each'] = N_each
 postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
-#
-# #
-# if uniform:
-#     new_eps = 3500
-#     g.accepted = g.accepted[g.dist < new_eps]
-#     g.dist = g.dist[g.dist < new_eps]
-#     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
-#                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
-#
 
+if algorithm == 'acc-rej':
+    postproc.plot_eps()
+    new_eps = 3500
+    g.accepted = g.accepted[g.dist < new_eps]
+    g.dist = g.dist[g.dist < new_eps]
+    logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+                                                   round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
+#
 postproc.calc_final_C()
 postproc.calc_marginal_pdf()
-
-
-if not calibration:
-
-    # postproc.plot_eps()
-
-    postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
-    postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')
+# postproc.plot_eps()
+postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
+# postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

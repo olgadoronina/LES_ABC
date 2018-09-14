@@ -75,7 +75,7 @@ def main():
 
 
     comm.Barrier()
-    logging.info('Model {}, {}'.format(g.TEST_Model.Tensor['1']['uu'].shape, 64**3))
+    logging.info('Model {}, {}'.format(g.TEST_Model.Tensor['0']['uu'].shape, 64**3))
     logging.info('TEST_sp {}'.format(g.TEST_sp))
     if params.parallel['N_proc'] > 1:
         g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])

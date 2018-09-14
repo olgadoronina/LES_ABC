@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
-
+# plt.style.use('dark_background')
 # mpl.style.use(['dark_background','mystyle'])
 # mpl.style.use(['mystyle'])
 
@@ -304,16 +304,17 @@ def tau_abc(Cs_abc):
     gc.collect()
 
 
-def dist_pdf(dist, x, folder):
+def plot_dist_pdf(dist, x, folder):
 
-    fig = plt.figure(figsize=(5, 3))
+    fig = plt.figure(figsize=(fig_width, fig_height))
     ax = plt.gca()
-    ax.hist(dist, bins=100, normed=1, alpha=0.4)
+    ax.hist(dist, bins=100, alpha=0.8)
     eps = np.percentile(dist, q=int(x * 100))
+    print('eps =', eps)
     ax.axvline(eps, label='eps')
-    ax.set_xlabel(r'$\rho$')
+    # ax.set_xlabel(r'$\rho$')
     ax.set_ylabel(r'pdf($\rho$)')
-    fig.subplots_adjust(left=0.15, right=0.95, bottom=0.15, top=0.9)
+    fig.subplots_adjust(left=0.2, right=0.98, bottom=0.2, top=0.95)
     fig.savefig(os.path.join(folder, 'dist'))
     plt.close('all')
 
@@ -324,59 +325,67 @@ def dist_pdf(dist, x, folder):
 params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
 
 
-def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
+def plot_marginal_pdf(N_params, output, plot_folder, C_limits, name=''):
 
     max_value = 0.0
     data = dict()
     for i in range(N_params):
         for j in range(N_params):
             if i < j:
-                data[str(i)+str(j)] = np.loadtxt(os.path.join(output, 'marginal' + str(i) + str(j)))
+                data[str(i)+str(j)] = np.loadtxt(os.path.join(output, 'marginal' + name + str(i) + str(j)))
                 max_value = max(max_value, np.max(data[str(i)+str(j)]))
     max_value = int(max_value)
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+    # cmaplist[0] = 'black' #'white' # force the first color entry to be white
     cmaplist[0] = 'white' # force the first color entry to be white
     cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
 
-    fig = plt.figure(figsize=(fig_width, 0.98*fig_width))
-
+    fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
+    if N_params == 6:
+        fig = plt.figure(figsize=(2 * fig_width, 1.9 * fig_width))
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
-                data_marg = np.loadtxt(os.path.join(output, 'marginal' + str(i)))
+                data_marg = np.loadtxt(os.path.join(output, 'marginal' + name + str(i)))
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1])
-                c_final_dist = np.loadtxt(os.path.join(output, 'C_final_dist'))
+                # c_final_dist = np.loadtxt(os.path.join(output, 'C_final_dist'))
                 # ax.axvline(mean, linestyle='--', color='g', label='mean')
                 # ax.axvline(max, linestyle='--', color='r', label='max')
-                ax.axvline(c_final_dist[i], linestyle='--', color='g', label='min distance')
-                c_final_joint = np.loadtxt(os.path.join(output, 'C_final_joint'))
-                if len(c_final_joint.shape) == 1:
-                    ax.axvline(c_final_joint[i], linestyle='--', color='b', label='max pdf')
-                elif len(c_final_joint) < 4:
-                    for C in c_final_joint:
-                        ax.axvline(C[i], linestyle='--', color='b', label='joint max')
+                # ax.axvline(c_final_dist[i], linestyle='--', color='g', label='min distance')
+                if name == '':
+                    c_final_joint = np.loadtxt(os.path.join(output, 'C_final_joint'))
+                    if len(c_final_joint.shape) == 1:
+                        ax.axvline(c_final_joint[i], linestyle='--', color='b', label='max of joint pdf')
+                    elif len(c_final_joint) < 4:
+                        for C in c_final_joint:
+                            ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
-                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
                 ax.tick_params(axis='both', which='minor', direction='in')
                 ax.tick_params(axis='both', which='major', pad=0.8)
                 ax.set_xlabel(params_names[i], labelpad=2)
                 if i == 0:
-                    # ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
-                    ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
+                    if N_params == 3:
+                        ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
+                    elif N_params == 4:
+                        ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
-                edges = np.loadtxt(os.path.join(output, 'marginal_bins'+str(i)+str(j)))
+                edges = np.loadtxt(os.path.join(output, 'marginal_bins' + name + str(i)+str(j)))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
                 # ax.yaxis.tick_right()
                 ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                 ax.yaxis.set_tick_params(direction='in')
                 ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-                if j == 2 and i ==1:
-                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                if (j == 2 or j == 3) and i == 1:
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
                 ax.xaxis.set_major_formatter(plt.NullFormatter())
                 # if j != (N_params-1):
                 #     ax.yaxis.set_major_formatter(plt.NullFormatter())
@@ -389,7 +398,6 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
     cax = plt.axes([0.05, 0.1, 0.01, 0.26])
     plt.colorbar(im, cax=cax) #, ticks=np.arange(max_value+1))
 
-
     if N_params == 3:
         # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
         fig.subplots_adjust(left=0.02, right=0.98, wspace=0.28, hspace=0.1, bottom=0.1, top=0.98)
@@ -398,7 +406,7 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits):
     elif N_params == 6:
         fig.subplots_adjust(left=0.05, right=0.98, wspace=0.45, hspace=0.35, bottom=0.08, top=0.98)
 
-    fig.savefig(os.path.join(plot_folder, 'marginal'))
+    fig.savefig(os.path.join(plot_folder, 'marginal' + name))
     plt.close('all')
 
 
@@ -437,12 +445,15 @@ def plot_compare_tau(visua, output, sum_stat, scale):
             y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
             axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
             # plot max joint
-            y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
-            axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled max')
+            if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
+                y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+                axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
             # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
             axarr[ind].set_xlabel(titles[ind], labelpad=2)
+            axarr[ind].xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
         axarr[0].set_ylabel('ln(pdf)', labelpad=2)
         axarr[0].yaxis.set_major_locator(ticker.MultipleLocator(2))
         fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, bottom=0.22, top=0.80)

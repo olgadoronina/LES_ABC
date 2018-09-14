@@ -18,6 +18,16 @@ def timer(start, end, label):
     logging.info("{:0>1}:{:0>2}:{:05.2f} \t {}".format(int(hours), int(minutes), seconds, label))
 
 
+def rand_ind(random):
+
+    ind = np.random.randint(0, 256 ** 3, size=random)
+    ind = np.unique(ind)
+    while len(ind) < 0.99*random:
+        ind_add = np.random.randint(0, 256 ** 3, size=(random - len(ind)))
+        ind = np.unique(np.append(ind, ind_add))
+    return ind
+
+
 def pdf_from_array_with_x(array, bins, range):
     pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
     x = (edges[1:] + edges[:-1]) / 2

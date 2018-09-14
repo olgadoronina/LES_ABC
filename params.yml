@@ -1,7 +1,7 @@
 ########################################################################################################################
 # Data
 data:
-  load: 3 # 0 = DNS, 1 = LES(and TEST), 2 = sparse, 3 = model
+  load: 1 # 0 = DNS, 1 = LES(and TEST), 2 = sparse, 3 = model
   data_name: 'JHU_data'
   data_path: './ABC/data_input/JHU_data/'
 # 'data_name': 'CU_data'
@@ -22,23 +22,22 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 2          # order of eddy-viscosity model
-  N_params_force: 3
+  order': 1          # order of eddy-viscosity model
+  N_params_force: 1
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
   domain:
-  - -0.45
-  - 0.45     # for sigma pdf comparison
+  - -0.3
+  - 0.3     # for sigma pdf comparison
                # 'domain': [-5, 5],     # for production pdf comparison
-               # domain = [-0.7, 0.7]      # for pdf comparison
   distance: 'L2log'
-               # 'summary_statistics': 'production_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
+               # summary_statistics: 'production_pdf_log'  # 'sigma_pdf_log', 'production_pdf_log'; production mean
   summary_statistics: 'sigma_pdf_log'
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'IMCMC'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'acc-rej'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
   random: 100000  # number of random points
 ################################################################################################################
@@ -59,7 +58,7 @@ algorithm:
   IMCMC:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
-      N_each: 10              # recommended 10
+      N_each: 0              # recommended 10
       N_params_in_task: 0     # only 0 and 2 for calibration
       x: 0.01                 # percent of accepted for calibration step
       phi: 1
