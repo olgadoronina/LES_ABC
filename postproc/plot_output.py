@@ -4,7 +4,7 @@ import numpy as np
 import plotting
 
 
-path_base = '../ABC/sigma_random/6_params2/'
+path_base = '../ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -34,13 +34,15 @@ C_limits = np.zeros((10, 2))
 # C_limits[3] = [np.min(accepted), np.max(accepted)]
 # C_limits[4] = [np.min(accepted), np.max(accepted)]
 # C_limits[5] = [np.min(accepted), np.max(accepted)]
-C_limits = np.zeros((10, 2))
-C_limits[0] = [np.min(accepted[:, 0]), np.max(accepted[:, 0])]
+
+C_limits[0] = [np.min(accepted[:, 0]), 0.0]
+
+# C_limits[0] = [np.min(accepted[:, 0]), np.max(accepted[:, 0])]
 C_limits[1] = [np.min(accepted[:, 1]), np.max(accepted[:, 1])]
 C_limits[2] = [np.min(accepted[:, 2]), np.max(accepted[:, 2])]
 C_limits[3] = [np.min(accepted[:, 3]), np.max(accepted[:, 3])]
-C_limits[4] = [np.min(accepted[:, 4]), np.max(accepted[:, 4])]
-C_limits[5] = [np.min(accepted[:, 5]), np.max(accepted[:, 5])]
+# C_limits[4] = [np.min(accepted[:, 4]), np.max(accepted[:, 4])]
+# C_limits[5] = [np.min(accepted[:, 5]), np.max(accepted[:, 5])]
 
 print(C_limits)
 dist_calibration = np.load(filename_calibration_all)['S_init'][:, -1]

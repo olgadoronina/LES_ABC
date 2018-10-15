@@ -2,6 +2,7 @@ import logging
 import abc_code.data as data
 import abc_code.global_var as g
 
+from scipy.stats import gaussian_kde
 import numpy as np
 import postproc.plotting as plotting
 import init
@@ -42,6 +43,7 @@ class PostprocessABC(object):
         self.params_names = [r'$C_1$', r'$C_2$', r'$C_3$', r'$C_4$', r'$C_5$', r'$C_6$', r'$C_7$', r'$C_8$', r'$C_9$']
         self.C_final_dist = []
         self.C_final_joint = []
+        self.C_final_smooth = []
         self.C_final_marginal = np.empty(self.N_params)
 
     def calc_final_C(self):
@@ -69,6 +71,7 @@ class PostprocessABC(object):
             logging.info('Minimum distance is {} in: {}'.format(g.dist[minim], C_final_dist))
             np.savetxt(os.path.join(path['output'], 'C_final_dist'), self.C_final_dist)
             # np.savetxt(os.path.join(path['output'], 'C_final_dist'), min_dist)
+
             # C_final_joint
             H, edges = np.histogramdd(g.accepted, bins=self.num_bin_joint, range=self.C_limits)
             logging.debug('Max number in bin: {}'.format(np.max(H)))
@@ -81,15 +84,42 @@ class PostprocessABC(object):
                 for j in range(self.N_params):
                     point.append(C_bin[j, i[j]])
                 self.C_final_joint.append(point)
-            np.savetxt(os.path.join(path['output'], 'C_final_joint'), self.C_final_joint)
+            np.savetxt(os.path.join(path['output'], 'C_final_joint'+str(self.num_bin_joint)), self.C_final_joint)
             if len(ind) > 10:
                 logging.warning('Can not estimate parameters from joint pdf!'
                                 'Too many bins ({} bins, max value {}) '
                                 'with the same max value in joint pdf'.format(len(ind), np.max(H)))
             else:
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
+            #
+            # # Gaussian smoothness
 
-########################################################################################################################
+            kde = gaussian_kde(g.accepted.T)
+            # # evaluate on a regular grid
+            xgrid = np.linspace(self.C_limits[0, 0], self.C_limits[0, 1], self.num_bin_joint+1)
+            ygrid = np.linspace(self.C_limits[1, 0], self.C_limits[1, 1], self.num_bin_joint+1)
+            zgrid = np.linspace(self.C_limits[2, 0], self.C_limits[2, 1], self.num_bin_joint+1)
+            if self.N_params == 3:
+                Xgrid, Ygrid, Zgrid = np.meshgrid(xgrid, ygrid, zgrid, indexing='ij')
+                Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel(), Zgrid.ravel()]))
+            elif self.N_params == 4:
+                z4grid = np.linspace(self.C_limits[3, 0], self.C_limits[3, 1], self.num_bin_joint + 1)
+                Xgrid, Ygrid, Zgrid, Z4grid = np.meshgrid(xgrid, ygrid, zgrid, z4grid, indexing='ij')
+                Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel(), Zgrid.ravel(), Z4grid.ravel()]))
+            Z = Z.reshape(Xgrid.shape)
+            ind = np.argwhere(Z == np.max(Z))
+            print('ind=', ind)
+            print(xgrid[ind[0, 0]], ygrid[ind[0, 1]], zgrid[ind[0, 1]])
+            if self.N_params == 3:
+                for i in ind:
+                    self.C_final_smooth.append([xgrid[i[0]], ygrid[i[1]], zgrid[i[2]]])
+            elif self.N_params == 4:
+                for i in ind:
+                    self.C_final_smooth.append([xgrid[i[0]], ygrid[i[1]], zgrid[i[2]], z4grid[i[3]]])
+            np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
+
+    ####################################################################################################################
+
     def calc_marginal_pdf(self, name=''):
 
         if self.N_params != 1:
@@ -217,7 +247,7 @@ class PostprocessABC(object):
         # frame = legend.get_frame()
         # frame.set_alpha(1)
         fig.subplots_adjust(left=0.15, right=0.9, wspace=0.17, bottom=0.17, top=0.9)
-        fig.savefig(os.path.join(path['visua'],'eps_marginal'))
+        fig.savefig(os.path.join(path['visua'], 'eps_marginal'))
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, figsize=(6.5, 2.5))
         for i in range(self.N_params):
@@ -284,7 +314,7 @@ class PostprocessABC(object):
 # ####################################################################################################################
 # # Script starts here
 # ####################################################################################################################
-path_base = './ABC/sigma_random/6_params2/'
+path_base = './ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -328,19 +358,7 @@ g.accepted = np.load(filename_accepted)['C']
 g.dist = np.load(filename_accepted)['dist']
 num_bin_joint = 20
 N_each = 100
-# C_limits = params['C_limits']
-C_limits = np.zeros((10, 2))
-C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
-C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
-C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
-print(C_limits)
 
-eps = g.eps
-params['algorithm']['N_each'] = N_each
-postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 
 if algorithm == 'acc-rej':
     postproc.plot_eps()
@@ -349,9 +367,53 @@ if algorithm == 'acc-rej':
     g.dist = g.dist[g.dist < new_eps]
     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
-#
-postproc.calc_final_C()
-postproc.calc_marginal_pdf()
-# postproc.plot_eps()
-postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
+
+accepted = g.accepted[g.accepted[:, 0] < 0.0]
+g.dist = g.dist[g.accepted[:, 0] < 0.0]
+g.accepted = accepted
+logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+                                               round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
+
+# C_limits = params['C_limits']
+C_limits = np.zeros((10, 2))
+C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
+C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+# C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+# C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
+# C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
+print(C_limits)
+eps = g.eps
+params['algorithm']['N_each'] = N_each
+N_params = 4
+fig1, axarr1 = plt.subplots(nrows=1, ncols=N_params, figsize=(2*N_params, 2.5))
+fig2, axarr2 = plt.subplots(nrows=1, ncols=N_params, figsize=(2*N_params, 2.5))
+for num_bin_joint in range(10, 30, 5):
+    postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
+    postproc.calc_final_C()
+    print(postproc.C_final_joint, len(postproc.C_final_joint))
+    print(postproc.C_final_smooth, len(postproc.C_final_smooth))
+
+    for i in range(N_params):
+        axarr1[i].scatter([num_bin_joint] * len(postproc.C_final_joint), np.array(postproc.C_final_joint)[:, i])
+        axarr2[i].scatter([num_bin_joint] * len(postproc.C_final_smooth), np.array(postproc.C_final_smooth)[:, i])
+    for i in range(N_params):
+        axarr1[i].set_xlabel('Number of bins')
+        axarr2[i].set_xlabel('Number of bins')
+axarr1[0].set_ylabel(r'$C_i$')
+axarr2[0].set_ylabel(r'$C_i$')
+fig1.subplots_adjust(left=0.1, right=0.98, hspace=0.3, bottom=0.21, top=0.97)
+fig2.subplots_adjust(left=0.1, right=0.98, hspace=0.3, bottom=0.21, top=0.97)
+
+fig1.savefig(os.path.join(path['visua'], 'Num_bins_joint'))
+fig2.savefig(os.path.join(path['visua'], 'Num_bins_smooth'))
+plt.close('all')
+
+
+# postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
+# #
+# postproc.calc_final_C()
+# postproc.calc_marginal_pdf()
+# # postproc.plot_eps()
+# postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
 # postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')
