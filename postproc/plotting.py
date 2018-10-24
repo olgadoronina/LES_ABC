@@ -409,6 +409,89 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits, name=''):
     fig.savefig(os.path.join(plot_folder, 'marginal' + name))
     plt.close('all')
 
+def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
+
+    max_value = 0.0
+    data = dict()
+    for i in range(N_params):
+        for j in range(N_params):
+            if i < j:
+                data[str(i)+str(j)] = np.loadtxt(os.path.join(output, 'marginal_smooth' + name + str(i) + str(j)))
+                max_value = max(max_value, np.max(data[str(i)+str(j)]))
+    max_value = int(max_value)
+    cmap = plt.cm.jet  # define the colormap
+    cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+    # cmaplist[0] = 'black' #'white' # force the first color entry to be white
+    cmaplist[0] = 'white' # force the first color entry to be white
+    cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
+
+    fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
+    if N_params == 6:
+        fig = plt.figure(figsize=(2 * fig_width, 1.9 * fig_width))
+    for i in range(N_params):
+        for j in range(N_params):
+            if i == j:
+                data_marg = np.loadtxt(os.path.join(output, 'marginal_smooth' + name + str(i)))
+                ax = plt.subplot2grid((N_params, N_params), (i, i))
+                ax.plot(data_marg[0], data_marg[1])
+                # c_final_dist = np.loadtxt(os.path.join(output, 'C_final_dist'))
+                # ax.axvline(mean, linestyle='--', color='g', label='mean')
+                # ax.axvline(max, linestyle='--', color='r', label='max')
+                # ax.axvline(c_final_dist[i], linestyle='--', color='g', label='min distance')
+                if name == '':
+                    c_final_smooth = np.loadtxt(os.path.join(output, 'C_final_smooth'))
+                    if len(c_final_smooth.shape) == 1:
+                        ax.axvline(c_final_smooth[i], linestyle='--', color='b', label='max of joint pdf')
+                    elif len(c_final_smooth) < 4:
+                        for C in c_final_smooth:
+                            ax.axvline(C[i], linestyle='--', color='b', label='joint max')
+                ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
+                # ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.yaxis.set_major_formatter(plt.NullFormatter())
+                ax.yaxis.set_major_locator(plt.NullLocator())
+                ax.tick_params(axis='both', which='minor', direction='in')
+                ax.tick_params(axis='both', which='major', pad=0.8)
+                ax.set_xlabel(params_names[i], labelpad=2)
+                if i == 0:
+                    if N_params == 3:
+                        ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
+                    elif N_params == 4:
+                        ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
+            elif i < j:
+                ax = plt.subplot2grid((N_params, N_params), (i, j))
+                # edges = np.loadtxt(os.path.join(output, 'marginal_bins' + name + str(i)+str(j)))
+                ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
+                # ax.yaxis.tick_right()
+                ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                ax.yaxis.set_tick_params(direction='in')
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                if (j == 2 or j == 3) and i == 1:
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.xaxis.set_major_formatter(plt.NullFormatter())
+                # if j != (N_params-1):
+                #     ax.yaxis.set_major_formatter(plt.NullFormatter())
+                ax.tick_params(axis='both', which='minor', direction='in')
+                ax.tick_params(axis='both', which='major', pad=0.8)
+                ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+
+                im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
+                               extent=ext, vmin=0, vmax=max_value)
+    cax = plt.axes([0.05, 0.1, 0.01, 0.26])
+    plt.colorbar(im, cax=cax) #, ticks=np.arange(max_value+1))
+
+    if N_params == 3:
+        # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
+        fig.subplots_adjust(left=0.02, right=0.98, wspace=0.28, hspace=0.1, bottom=0.1, top=0.98)
+    elif N_params == 4:
+        fig.subplots_adjust(left=0.03, right=0.98, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
+    elif N_params == 6:
+        fig.subplots_adjust(left=0.05, right=0.98, wspace=0.45, hspace=0.35, bottom=0.08, top=0.98)
+
+    fig.savefig(os.path.join(plot_folder, 'marginal_smooth' + name))
+    plt.close('all')
 
 def plot_scatter(N_params, C_limits, visua, accepted, dist):
 
@@ -429,6 +512,7 @@ def plot_scatter(N_params, C_limits, visua, accepted, dist):
 def plot_compare_tau(visua, output, sum_stat, scale):
 
     x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))
+
     if sum_stat == 'sigma_pdf_log':
 
         fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(fig_width, 0.5*fig_width))
@@ -441,12 +525,16 @@ def plot_compare_tau(visua, output, sum_stat, scale):
             y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
             axarr[ind].plot(x, y_true[key], 'r', linewidth=1, label='true')
             axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.4))
-            # plot min dist pdf
-            y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-            axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
-            # plot max joint
-            if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
-                y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+            # # plot min dist pdf
+            # y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
+            # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
+            # # plot max joint
+            # if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
+            #     y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+            #     axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
+            # plot max smooth
+            if os.path.isfile(os.path.join(output, 'sum_stat_max_smooth_' + scale)):
+                y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_smooth_' + scale))[ind]
                 axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
             # # plot max marginal
             # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
