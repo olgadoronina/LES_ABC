@@ -98,7 +98,7 @@ class PostprocessABC(object):
 
 
 
-            np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
+            # np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
             np.savetxt(os.path.join(path['output'], 'C_final_smooth'), self.C_final_smooth)
             # np.savetxt(os.path.join(path['output'], 'posterior' + str(self.num_bin_joint)), Z)
             logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_smooth))
@@ -137,17 +137,17 @@ class PostprocessABC(object):
                         np.savetxt(os.path.join(path['output'], 'marginal_smooth' + name + str(i) + str(j)), H)
 
 ########################################################################################################################
-    def calc_compare_sum_stat(self, sum_stat, scale='LES'):
+    def calc_compare_sum_stat(self, output, sum_stat, scale='LES'):
 
-        if self.N_params == 1:
-            C_final_dist = self.C_final_dist[0].copy()
-        else:
-            C_final_dist = self.C_final_dist.copy()
-        C_final_joint = 0
-        if len(self.C_final_joint) < 4 and self.N_params != 1:
-            C_final_joint = self.C_final_joint.copy()
-        if len(self.C_final_smooth) < 4 and self.N_params != 1:
-            C_final_smooth = self.C_final_smooth.copy()
+        # if self.N_params == 1:
+        #     C_final_dist = self.C_final_dist[0].copy()
+        # else:
+        #     C_final_dist = self.C_final_dist.copy()
+        # C_final_joint = 0
+        # if len(self.C_final_joint) < 4 and self.N_params != 1:
+        #     C_final_joint = self.C_final_joint.copy()
+
+
         # C_final_marginal = self.C_final_marginal
 
         # create model
@@ -161,50 +161,46 @@ class PostprocessABC(object):
             current_model = model.NonlinearModel(g.path['data_path'], 0, self.model_params, self.abc,
                                                  self.algorithm, self.C_limits,  self.pdf_params, 0, g.TEST)
 
-        sigma_modeled_dist = current_model.sigma_from_C(C_final_dist)
-
+        # sigma_modeled_dist = current_model.sigma_from_C(C_final_dist)
         # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
 
         # calc min dist pdf
-        if sum_stat == 'sigma_pdf_log':
-            y = np.empty((3, self.bins))
-            for ind in range(3):
-                y[ind] = utils.take_safe_log(sigma_modeled_dist[ind])
-        elif sum_stat == 'production_pdf_log':
-            y = utils.take_safe_log(sigma_modeled_dist)
-        np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
-            # # plot max marginal
+        # if sum_stat == 'sigma_pdf_log':
+        #     y = np.empty((3, self.bins))
+        #     for ind in range(3):
+        #         y[ind] = utils.take_safe_log(sigma_modeled_dist[ind])
+        # elif sum_stat == 'production_pdf_log':
+        #     y = utils.take_safe_log(sigma_modeled_dist)
+        # np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
+        #     # # plot max marginal
             # y = utils.pdf_from_array(sigma_modeled_marginal[key].flatten(), self.bins, self.domain)
             # y = utils.take_safe_log(y)
             # np.savetxt(os.path.join(output['output_path'], 'sum_stat_max_marginal'), y)
 
-        # calc max joint pdf
-        if C_final_joint:
+        # # calc max joint pdf
+        # if C_final_joint:
+        #     for i in range(len(C_final_joint)):
+        #         sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
+        #
+        #         if sum_stat == 'sigma_pdf_log':
+        #             y = np.empty((4, self.bins))
+        #             for ind in range(3):
+        #                 y[ind] = utils.take_safe_log(sigma_modeled_joint[ind])
+        #         elif sum_stat == 'production_pdf_log':
+        #             y = utils.take_safe_log(sigma_modeled_joint[ind])
+        #         np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
-            for i in range(len(C_final_joint)):
-                sigma_modeled_joint = current_model.sigma_from_C(C_final_joint[i])
-                if sum_stat == 'sigma_pdf_log':
-                    y = np.empty((3, self.bins))
-                    for ind in range(3):
-                        y[ind] = utils.take_safe_log(sigma_modeled_joint[ind])
-                elif sum_stat == 'production_pdf_log':
-                    tmp = utils.pdf_from_array(sigma_modeled_joint, self.bins, self.domain)
-                    y = utils.take_safe_log(tmp)
-                np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
+        # calc max joint smooth pdf
+        C_final_smooth = [np.loadtxt(os.path.join(output, 'C_final_smooth'))]
 
-        # calc max joint pdf
-        if C_final_smooth:
-
-            for i in range(len(C_final_smooth)):
-                sigma_modeled_smooth = current_model.sigma_from_C(C_final_smooth[i])
-                if sum_stat == 'sigma_pdf_log':
-                    y = np.empty((3, self.bins))
-                    for ind in range(3):
-                        y[ind] = utils.take_safe_log(sigma_modeled_smooth[ind])
-                elif sum_stat == 'production_pdf_log':
-                    tmp = utils.pdf_from_array(sigma_modeled_smooth, self.bins, self.domain)
-                    y = utils.take_safe_log(tmp)
-                np.savetxt(os.path.join(path['output'], 'sum_stat_max_smooth_' + scale), y)
+        for i in range(len(C_final_smooth)):
+            sigma_modeled_smooth = current_model.sigma_pdf(C_final_smooth[i])
+            y = np.empty((4, self.bins))
+            for ind in range(3):
+                y[ind] = utils.take_safe_log(sigma_modeled_smooth[ind])
+                production_modeled_joint = current_model.production_pdf(C_final_smooth[i])
+                y[3] = utils.take_safe_log(production_modeled_joint)
+        np.savetxt(os.path.join(path['output'], 'sum_stat_max_smooth_' + scale), y)
 
     def plot_eps(self):
 
@@ -328,7 +324,8 @@ class PostprocessABC(object):
 # # Script starts here
 # ####################################################################################################################
 # path_base = './ABC/sigma_random/3_params_imcmc_random_100000_03domain/'
-path_base = './ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
+# path_base = './ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
+path_base = './ABC/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -393,7 +390,7 @@ C_limits = np.zeros((10, 2))
 C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
 C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
 C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+# C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
 # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
 # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
 print(C_limits)
@@ -430,5 +427,5 @@ postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 postproc.calc_final_C()
 postproc.calc_marginal_pdf()
 # # postproc.plot_eps()
-postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST')
+postproc.calc_compare_sum_stat(path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
 # postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

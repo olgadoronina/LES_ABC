@@ -22,22 +22,24 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 1          # order of eddy-viscosity model
-  N_params_force: 1
+  order': 2          # order of eddy-viscosity model
+  N_params_force: 3
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
   domain:
   - -0.3
   - 0.3     # for sigma pdf comparison
-               # 'domain': [-5, 5],     # for production pdf comparison
+  'domain_production':
+  - -5
+  - 5       # for production pdf comparison
   distance: 'L2log'
-               # summary_statistics: 'production_pdf_log'  # 'sigma_pdf_log', 'production_pdf_log'; production mean
-  summary_statistics: 'sigma_pdf_log'
+  summary_statistics: 'production_pdf_log'  # 'sigma_pdf_log', 'production_pdf_log'; 'production_mean'
+#  summary_statistics: 'sigma_pdf_log'
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'acc-rej'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'IMCMC'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
   random: 100000  # number of random points
 ################################################################################################################
@@ -58,12 +60,12 @@ algorithm:
   IMCMC:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
-      N_each: 0              # recommended 10
+      N_each: 10              # recommended 10
       N_params_in_task: 0     # only 0 and 2 for calibration
       x: 0.01                 # percent of accepted for calibration step
       phi: 1
       # MCMC
-      'N_total_chain': 4000
+      'N_total_chain': 100000
   ############################################################################################################
   AGM-MH:
       N_gaussians: 30
@@ -88,6 +90,6 @@ C_limits:
 # Parallel regime parameters
 parallel:
   progressbar: 0    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-  N_proc: 1         # Number of processes
+  N_proc: 4         # Number of processes
 ########################################################################################################################
 

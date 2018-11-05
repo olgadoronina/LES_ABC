@@ -5,6 +5,7 @@ import numpy as np
 import abc_code.utils as utils
 from abc_code import global_var as g
 
+
 class Data(object):
     def __init__(self, data_dict, delta, dx, pdf_params):
 
@@ -14,12 +15,14 @@ class Data(object):
 
         if pdf_params['summary_statistics'] == 'sigma_pdf_log':
             g.sum_stat_true = self.deviatoric_stresses_pdf(data_dict, pdf_params)
+            production = self.production_rate_pdf(data_dict, pdf_params)
             with open(os.path.join(g.path['output'], 'sum_stat_true'), 'wb') as f:
-                np.savetxt(f, [g.sum_stat_true['uu'], g.sum_stat_true['uv'], g.sum_stat_true['uw']])
+                np.savetxt(f, [g.sum_stat_true['uu'], g.sum_stat_true['uv'], g.sum_stat_true['uw'], production])
         elif pdf_params['summary_statistics'] == 'production_pdf_log':
+            sigma = self.deviatoric_stresses_pdf(data_dict, pdf_params)
             g.sum_stat_true = self.production_rate_pdf(data_dict, pdf_params)
             with open(os.path.join(g.path['output'], 'sum_stat_true'), 'wb') as f:
-                np.savetxt(f, g.sum_stat_true)
+                np.savetxt(f, [sigma['uu'], sigma['uv'], sigma['uw'], g.sum_stat_true])
         elif pdf_params['summary_statistics'] == 'production_mean':
             g.sum_stat_true = g.production_rate_mean(data_dict)
 
@@ -98,7 +101,7 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 prod_rate += tau[i + j]*self.S[i + j]
-        prod_rate_pdf = utils.pdf_from_array(prod_rate, pdf_params['bins'], pdf_params['domain'])
+        prod_rate_pdf = utils.pdf_from_array(prod_rate, pdf_params['bins'], pdf_params['domain_production'])
         log_prod_pdf = utils.take_safe_log(prod_rate_pdf)
         return log_prod_pdf
 
@@ -135,7 +138,7 @@ class DataSparse(object):
             self.R = self.sparse_dict(data.R, M)
             logging.info('Training data shape is ' + str(self.S['uu'].shape))
             np.savez(os.path.join(path, 'TEST_sp.npz'), delta=self.delta, S=self.S, R=self.R)
-            np.savez(os.path.join(path, 'sum_stat_true.npz'), **g.sum_stat_true)
+            # np.savez(os.path.join(path, 'sum_stat_true.npz'), **g.sum_stat_true)
 
     def sparse_array(self, data_value, M):
 

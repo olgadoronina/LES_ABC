@@ -12,7 +12,7 @@ import numpy as np
 # mpl.style.use(['dark_background','mystyle'])
 # mpl.style.use(['mystyle'])
 
-fig_width_pt = 246.0  # Get this from LaTeX using "The column width is: \the\columnwidth \\"
+fig_width_pt = 1.5*246.0  # Get this from LaTeX using "The column width is: \the\columnwidth \\"
 inches_per_pt = 1.0/72.27               # Convert pt to inches
 golden_mean = (np.sqrt(5)-1.0)/2.0         # Aesthetic ratio
 fig_width = fig_width_pt*inches_per_pt  # width in inches
@@ -37,7 +37,7 @@ mpl.rc('text', usetex=True)
 mpl.rcParams['xtick.major.size'] = 3
 mpl.rcParams['xtick.minor.size'] = 3
 mpl.rcParams['xtick.major.width'] = 1
-mpl.rcParams['xtick.minor.width'] = 1
+mpl.rcParams['xtick.minor.width'] = 0.5
 mpl.rcParams['ytick.major.size'] = 3
 mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1
@@ -364,8 +364,11 @@ def plot_marginal_pdf(N_params, output, plot_folder, C_limits, name=''):
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
                 # ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
                 # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
-                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                if i == 2:
+                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                if i == 0:
+                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.05))
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
                 ax.tick_params(axis='both', which='minor', direction='in')
@@ -446,13 +449,14 @@ def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
                         for C in c_final_smooth:
                             ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
-                # ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
-                # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
-                ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                if i == 2:
+                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                if i == 0:
+                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.05))
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
-                ax.tick_params(axis='both', which='minor', direction='in')
+                # ax.tick_params(axis='both', which='minor', direction='in')
                 ax.tick_params(axis='both', which='major', pad=0.8)
                 ax.set_xlabel(params_names[i], labelpad=2)
                 if i == 0:
@@ -511,76 +515,87 @@ def plot_scatter(N_params, C_limits, visua, accepted, dist):
 
 def plot_compare_tau(visua, output, sum_stat, scale):
 
-    x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))
+    # if sum_stat == 'sigma_pdf_log':
 
-    if sum_stat == 'sigma_pdf_log':
-
-        fig, axarr = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(fig_width, 0.5*fig_width))
-        titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$']
-        y_true = dict()
-        y_min_dist = dict()
-        y_max_joint = dict()
-        for ind, key in enumerate(['uu', 'uv', 'uw']):
-            # Plot true pdf
-            y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
-            axarr[ind].plot(x, y_true[key], 'r', linewidth=1, label='true')
-            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.4))
-            # # plot min dist pdf
-            # y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-            # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
-            # # plot max joint
-            # if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
-            #     y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
-            #     axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
-            # plot max smooth
-            if os.path.isfile(os.path.join(output, 'sum_stat_max_smooth_' + scale)):
-                y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_smooth_' + scale))[ind]
-                axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
-            # # plot max marginal
-            # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
-            # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
-            axarr[ind].set_xlabel(titles[ind], labelpad=2)
-            axarr[ind].xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-            axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
-        axarr[0].set_ylabel('ln(pdf)', labelpad=2)
-        axarr[0].yaxis.set_major_locator(ticker.MultipleLocator(2))
-        fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, bottom=0.22, top=0.80)
-
-        axarr[1].legend(loc='upper center', bbox_to_anchor=(0.3, 1.35), fancybox=False, shadow=False, ncol=3)
-
-    elif sum_stat == 'production_pdf_log':
-        fig = plt.figure(figsize=(4, 3))
-        ax = plt.gca()
+    fig, axarr = plt.subplots(nrows=1, ncols=4, sharey=True, figsize=(fig_width, 0.35*fig_width))
+    titles = [r'$\sigma_{11}$', r'$\sigma_{12}$', r'$\sigma_{13}$', r'$\sigma_{ij}S_{ij}$']
+    y_true = dict()
+    # y_min_dist = dict()
+    y_max_joint = dict()
+    x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))[0]
+    print(x)
+    for ind, key in enumerate(['uu', 'uv', 'uw']):
         # Plot true pdf
-        y_true = np.loadtxt(os.path.join(output, 'sum_stat_true'))
-        ax.plot(x, y_true, 'r', linewidth=2, label='true')
-        # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
-        # plot min dist pdf
-        y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
-        ax.plot(x, y_min_dist, 'g', linewidth=2, label='modeled dist')
+        y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
+        axarr[ind].plot(x, y_true[key], 'r', linewidth=1, label='true')
+        # # plot min dist pdf
+        # y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
+        # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
+        # # plot max joint
+        # if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
+        #     y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
+        #     axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
+        # plot max smooth
+        if os.path.isfile(os.path.join(output, 'sum_stat_max_smooth_' + scale)):
+            y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_smooth_' + scale))[ind]
+            print(x, y_max_joint[key])
+            axarr[ind].plot(x, y_max_joint[key], 'b', linewidth=1, label='modeled')
         # # plot max marginal
-        # y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))
-        # ax.plot(x, y_max_joint, 'b', linewidth=2, label='modeled dist')
-        # ax.set_xlabel(r'$P$')
-        # ax.set_ylabel('ln(pdf)')
-        # plt.legend(loc=0)
-        # fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
+        # x, y = utils.pdf_from_array_with_x(tau_modeled_marginal[key].flatten(), g.bins, g.domain)
+        # axarr[ind].plot(x, y, 'm', linewidth=2, label='modeled marginal max')
+        axarr[ind].set_xlabel(titles[ind], labelpad=2)
+        axarr[ind].xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+        axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+    axarr[0].set_ylabel('ln(pdf)', labelpad=2)
+    axarr[0].yaxis.set_major_locator(ticker.MultipleLocator(2))
+    fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, bottom=0.22, top=0.80)
 
-        # Plot max joint pdf
-        # y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
-        # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
-        # if C_final_joint:
-        #     for i in range(len(C_final_joint)):
-        #         tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
-        #         y_dict = dict()
-        #         for ind, key in enumerate(['uu', 'uv', 'uw']):
-        #             x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
-        #             y = utils.take_safe_log(y_dict[key])
-        #             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
-        #
-        #         np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
-        #
-        # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
+    x = np.loadtxt(os.path.join(output, 'sum_stat_bins'))[1]
+    y_true = np.loadtxt(os.path.join(output, 'sum_stat_true'))[3]
+    axarr[3].plot(x, y_true, 'r', linewidth=1, label='true')
+    if os.path.isfile(os.path.join(output, 'sum_stat_max_smooth_' + scale)):
+        y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_smooth_' + scale))[3]
+        axarr[3].plot(x, y_max_joint, 'b', linewidth=1, label='modeled')
+    axarr[3].set_xlabel(titles[3], labelpad=2)
+    axarr[3].set_ylim(bottom=-6)
+    axarr[3].xaxis.set_major_locator(ticker.MultipleLocator(2))
+
+    axarr[1].legend(loc='upper center', bbox_to_anchor=(0.3, 1.35), fancybox=False, shadow=False, ncol=3)
+
+    # elif sum_stat == 'production_pdf_log':
+    #
+    #     fig = plt.figure(figsize=(4, 3))
+    #     ax = plt.gca()
+    #     # Plot true pdf
+    #     y_true = np.loadtxt(os.path.join(output, 'sum_stat_true'))
+    #     ax.plot(x, y_true, 'r', linewidth=2, label='true')
+    #     # axarr[ind].xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+    #     # plot min dist pdf
+    #     y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
+    #     ax.plot(x, y_min_dist, 'g', linewidth=2, label='modeled dist')
+    #     # # plot max marginal
+    #     # y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))
+    #     # ax.plot(x, y_max_joint, 'b', linewidth=2, label='modeled dist')
+    #     # ax.set_xlabel(r'$P$')
+    #     # ax.set_ylabel('ln(pdf)')
+    #     # plt.legend(loc=0)
+    #     # fig.subplots_adjust(left=0.1, right=0.95, bottom=0.18, top=0.9)
+    #
+    #     # Plot max joint pdf
+    #     # y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))
+    #     # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=2, label='modeled dist')
+    #     # if C_final_joint:
+    #     #     for i in range(len(C_final_joint)):
+    #     #         tau_modeled_joint = current_model.Reynolds_stresses_from_C_tau(C_final_joint[i])
+    #     #         y_dict = dict()
+    #     #         for ind, key in enumerate(['uu', 'uv', 'uw']):
+    #     #             x, y_dict[key] = utils.pdf_from_array_with_x(tau_modeled_joint[key].flatten(), g.bins, g.domain)
+    #     #             y = utils.take_safe_log(y_dict[key])
+    #     #             axarr[ind].plot(x, y, 'b', linewidth=2, label='modeled joint')
+    #     #
+    #     #         np.savez('./plots/pdf.npz', x=x, uu=y_dict['uu'], uv=y_dict['uv'], uw=y_dict['uw'])
+    #     #
+    #     # axarr[0].axis(xmin=self.domain[0], xmax=self.domain[1], ymin=-7)      #ymin=g.TINY_log-0.5)
 
 
 

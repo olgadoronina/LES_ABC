@@ -7,7 +7,7 @@ keys = ['uu', 'uv', 'uw', 'vu', 'vv', 'vw', 'wu', 'wv', 'ww']
 ## Distance functions
 ########################################################################################################################
 def calc_dist(C, dist_func):
-    pdf = g.TEST_Model.sigma_from_C(C)
+    pdf = g.TEST_Model.sum_stat_from_C(C)
     distance = 0
     for i in range(len(pdf)):
         d = dist_func(pdf_modeled=pdf[i], key=keys[i], axis=0)

@@ -62,9 +62,11 @@ class CreateParams:
         compare_pdf = params['compare_pdf']
         g.pdf_params = compare_pdf
         edges = np.linspace(compare_pdf['domain'][0], compare_pdf['domain'][1], compare_pdf['bins'] + 1)
-        x = (edges[1:] + edges[:-1]) / 2
+        x_sigma = (edges[1:] + edges[:-1]) / 2
+        edges = np.linspace(compare_pdf['domain_production'][0], compare_pdf['domain_production'][1], compare_pdf['bins'] + 1)
+        x_production = (edges[1:] + edges[:-1]) / 2
         with open(os.path.join(g.path['output'], 'sum_stat_bins'), 'wb') as f:
-            np.savetxt(f, x)
+            np.savetxt(f, np.vstack((x_sigma,x_production)))
         return compare_pdf
 
     def define_model_params(self, params):

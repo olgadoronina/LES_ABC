@@ -12,6 +12,10 @@ class NonlinearModel(object):
             self.M = data.S['uu'].shape[0]
         else:
             self.M = abc['num_training_points']
+        self.S_full = dict()
+        for i in data.S.keys():
+            self.S_full[i] = data.S[i].flatten()
+        self.S = self.S_full.copy()
         self.C_limits = C_limits
         self.random = random
         self.pdf_params = pdf_params
@@ -30,20 +34,19 @@ class NonlinearModel(object):
             self.N_params_in_task = 0
         if self.pdf_params['summary_statistics'] == 'sigma_pdf_log':
             if self.N_params_in_task == 0:
-                self.sigma_from_C = self.sigma_pdf_log
+                self.sum_stat_from_C = self.sigma_pdf
             elif self.N_params_in_task == 1:
-                self.sigma_from_C = self.sigma_from_C_1param
+                self.sum_stat_from_C = self.sigma_from_C_1param
             elif self.N_params_in_task == 2:
-                self.sigma_from_C = self.sigma_from_C_2param
+                self.sum_stat_from_C = self.sigma_from_C_2param
             else:
                 self.Reynolds_stresses_from_C = self.sigma_from_C_2param
                 logging.warning('{} parameters in one task is not supported. Using 2 parameters instead'.format(
                     self.N_params_in_task))
         elif self.pdf_params['summary_statistics'] == 'production_pdf_log':
             if self.N_params_in_task == 0:
-                self.sigma_from_C = self.production_pdf_log
+                self.sum_stat_from_C = self.production_pdf
         if load and random:
-
             self.Tensor = dict()
             for i in range(self.N_params):
                 self.Tensor[str(i)] = np.load(path)[str(i)].item()
@@ -57,8 +60,7 @@ class NonlinearModel(object):
             np.savez(path, **self.Tensor)
             del self.S_mod
 
-        logging.info('\n')
-        logging.info('Nonlinear model with {}'.format(self.sigma_from_C.__name__))
+        logging.info('Nonlinear model with {}'.format(self.sum_stat_from_C.__name__))
 
     def calc_strain_mod(self, data):
         """Calculate module of strain tensor as |S| = (2S_ijS_ij)^1/2
@@ -245,7 +247,6 @@ class NonlinearModel(object):
 
         elif number == 8:
             # Calculate tensor Delta^2/S_mod^2 (R^2S^2 + S^2R^2 - 2/3{S^2R^2}*delta_ij)  for given field
-
             tensor1 = dict()
             S2_R2_inv = 0
             for i in ['u', 'v', 'w']:
@@ -275,7 +276,6 @@ class NonlinearModel(object):
 
         elif number == 9:
             # Calculate tensor Delta^2/S_mod^3 (RS^2R^2 - R^2S^2R) for given field
-
             tensor1 = dict()
             for i in ['u', 'v', 'w']:
                 for j in ['u', 'v', 'w']:
@@ -299,24 +299,24 @@ class NonlinearModel(object):
             return tensor1
 
     ####################################################################################################################
-    # sigma_from_C
+    # sum_stat_from_C
     ####################################################################################################################
-    def sigma_pdf_log(self, C):
+    def sigma_pdf(self, C):
         self.sigma_field_from_C(C)
         sigma_pdf = np.empty((len(self.elements_in_tensor), self.pdf_params['bins']))
         for ind, key in enumerate(self.elements_in_tensor):
             sigma_pdf[ind] = utils.pdf_from_array(self.sigma[key], self.pdf_params['bins'], self.pdf_params['domain'])
         return sigma_pdf
 
-    def production_pdf_log(self, C):
-        self.sigma_field_from_C(C)
+    def production_pdf(self, C):
+        self.sigma_field_from_C(C, 1)
         production = 0
         for key, value in self.sigma.items():
             production += self.sigma[key]*self.S[key]
-        production = np.array([utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain'])])
+        production = np.array([utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain_production'])])
         return production
 
-    def sigma_field_from_C(self, C):
+    def sigma_field_from_C(self, C, S = None):
         """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.
         :param C: list of constant parameters
         :return: dict of modeled Reynolds stresses tensor
@@ -327,11 +327,14 @@ class NonlinearModel(object):
                 self.sigma[i] = np.zeros(len(ind))
                 for j in range(self.N_params):
                     self.sigma[i] += C[j] * self.Tensor[str(j)][i][ind]
+                if S:
+                    self.S[i] = self.S_full[i][ind]
         else:
             for i in self.elements_in_tensor:
                 self.sigma[i] = np.zeros(self.M**3)
                 for j in range(self.N_params):
                     self.sigma[i] += C[j] * self.Tensor[str(j)][i]
+
 
     def sigma_from_C_1param(self, C, dist_func):
         """ Calculate Reynolds stresses using eddy-viscosity model with 1 parameter in task.

@@ -189,8 +189,8 @@ class ABC(object):
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
-# dist_func = dist.distance_production_L2log
-dist_func = dist.distance_sigma_L2log
+dist_func = dist.distance_production_L2log
+# dist_func = dist.distance_sigma_L2log
 
 
 def calibration_function_single_value(C):
