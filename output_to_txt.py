@@ -62,6 +62,10 @@ class PostprocessABC(object):
             f = open(os.path.join(path['output'], 'C_final_dist'), 'a')
             np.savetxt(f, np.array([min_dist]))
             f.close()
+            self.Z, self.C_final_smooth = kde.gaussian_kde_scipy(g.accepted, self.C_limits[:self.N_params, 0],
+                                                                 self.C_limits[:self.N_params, 1], self.num_bin_joint)
+            np.savetxt(os.path.join(path['output'], 'C_final_smooth'), self.C_final_smooth)
+            logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_smooth))
         else:
             # C_final_dist
             minim = np.argmin(g.dist)
@@ -135,12 +139,16 @@ class PostprocessABC(object):
                         H = np.sum(self.Z, axis=ind)
 
                         np.savetxt(os.path.join(path['output'], 'marginal_smooth' + name + str(i) + str(j)), H)
+        else:
+            np.savetxt(os.path.join(path['output'], 'marginal_smooth' + name),
+                                    [np.linspace(self.C_limits[0,0], self.C_limits[0,1],
+                                                 self.num_bin_joint + 1), self.Z])
 
 ########################################################################################################################
     def calc_compare_sum_stat(self, output, sum_stat, scale='LES'):
 
-        # if self.N_params == 1:
-        #     C_final_dist = self.C_final_dist[0].copy()
+        if self.N_params == 1:
+            C_final_dist = self.C_final_dist[0].copy()
         # else:
         #     C_final_dist = self.C_final_dist.copy()
         # C_final_joint = 0
@@ -161,18 +169,18 @@ class PostprocessABC(object):
             current_model = model.NonlinearModel(g.path['data_path'], 0, self.model_params, self.abc,
                                                  self.algorithm, self.C_limits,  self.pdf_params, 0, g.TEST)
 
-        # sigma_modeled_dist = current_model.sigma_from_C(C_final_dist)
         # sigma_modeled_marginal = current_model.sigma_from_C(C_final_marginal)
 
         # calc min dist pdf
-        # if sum_stat == 'sigma_pdf_log':
-        #     y = np.empty((3, self.bins))
-        #     for ind in range(3):
-        #         y[ind] = utils.take_safe_log(sigma_modeled_dist[ind])
-        # elif sum_stat == 'production_pdf_log':
-        #     y = utils.take_safe_log(sigma_modeled_dist)
-        # np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
-        #     # # plot max marginal
+        sigma_modeled_dist = current_model.sigma_pdf(C_final_dist)
+        y = np.empty((4, self.bins))
+        for ind in range(3):
+            y[ind] = utils.take_safe_log(sigma_modeled_dist[ind])
+            # production_modeled_joint = current_model.production_pdf(C_final_smooth[i])
+            production_modeled_joint = current_model.production_pdf(C_final_dist)
+        y[3] = utils.take_safe_log(production_modeled_joint)
+        np.savetxt(os.path.join(path['output'], 'sum_stat_min_dist_' + scale), y)
+            # # # plot max marginal
             # y = utils.pdf_from_array(sigma_modeled_marginal[key].flatten(), self.bins, self.domain)
             # y = utils.take_safe_log(y)
             # np.savetxt(os.path.join(output['output_path'], 'sum_stat_max_marginal'), y)
@@ -191,15 +199,17 @@ class PostprocessABC(object):
         #         np.savetxt(os.path.join(path['output'], 'sum_stat_max_joint_' + scale), y)
 
         # calc max joint smooth pdf
-        C_final_smooth = [np.loadtxt(os.path.join(output, 'C_final_smooth'))]
-
+        C_final_smooth = np.array([np.loadtxt(os.path.join(output, 'C_final_smooth'))])
         for i in range(len(C_final_smooth)):
-            sigma_modeled_smooth = current_model.sigma_pdf(C_final_smooth[i])
+            print(C_final_smooth)
+            # sigma_modeled_smooth = current_model.sigma_pdf(C_final_smooth[i])
+            sigma_modeled_smooth = current_model.sigma_pdf(C_final_smooth)
             y = np.empty((4, self.bins))
             for ind in range(3):
                 y[ind] = utils.take_safe_log(sigma_modeled_smooth[ind])
-                production_modeled_joint = current_model.production_pdf(C_final_smooth[i])
-                y[3] = utils.take_safe_log(production_modeled_joint)
+                # production_modeled_joint = current_model.production_pdf(C_final_smooth[i])
+                production_modeled_joint = current_model.production_pdf(C_final_smooth)
+            y[3] = utils.take_safe_log(production_modeled_joint)
         np.savetxt(os.path.join(path['output'], 'sum_stat_max_smooth_' + scale), y)
 
     def plot_eps(self):
@@ -326,6 +336,7 @@ class PostprocessABC(object):
 # path_base = './ABC/sigma_random/3_params_imcmc_random_100000_03domain/'
 # path_base = './ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
 path_base = './ABC/'
+# path_base = './ABC/sigma_random/1_param/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -367,18 +378,18 @@ if params['abc']['random'] == 0:
 
 g.accepted = np.load(filename_accepted)['C']
 g.dist = np.load(filename_accepted)['dist']
-num_bin_joint = 20
+
+num_bin_joint = 50
 N_each = 100
 
 
-if algorithm == 'acc-rej':
-    postproc.plot_eps()
-    new_eps = 3500
-    g.accepted = g.accepted[g.dist < new_eps]
-    g.dist = g.dist[g.dist < new_eps]
-    logging.info('accepted {} values ({}%)'.format(len(g.accepted),
-                                                   round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
-
+# if algorithm == 'acc-rej':
+#     # postproc.plot_eps()
+#     new_eps = 20000
+#     g.accepted = g.accepted[g.dist < new_eps]
+#     g.dist = g.dist[g.dist < new_eps]
+#     logging.info('accepted {} values ({}%)'.format(len(g.accepted),
+#                                                    round(len(g.accepted) / params['algorithm']['N_total'] * 100, 2)))
 accepted = g.accepted[g.accepted[:, 0] < 0.0]
 g.dist = g.dist[g.accepted[:, 0] < 0.0]
 g.accepted = accepted
@@ -387,9 +398,11 @@ logging.info('accepted {} values ({}%)'.format(len(g.accepted),
 
 # C_limits = params['C_limits']
 C_limits = np.zeros((10, 2))
+
+print(np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0]))
 C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
-C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
-C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
+# C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
+# C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
 # C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
 # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
 # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]

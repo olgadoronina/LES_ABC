@@ -23,6 +23,12 @@ class Data(object):
             g.sum_stat_true = self.production_rate_pdf(data_dict, pdf_params)
             with open(os.path.join(g.path['output'], 'sum_stat_true'), 'wb') as f:
                 np.savetxt(f, [sigma['uu'], sigma['uv'], sigma['uw'], g.sum_stat_true])
+        elif pdf_params['summary_statistics'] == 'both_pdf_log':
+            g.sum_stat_true = self.deviatoric_stresses_pdf(data_dict, pdf_params)
+            g.sum_stat_true['prod'] = self.production_rate_pdf(data_dict, pdf_params)
+            with open(os.path.join(g.path['output'], 'sum_stat_true'), 'wb') as f:
+                np.savetxt(f, [g.sum_stat_true['uu'], g.sum_stat_true['uv'],
+                               g.sum_stat_true['uw'], g.sum_stat_true['prod']])
         elif pdf_params['summary_statistics'] == 'production_mean':
             g.sum_stat_true = g.production_rate_mean(data_dict)
 

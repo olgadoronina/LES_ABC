@@ -46,6 +46,9 @@ class NonlinearModel(object):
         elif self.pdf_params['summary_statistics'] == 'production_pdf_log':
             if self.N_params_in_task == 0:
                 self.sum_stat_from_C = self.production_pdf
+        elif self.pdf_params['summary_statistics'] == 'both_pdf_log':
+            if self.N_params_in_task == 0:
+                self.sum_stat_from_C = self.both_pdf
         if load and random:
             self.Tensor = dict()
             for i in range(self.N_params):
@@ -313,10 +316,24 @@ class NonlinearModel(object):
         production = 0
         for key, value in self.sigma.items():
             production += self.sigma[key]*self.S[key]
-        production = np.array([utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain_production'])])
+        production = np.array(
+            [utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain_production'])])
         return production
 
-    def sigma_field_from_C(self, C, S = None):
+    def both_pdf(self, C):
+        """ Create array of 7 pdfs (6 sigma pdf and 1 production pdf). """
+        self.sigma_field_from_C(C, 1)
+        both_pdf = np.empty((len(self.elements_in_tensor)+1, self.pdf_params['bins']))
+        for ind, key in enumerate(self.elements_in_tensor):
+            both_pdf[ind] = utils.pdf_from_array(self.sigma[key], self.pdf_params['bins'], self.pdf_params['domain'])
+        production = 0
+        for key, value in self.sigma.items():
+            production += self.sigma[key] * self.S[key]
+        both_pdf[-1] = np.array(
+            [utils.pdf_from_array(production, self.pdf_params['bins'], self.pdf_params['domain_production'])])
+        return both_pdf
+
+    def sigma_field_from_C(self, C, S=None):
         """Calculate deviatoric part of Reynolds stresses using eddy-viscosity model.
         :param C: list of constant parameters
         :return: dict of modeled Reynolds stresses tensor

@@ -138,8 +138,8 @@ class ABC(object):
         else:
             result = self.work_func(self.C_array[0])
             end = time()
-            g.accepted = np.array([C[:self.N_params] for C in result if C])
-            g.dist = np.array([C[-1] for C in result if C])
+            g.accepted = np.array([C[:self.N_params] for C in result])
+            g.dist = np.array([C[-1] for C in result])
         utils.timer(start, end, 'Time ')
         logging.debug('Number of accepted parameters: {}'.format(len(g.accepted)))
 
@@ -189,9 +189,9 @@ class ABC(object):
 ########################################################################################################################
 # Work_functions
 ########################################################################################################################
-dist_func = dist.distance_production_L2log
+# dist_func = dist.distance_production_L2log
 # dist_func = dist.distance_sigma_L2log
-
+dist_func = dist.distance_both_L2log
 
 def calibration_function_single_value(C):
     """ Calibration function for IMCMC algorithm
@@ -262,11 +262,12 @@ def work_function_MCMC(C_init):
                 elif i == t0:
                     mean_prev = np.mean(result[:t0, :-1], axis=0)
                     cov_prev = s_d * np.cov(result[0:t0, :-1].T)
-
-                    c = np.random.multivariate_normal(result[i - 1, :-1], cov=cov_prev)
+                    c = np.random.normal(result[i - 1, :-1], scale=cov_prev)
+                    # c = np.random.multivariate_normal(result[i - 1, :-1], cov=cov_prev)
                 else:
                     cov_prev, mean_prev = utils.covariance_recursive(result[i-1, :-1], i-1, cov_prev, mean_prev, s_d)
-                    c = np.random.multivariate_normal(result[i-1, :-1], cov=cov_prev)
+                    # c = np.random.multivariate_normal(result[i-1, :-1], cov=cov_prev)
+                    c = np.random.normal(result[i - 1, :-1], scale=cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             distance = dist.calc_dist(c, dist_func)

@@ -33,6 +33,9 @@ def gaussian_kde_scipy(data, a, b, num_bin_joint):
     if dim == 1:
         Z = kde.evaluate(xgrid)
         Z = Z.reshape(xgrid.shape)
+        ind = np.argwhere(Z == np.max(Z))
+        for i in ind:
+            C_max.append(xgrid[i])
     elif dim == 2:
         ygrid = np.linspace(a[1], b[1], num_bin_joint + 1)
         Xgrid, Ygrid= np.meshgrid(xgrid, ygrid, indexing='ij')
