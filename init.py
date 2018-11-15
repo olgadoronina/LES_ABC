@@ -248,7 +248,7 @@ def create_LES_TEST_data(data_params, case_params, pdf_params):
         np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
         logging.info('Create LES class')
         g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
-        np.savez(os.path.join(data_params['data_path'], 'sum_stat_true.npz'), **g.sum_stat_true)
+        # np.savez(os.path.join(data_params['data_path'], 'sum_stat_true.npz'), **g.sum_stat_true)
         del HIT_data
         LES_delta = 1 / case_params['LES_scale']
         logging.info('Create TEST class')
