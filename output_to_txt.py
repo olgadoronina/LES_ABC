@@ -46,6 +46,7 @@ class PostprocessABC(object):
         self.C_final_smooth = []
         self.C_final_marginal = np.empty(self.N_params)
         self.Z = []
+        self.ind_max = []
 
     def calc_final_C(self):
         """ Estimate the best fit of parameters.
@@ -93,7 +94,7 @@ class PostprocessABC(object):
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
             #
             # # Gaussian smoothness
-            self.Z, self.C_final_smooth = kde.gaussian_kde_scipy(g.accepted, self.C_limits[:self.N_params, 0],
+            self.Z, self.C_final_smooth, self.ind_max = kde.gaussian_kde_scipy(g.accepted, self.C_limits[:self.N_params, 0],
                                                                  self.C_limits[:self.N_params, 1], self.num_bin_joint)
 
 
@@ -137,6 +138,20 @@ class PostprocessABC(object):
                         np.savetxt(os.path.join(path['output'], 'marginal_smooth' + name + str(i) + str(j)), H)
 
 ########################################################################################################################
+    def calc_conditional_pdf(self, name=''):
+
+        if self.N_params != 1:
+            for i in range(self.N_params):
+                for j in range(self.N_params):
+                    if i > j:
+                        # Smooth
+                        params = np.arange(self.N_params)
+                        ind = tuple(np.where(np.logical_and(params != i, params != j))[0])
+                        if self.N_params == 3:
+                            H = np.take(self.Z, self.ind_max[ind], axis=ind[0])
+                        np.savetxt(os.path.join(path['output'], 'conditional_smooth' + name + str(i) + str(j)), H)
+
+    ########################################################################################################################
     def calc_compare_sum_stat(self, output, sum_stat, scale='LES'):
 
         # if self.N_params == 1:
@@ -323,9 +338,7 @@ class PostprocessABC(object):
 # ####################################################################################################################
 # # Script starts here
 # ####################################################################################################################
-# path_base = './ABC/sigma_random/3_params_imcmc_random_100000_03domain/'
-# path_base = './ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
-path_base = '../ABC/'
+path_base = '../ABC/final/3_params_sigma/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -367,7 +380,7 @@ if params['abc']['random'] == 0:
 
 g.accepted = np.load(filename_accepted)['C']
 g.dist = np.load(filename_accepted)['dist']
-num_bin_joint = 20
+num_bin_joint = 50
 N_each = 100
 
 
@@ -390,7 +403,8 @@ C_limits = np.zeros((10, 2))
 C_limits[0] = [np.min(g.accepted[:, 0]), np.max(g.accepted[:, 0])]
 C_limits[1] = [np.min(g.accepted[:, 1]), np.max(g.accepted[:, 1])]
 C_limits[2] = [np.min(g.accepted[:, 2]), np.max(g.accepted[:, 2])]
-C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
+if params['model']['N_params'] == 4:
+    C_limits[3] = [np.min(g.accepted[:, 3]), np.max(g.accepted[:, 3])]
 # C_limits[4] = [np.min(g.accepted[:, 4]), np.max(g.accepted[:, 4])]
 # C_limits[5] = [np.min(g.accepted[:, 5]), np.max(g.accepted[:, 5])]
 print(C_limits)
@@ -425,7 +439,8 @@ params['algorithm']['N_each'] = N_each
 
 postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 postproc.calc_final_C()
-postproc.calc_marginal_pdf()
+# postproc.calc_marginal_pdf()
+postproc.calc_conditional_pdf()
 # # postproc.plot_eps()
-postproc.calc_compare_sum_stat(path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
+# postproc.calc_compare_sum_stat(path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
 # postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

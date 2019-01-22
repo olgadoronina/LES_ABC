@@ -22,7 +22,7 @@ fig_size = [fig_width, fig_height]
 # mpl.rcParams['figure.figsize'] = 6.5, 2.2
 # plt.rcParams['figure.autolayout'] = True
 
-mpl.rcParams['font.size'] = 9
+mpl.rcParams['font.size'] = 12
 mpl.rcParams['axes.titlesize'] = 1.2 * plt.rcParams['font.size']
 mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
 mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
@@ -444,12 +444,18 @@ def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
                 if i < j:
                     data[str(i)+str(j)] = np.loadtxt(os.path.join(output, 'marginal_smooth' + name + str(i) + str(j)))
                     max_value = max(max_value, np.max(data[str(i)+str(j)]))
+                if i > j:
+                    data[str(i) + str(j)] = np.loadtxt(os.path.join(output, 'conditional_smooth' + name + str(i) + str(j)))
         max_value = int(max_value)
         cmap = plt.cm.jet  # define the colormap
+        cmap2 = plt.cm.cool  # define the colormap
         cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+        cmaplist2 = [cmap(i) for i in range(cmap2.N)]  # extract all colors from the .jet map
         # cmaplist[0] = 'black' #'white' # force the first color entry to be white
         cmaplist[0] = 'white' # force the first color entry to be white
+        cmaplist2[0] = 'white'  # force the first color entry to be white
         cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
+        cmap2 = cmap.from_list('Custom cmap', cmaplist2)
 
         fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
         if N_params == 6:
@@ -472,11 +478,15 @@ def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
                             for C in c_final_smooth:
                                 ax.axvline(C[i], linestyle='--', color='b', label='joint max')
                     ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
-                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
-                    if i == 2:
-                        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.2))
                     if i == 0:
-                        ax.xaxis.set_major_locator(ticker.MultipleLocator(0.05))
+                        ax.xaxis.set_major_locator(ticker.MultipleLocator(0.02))
+                    if i == 2:
+                        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                        ax.xaxis.set_major_locator(ticker.MultipleLocator(0.2))
+                    if i == 3:
+                        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                        ax.xaxis.set_major_locator(ticker.MultipleLocator(0.2))
                     ax.yaxis.set_major_formatter(plt.NullFormatter())
                     ax.yaxis.set_major_locator(plt.NullLocator())
                     # ax.tick_params(axis='both', which='minor', direction='in')
@@ -496,7 +506,9 @@ def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
                     ax.yaxis.set_tick_params(direction='in')
                     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                     if (j == 2 or j == 3) and i == 1:
-                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
+                    if i == 2 and j == 3:
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
                     ax.xaxis.set_major_formatter(plt.NullFormatter())
                     # if j != (N_params-1):
                     #     ax.yaxis.set_major_formatter(plt.NullFormatter())
@@ -506,8 +518,31 @@ def plot_marginal_smooth_pdf(N_params, output, plot_folder, C_limits, name=''):
 
                     im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                    extent=ext, vmin=0, vmax=max_value)
+                elif i > j:
+                    ax = plt.subplot2grid((N_params, N_params), (i, j))
+                    ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
+                    ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+
+                    ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                    if (j == 2 or j == 3) and i == 1:
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
+                    if i == 2 and j == 3:
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
+
+                    ax.xaxis.set_major_formatter(plt.NullFormatter())
+                    ax.yaxis.set_tick_params(direction='in')
+                    ax.tick_params(axis='both', which='minor', direction='in')
+                    ax.tick_params(axis='both', which='major', pad=0.8)
+
+                    im_cond = ax.imshow(data[str(i) + str(j)].T, origin='lower', cmap=cmap2, aspect='auto',
+                                   extent=ext)
+
         cax = plt.axes([0.05, 0.1, 0.01, 0.26])
         plt.colorbar(im, cax=cax) #, ticks=np.arange(max_value+1))
+
+        cax = plt.axes([0.05, 0.1, 0.01, 0.26])
+        plt.colorbar(im_cond, cax=cax) #, ticks=np.arange(max_value+1))
 
         if N_params == 3:
             # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
@@ -550,8 +585,8 @@ def plot_compare_tau(visua, output, sum_stat, scale):
         y_true[key] = np.loadtxt(os.path.join(output, 'sum_stat_true'))[ind]
         axarr[ind].plot(x, y_true[key], 'r', linewidth=1, label='true')
         # plot min dist pdf
-        y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
-        axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
+        # y_min_dist[key] = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[ind]
+        # axarr[ind].plot(x, y_min_dist[key], 'g', linewidth=1, label='modeled dist')
         # # plot max joint
         # if os.path.isfile(os.path.join(output, 'sum_stat_max_joint_' + scale)):
         #     y_max_joint[key] = np.loadtxt(os.path.join(output, 'sum_stat_max_joint_' + scale))[ind]
@@ -577,8 +612,8 @@ def plot_compare_tau(visua, output, sum_stat, scale):
     if os.path.isfile(os.path.join(output, 'sum_stat_max_smooth_' + scale)):
         y_max_joint = np.loadtxt(os.path.join(output, 'sum_stat_max_smooth_' + scale))[3]
         axarr[3].plot(x, y_max_joint, 'b', linewidth=1, label='modeled')
-    y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[3]
-    axarr[3].plot(x, y_min_dist, 'g', linewidth=1)
+    # y_min_dist = np.loadtxt(os.path.join(output, 'sum_stat_min_dist_' + scale))[3]
+    # axarr[3].plot(x, y_min_dist, 'g', linewidth=1)
     axarr[3].set_xlabel(titles[3], labelpad=2)
     axarr[3].set_ylim(bottom=-6)
     axarr[3].xaxis.set_major_locator(ticker.MultipleLocator(2))

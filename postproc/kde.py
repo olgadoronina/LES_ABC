@@ -64,7 +64,7 @@ def gaussian_kde_scipy(data, a, b, num_bin_joint):
         print("gaussian_kde_scipy: Wrong number of dimensions (dim)")
     time2 = time()
     timer(time1, time2, "Time for gaussian_kde_scipy")
-    return Z, C_max
+    return Z, C_max, ind[0]
 
 
 def gaussian_kde_sklearn(data, a, b, num_bin_joint):
