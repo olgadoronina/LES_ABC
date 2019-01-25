@@ -22,8 +22,8 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 1          # order of eddy-viscosity model
-  N_params_force: 1
+  order': 2          # order of eddy-viscosity model
+  N_params_force: 3
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
@@ -34,12 +34,12 @@ compare_pdf:
   - -5
   - 5       # for production pdf comparison
   distance: 'L2log'
-#  summary_statistics: 'production_pdf_log' # 'production_mean'
-  summary_statistics: 'both_pdf_log'
+#  summary_statistics: 'production_pdf_log' # 'production_mean' 'both_pdf_log'
+  summary_statistics: 'production_pdf_log'
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'acc-rej'   # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'IMCMC'   # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
   random: 100000  # number of random points
 ################################################################################################################
@@ -78,7 +78,7 @@ algorithm:
 C_limits:
   - [-0.3, 0.0]
   - [-0.5, 0.5]
-  - [-0.2, 0.2]
+  - [-0.5, 0.2]
   - [-0.2, 0.2]
   - [-1, 1]
   - [-0.5, 0.5]
