@@ -94,14 +94,18 @@ class PostprocessABC(object):
                 logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_joint))
             #
             # # Gaussian smoothness
-            self.Z, self.C_final_smooth, self.ind_max = kde.gaussian_kde_scipy(g.accepted, self.C_limits[:self.N_params, 0],
-                                                                 self.C_limits[:self.N_params, 1], self.num_bin_joint)
+            # self.Z, self.C_final_smooth, self.ind_max = kde.gaussian_kde_scipy(g.accepted, self.C_limits[:self.N_params, 0],
+            #                                                      self.C_limits[:self.N_params, 1], self.num_bin_joint)
+            # # np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
+            # np.savetxt(os.path.join(path['output'], 'C_final_smooth'), self.C_final_smooth)
+            # np.savetxt(os.path.join(path['output'], 'ind_max'), self.ind_max)
+            # np.savez(os.path.join(path['output'], 'Z'), Z=self.Z)
 
+            ## Load
+            self.Z = np.load(os.path.join(path['output'], 'Z.npz'))['Z']
+            self.C_final_smooth = np.loadtxt(os.path.join(path['output'], 'C_final_smooth'))
+            self.ind_max = np.loadtxt(os.path.join(path['output'], 'ind_max'))
 
-
-            # np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
-            np.savetxt(os.path.join(path['output'], 'C_final_smooth'), self.C_final_smooth)
-            # np.savetxt(os.path.join(path['output'], 'posterior' + str(self.num_bin_joint)), Z)
             logging.info('Estimated parameters from joint pdf: {}'.format(self.C_final_smooth))
     ####################################################################################################################
 
@@ -338,7 +342,7 @@ class PostprocessABC(object):
 # ####################################################################################################################
 # # Script starts here
 # ####################################################################################################################
-path_base = '../ABC/final/3_params_sigma/'
+path_base = '../ABC/final/4_params_sigma/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -380,7 +384,7 @@ if params['abc']['random'] == 0:
 
 g.accepted = np.load(filename_accepted)['C']
 g.dist = np.load(filename_accepted)['dist']
-num_bin_joint = 50
+num_bin_joint = 25
 N_each = 100
 
 

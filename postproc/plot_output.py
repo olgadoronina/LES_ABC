@@ -58,7 +58,7 @@ print(C_limits)
 # C_limits[0] = [-0.3, 0.3]
 # C_limits[1] = [-0.3, 0.3]
 # C_limits[2] = [-0.3, 0.3]
-plotting.plot_marginal_smooth_pdf(params['model']['N_params'], path['output'], path['visua'], C_limits)
+plotting.plot_marginal_smooth_pdf_3(params['model']['N_params'], path['output'], path['visua'], C_limits)
 
 
 # if algorithm == 'acc-rej':

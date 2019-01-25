@@ -23,7 +23,7 @@ physical_case:
 # Model parameters
 model:
   order': 2          # order of eddy-viscosity model
-  N_params_force: 4
+  N_params_force: 3
 ########################################################################################################################
 compare_pdf:
   bins: 100                 # for pdf comparison
@@ -62,10 +62,10 @@ algorithm:
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
       N_each: 10              # recommended 10
       N_params_in_task: 0     # only 0 and 2 for calibration
-      x: 0.03                 # percent of accepted for calibration step
+      x: 0.1                 # percent of accepted for calibration step
       phi: 1
       # MCMC
-      'N_total_chain': 3400000
+      'N_total_chain': 100000
   ############################################################################################################
   AGM-MH:
       N_gaussians: 30
