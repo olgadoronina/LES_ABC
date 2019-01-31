@@ -30,7 +30,7 @@ compare_pdf:
   domain:
   - -0.3
   - 0.3     # for sigma pdf comparison
-  'domain_production':
+  domain_production:
   - -5
   - 5       # for production pdf comparison
   distance: 'L2log'

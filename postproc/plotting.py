@@ -436,12 +436,13 @@ def plot_marginal_smooth_pdf_3(N_params, output, plot_folder, C_limits, name='')
     cmap2 = cmap.from_list('Custom cmap', cmaplist2)
 
     fig = plt.figure(figsize=(fig_width, 0.6*fig_width))
-
+    ticks = [0.03, 0.3, 0.2, 0.2]   # production
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
                 data_marg = np.loadtxt(os.path.join(output, 'marginal_smooth' + name + str(i)))
                 c_final_smooth = np.loadtxt(os.path.join(output, 'C_final_smooth'))
+                print(c_final_smooth)
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1], 'k', label='marginal pdf')
                 labelsrt = 'maximum of \n joint pdf:'
@@ -455,34 +456,34 @@ def plot_marginal_smooth_pdf_3(N_params, output, plot_folder, C_limits, name='')
                 ax.yaxis.set_major_locator(plt.NullLocator())
                 ax.tick_params(axis='both', which='major', pad=2)
                 ax.set_ylabel('pdf', labelpad=3)
-
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 if i != (N_params - 1):
                     ax.xaxis.set_major_formatter(plt.NullFormatter())
                 else:
                     ax.set_xlabel(params_names[i], labelpad=2)
 
                 if i == 0:
-                    ax.legend(bbox_to_anchor=(5.3, 1.08), fancybox=True)
+                    ax.legend(bbox_to_anchor=(5.25, 1.07), fancybox=True)
                     textstr = '\n'.join((r'$C_1=%.3f$' % (c_final_smooth[0],),
                                          r'$C_2=%.3f$' % (c_final_smooth[1],),
                                          r'$C_3=%.3f$' % (c_final_smooth[2],)))
-                    ax.text(4.4, 0.4, textstr, transform=ax.transAxes, verticalalignment='top', linespacing=1.5)
+                    ax.text(4.3, 0.35, textstr, transform=ax.transAxes, verticalalignment='top', linespacing=1.5)
                     ax.text(4.4, -0.35, '2D marginal', transform=ax.transAxes, horizontalalignment='center',
                             rotation=90, linespacing=1.5)
-                    ax.text(4.4, -1.48, 'condisional', transform=ax.transAxes, horizontalalignment='center',
+                    ax.text(4.4, -1.48, 'conditional', transform=ax.transAxes, horizontalalignment='center',
                             rotation=90, linespacing=1.5)
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
 
                 ax.xaxis.set_major_formatter(plt.NullFormatter())
-                ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[j]))
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 ax.tick_params(axis='both', which='major', pad=1.5)
                 # ax.set_ylabel(params_names[i], labelpad=-2)
                 ax.set_ylabel(params_names[i], labelpad=2)
                 ax.yaxis.tick_right()
-                if i == 1:
-                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
+
 
                 if j != N_params-1:
                     ax.yaxis.set_major_formatter(plt.NullFormatter())
@@ -510,7 +511,8 @@ def plot_marginal_smooth_pdf_3(N_params, output, plot_folder, C_limits, name='')
                 ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
                 ax.tick_params(axis='both', which='major', pad=2)
                 ax.set_ylabel(params_names[i], labelpad=-2)
-
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[j]))
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 if i != (N_params - 1):
                     ax.xaxis.set_major_formatter(plt.NullFormatter())
                 else:
@@ -518,8 +520,9 @@ def plot_marginal_smooth_pdf_3(N_params, output, plot_folder, C_limits, name='')
 
                 if j != 0:
                     ax.yaxis.set_major_formatter(plt.NullFormatter())
-                else:
-                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+
+
+
                 im_cond = ax.imshow(data[str(i) + str(j)].T, origin='lower', cmap=cmap2, aspect='auto', extent=ext)
                 ax.axvline(c_final_smooth[j], linestyle='--', color='b')
                 ax.axhline(c_final_smooth[i], linestyle='--', color='b')
@@ -530,7 +533,6 @@ def plot_marginal_smooth_pdf_3(N_params, output, plot_folder, C_limits, name='')
     cax = plt.axes([0.86, 0.1, 0.01, 0.26])
     plt.colorbar(im_cond, cax=cax) #, ticks=np.arange(max_value+1))
 
-    # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
     fig.subplots_adjust(left=0.08, right=0.7, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
     fig.savefig(os.path.join(plot_folder, 'marginal_smooth' + name))
     plt.close('all')
@@ -560,6 +562,8 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
 
     fig = plt.figure(figsize=(fig_width, 0.6*fig_width))
 
+    # ticks = [0.03, 0.3, 0.2, 0.2]   # production
+    ticks = [0.04, 0.1, 0.1, 0.1]  # sigma
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
@@ -568,7 +572,7 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
                 ax.plot(data_marg[0], data_marg[1], 'k', label='marginal pdf')
 
                 c_final_smooth = np.loadtxt(os.path.join(output, 'C_final_smooth'))
-                labelsrt = 'maximum of \n joint pdf:'
+                labelsrt = 'maximum of \n joint pdf'
                 if len(c_final_smooth.shape) == 1:
                     ax.axvline(c_final_smooth[i], linestyle='--', color='b', label=labelsrt)
                 elif len(c_final_smooth) < 4:
@@ -577,6 +581,7 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 ax.tick_params(axis='both', which='major', pad=2)
                 ax.set_ylabel('pdf', labelpad=3)
 
@@ -586,29 +591,25 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
                     ax.set_xlabel(params_names[i], labelpad=2)
 
                 if i == 0:
-                    ax.legend(bbox_to_anchor=(5.3, 1.08), fancybox=True)
+                    ax.legend(bbox_to_anchor=(7.15, 1.08), fancybox=True)
                     textstr = '\n'.join((
                         r'$C_1=%.3f$' % (c_final_smooth[0],),
                         r'$C_2=%.3f$' % (c_final_smooth[1],),
                         r'$C_3=%.3f$' % (c_final_smooth[2],),
                         r'$C_4=%.3f$' % (c_final_smooth[3],)))
-                    ax.text(4.4, 0.4, textstr, transform=ax.transAxes, verticalalignment='top', linespacing=1.5)
-                    ax.text(4.4, -0.35, '2D marginal', transform=ax.transAxes, horizontalalignment='center',
-                            rotation=90, linespacing=1.5)
-                    ax.text(4.4, -1.48, 'condisional', transform=ax.transAxes, horizontalalignment='center',
-                            rotation=90, linespacing=1.5)
+                    ax.text(5.8, -0.1, textstr, transform=ax.transAxes, verticalalignment='top', linespacing=1.5)
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
 
                 ax.xaxis.set_major_formatter(plt.NullFormatter())
-                ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 ax.tick_params(axis='both', which='major', pad=1.5)
                 # ax.set_ylabel(params_names[i], labelpad=-2)
                 ax.set_ylabel(params_names[i], labelpad=2)
                 ax.yaxis.tick_right()
-                if i == 1:
-                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.2))
+                # if i == 0:
+                #     ax.yaxis.set_major_locator(ticker.MultipleLocator(0.02))
 
                 if j != N_params-1:
                     ax.yaxis.set_major_formatter(plt.NullFormatter())
@@ -636,7 +637,8 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
                 ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
                 ax.tick_params(axis='both', which='major', pad=2)
                 ax.set_ylabel(params_names[i], labelpad=-2)
-
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[j]))
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
                 if i != (N_params - 1):
                     ax.xaxis.set_major_formatter(plt.NullFormatter())
                 else:
@@ -644,21 +646,31 @@ def plot_marginal_smooth_pdf_4(N_params, output, plot_folder, C_limits, name='')
 
                 if j != 0:
                     ax.yaxis.set_major_formatter(plt.NullFormatter())
-                else:
-                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+
                 im_cond = ax.imshow(data[str(i) + str(j)].T, origin='lower', cmap=cmap2, aspect='auto', extent=ext)
                 ax.axvline(c_final_smooth[j], linestyle='--', color='b')
                 ax.axhline(c_final_smooth[i], linestyle='--', color='b')
 
-    cax = plt.axes([0.86, 0.4, 0.01, 0.26])
-    plt.colorbar(im, cax=cax) #, ticks=np.arange(max_value+1))
+    cax = plt.axes([0.86, 0.325, 0.01, 0.2])
+    cbar = plt.colorbar(im, cax=cax, orientation='vertical')
+    cbar.ax.get_yaxis().labelpad = -49
+    cbar.ax.set_ylabel('2D marginal', fontsize=10)
+    # cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=45)
+    cax = plt.axes([0.86, 0.1, 0.01, 0.2])
+    cbar1 = plt.colorbar(im_cond, cax=cax, orientation='vertical')
+    cbar1.ax.get_yaxis().labelpad = -40
+    cbar1.ax.set_ylabel('conditional', fontsize=10)
 
-    cax = plt.axes([0.86, 0.1, 0.01, 0.26])
-    plt.colorbar(im_cond, cax=cax) #, ticks=np.arange(max_value+1))
+    # horizontal
+    # cax = plt.axes([0.78, 0.425, 0.19, 0.015])
+    # cbar = plt.colorbar(im, cax=cax, orientation='horizontal')
+    # cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=45)
+    # cbar.ax.set_title('2D marginal', fontsize=10)
+    # cax = plt.axes([0.78, 0.2, 0.19, 0.015])
+    # cbar1 = plt.colorbar(im_cond, cax=cax, orientation='horizontal')
+    # cbar1.ax.set_title('conditional', fontsize=10)
 
-
-    # fig.subplots_adjust(left=0.08, right=0.7, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
-    fig.subplots_adjust(left=0.03, right=0.98, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
+    fig.subplots_adjust(left=0.08, right=0.7, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
     fig.savefig(os.path.join(plot_folder, 'marginal_smooth' + name))
     plt.close('all')
 

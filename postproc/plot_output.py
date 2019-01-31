@@ -6,7 +6,7 @@ import plotting
 
 # path_base = '../ABC/sigma_random/3_params_imcmc_random_100000_03domain/'
 # path_base = '../ABC/sigma_random/4_params_imcmc_random_100000_03domain_N3400000/'
-path_base = '../ABC/final/3_params_sigma/'
+path_base = '../ABC/final/3_params_both/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -37,9 +37,10 @@ C_limits = np.zeros((10, 2))
 # C_limits[4] = [np.min(accepted), np.max(accepted)]
 # C_limits[5] = [np.min(accepted), np.max(accepted)]
 
-C_limits[0] = [np.min(accepted[:, 0]), 0.0]
-
-# C_limits[0] = [np.min(accepted[:, 0]), np.max(accepted[:, 0])]
+if np.max(accepted[:, 0]) < 0.0:
+    C_limits[0] = [np.min(accepted[:, 0]), np.max(accepted[:, 0])]
+else:
+    C_limits[0] = [np.min(accepted[:, 0]), 0.0]
 C_limits[1] = [np.min(accepted[:, 1]), np.max(accepted[:, 1])]
 C_limits[2] = [np.min(accepted[:, 2]), np.max(accepted[:, 2])]
 if params['model']['N_params'] == 4:
@@ -58,8 +59,10 @@ print(C_limits)
 # C_limits[0] = [-0.3, 0.3]
 # C_limits[1] = [-0.3, 0.3]
 # C_limits[2] = [-0.3, 0.3]
-plotting.plot_marginal_smooth_pdf_3(params['model']['N_params'], path['output'], path['visua'], C_limits)
-
+if params['model']['N_params'] == 3:
+    plotting.plot_marginal_smooth_pdf_3(params['model']['N_params'], path['output'], path['visua'], C_limits)
+elif params['model']['N_params'] == 4:
+    plotting.plot_marginal_smooth_pdf_4(params['model']['N_params'], path['output'], path['visua'], C_limits)
 
 # if algorithm == 'acc-rej':
 #     new_eps = 3500
