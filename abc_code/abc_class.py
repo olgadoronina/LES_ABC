@@ -191,7 +191,7 @@ class ABC(object):
 ########################################################################################################################
 dist_func = dist.distance_production_L2log
 # dist_func = dist.distance_sigma_L2log
-# dist_func = dist.distance_both_L2log
+# dist_func = dab   ist.distance_both_L2log
 
 def calibration_function_single_value(C):
     """ Calibration function for IMCMC algorithm

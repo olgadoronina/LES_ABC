@@ -344,7 +344,7 @@ class PostprocessABC(object):
 # ####################################################################################################################
 # # Script starts here
 # ####################################################################################################################
-path_base = '../ABC/final/3_params_sigma/'
+path_base = '../ABC/4_par_both'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -386,7 +386,7 @@ if params['abc']['random'] == 0:
 
 g.accepted = np.load(filename_accepted)['C']
 g.dist = np.load(filename_accepted)['dist']
-num_bin_joint = 50
+num_bin_joint = 25
 N_each = 100
 
 
@@ -445,8 +445,8 @@ params['algorithm']['N_each'] = N_each
 
 postproc = PostprocessABC(C_limits, eps, num_bin_joint, params)
 postproc.calc_final_C()
-# postproc.calc_marginal_pdf()
+postproc.calc_marginal_pdf()
 postproc.calc_conditional_pdf()
 # # postproc.plot_eps()
-# postproc.calc_compare_sum_stat(path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
+postproc.calc_compare_sum_stat(path['output'], params['compare_pdf']['summary_statistics'], scale='TEST')
 # postproc.calc_compare_sum_stat(params['compare_pdf']['summary_statistics'], scale='TEST_M')

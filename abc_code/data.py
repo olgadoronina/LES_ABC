@@ -107,7 +107,7 @@ class Data(object):
         for i in ['u', 'v', 'w']:
             for j in ['u', 'v', 'w']:
                 prod_rate += tau[i + j]*self.S[i + j]
-        prod_rate_pdf = utils.pdf_from_array(prod_rate, pdf_params['bins'], pdf_params['domain_production'])
+        prod_rate_pdf = utils.pdf_from_array(prod_rate, pdf_params['bins'], [-5,5])
         log_prod_pdf = utils.take_safe_log(prod_rate_pdf)
         return log_prod_pdf
 

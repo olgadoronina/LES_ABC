@@ -2,7 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-path_base = '../ABC/final/3_params_both/'
+path_base = '../ABC/final/4_params_sigma/'
 path = {'output': os.path.join(path_base, 'output'), 'visua': os.path.join(path_base, 'plots')}
 if not os.path.isdir(path['visua']):
     os.makedirs(path['visua'])
@@ -11,6 +11,7 @@ if not os.path.isdir(path['visua']):
 N = 100
 Z = np.load(os.path.join(path['output'], 'Z.npz'))['Z']
 ind_max = np.loadtxt(os.path.join(path['output'], 'ind_max'))
+
 Z_max = np.max(Z)
 N_params = len(Z.shape)
 N_bins = Z.shape[0]
@@ -18,17 +19,22 @@ N_bins = Z.shape[0]
 ind_array = np.arange(N_bins)
 x = np.zeros(N_params, dtype=np.int32)
 samples_ind = np.empty((N+1, N_params), dtype=np.int32)
+probability = np.empty(N+1)
 samples_ind[0] = ind_max
-k = 0
+probability[0] = Z_max
 
+k = 0
 while k < N:
     for i in range(N_params):
         x[i] = np.random.choice(ind_array, replace=True)
     u = np.random.random()*Z_max
-    if u <= Z[tuple(x)]:
+    z = Z[tuple(x)]
+    print(z, Z_max)
+    if u <= z:
         samples_ind[k+1] = x
+        probability[k+1] = z
+        print(probability[k+1])
         k += 1
-samples_ind = np.array(samples_ind)
 
 
 accepted = np.load(os.path.join(path['output'], 'accepted_0.npz'))['C']
@@ -52,6 +58,7 @@ for i in range(N+1):
 
 
 np.savetxt(os.path.join(path['output'], 'samples_from_posterior'), samples)
+np.savetxt(os.path.join(path['output'], 'probability_from_posterior'), probability)
 
 plt.hist(samples[:, 0], 20)
 plt.show()

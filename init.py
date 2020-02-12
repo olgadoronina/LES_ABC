@@ -10,9 +10,12 @@ import yaml
 class CreateParams:
     """Define all input parameters using params.py file and store it in object"""
 
-    def __init__(self):
+    def __init__(self, path=None):
 
-        params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
+        if path:
+            params = yaml.load(open(path, 'r'))
+        else:
+            params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
 
         self.physical_case = params['physical_case']
         self.physical_case['LES_scale'] = self.physical_case['LES_scale']/2/np.pi
