@@ -97,7 +97,7 @@ def distance_both_L2log(pdf_modeled, key, axis=1):
     log_modeled = utils.take_safe_log(pdf_modeled)
     dist = np.sum((log_modeled - g.sum_stat_true[key]) ** 2, axis=axis)
     if key == 'prod':
-        dist = 5*(dist-3100)
+        dist = 3*(dist-3100)
         if dist < 0:
             print(dist)
 

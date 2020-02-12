@@ -10,9 +10,12 @@ import yaml
 class CreateParams:
     """Define all input parameters using params.py file and store it in object"""
 
-    def __init__(self):
+    def __init__(self, path=None):
 
-        params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
+        if path:
+            params = yaml.load(open(path, 'r'))
+        else:
+            params = yaml.load(open(os.path.join('./', 'params.yml'), 'r'))
 
         self.physical_case = params['physical_case']
         self.physical_case['LES_scale'] = self.physical_case['LES_scale']/2/np.pi
@@ -248,7 +251,7 @@ def create_LES_TEST_data(data_params, case_params, pdf_params):
         np.savez(os.path.join(data_params['data_path'], 'LES.npz'), **LES_data)
         logging.info('Create LES class')
         g.LES = data.Data(HIT_data, DNS_delta, dx, pdf_params)
-        np.savez(os.path.join(data_params['data_path'], 'sum_stat_true.npz'), **g.sum_stat_true)
+        # np.savez(os.path.join(data_params['data_path'], 'sum_stat_true.npz'), **g.sum_stat_true)
         del HIT_data
         LES_delta = 1 / case_params['LES_scale']
         logging.info('Create TEST class')
