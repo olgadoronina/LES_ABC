@@ -88,6 +88,7 @@ def take_safe_log(x):
     log = np.log(x, out=log_fill, where=x > g.TINY)
     return log
 
+
 def covariance_recursive(x, t, cov_prev, mean_prev, s_d):
     mean_new = t / (t + 1) * mean_prev + 1 / (t + 1) * x
     cov = (t - 1) / t * cov_prev + \
@@ -226,8 +227,7 @@ def sampling_sobol(N_total, C_limits):
 
 
 def sampling_random(N_total, C_limits):
-    """ Generate Sobol' sequense of parameters. (low-discrepency quasi-random sampling)
-    :return: list of lists of sampled parameters
+    """
     """
     N_params = len(C_limits)
     C_array = np.random.random(size=(N_total, N_params))

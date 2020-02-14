@@ -483,6 +483,41 @@ class NonlinearModel(object):
             result[ind] = a[:]
         return result
 
+# ####################################################################################################################
+# # Reynolds_stresses_from_C
+# ####################################################################################################################
+class RansModel():
+    def __init__(self):
+
+
+    @staticmethod
+    def rans(t, x):
+        """
+
+        :param x:
+        :return:
+        """
+        global S, C1, C2, ce1, ce2
+
+        k = x[0]  # turbulence kinetic energy
+        e = x[1]  # dissipation rate
+        a = np.array(x[2:])  # anisotropy tensor
+
+        P = -k * np.sum(a * S)
+
+        alf1 = P / e - 1 + C1
+        alf2 = C2 - 4 / 3
+
+        # Governing equations
+        dx = np.zeros(8)
+        dx[0] = P - e  # dk / dt
+        dx[1] = (ce1 * P - ce2 * e) * e / k  # de / dt
+        dx[2:] = -alf1 * e * a / k + alf2 * S  # d a_ij / dt
+        return dx
+
+
+
+
 
 # ####################################################################################################################
 # # Reynolds_stresses_from_C

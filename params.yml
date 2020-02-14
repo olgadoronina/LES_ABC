@@ -1,14 +1,14 @@
 ########################################################################################################################
 # Data
 data:
-  load: 1 # 0 = DNS, 1 = LES(and TEST), 2 = sparse, 3 = model
+  load: 1
   data_name: 'JHU_data'
-  data_path: './ABC/data_input/JHU_data/'
+  data_path: '../data_input/JHU_data/'
 # 'data_name': 'CU_data'
 # 'data_folder':  './data_input/HIT_DNS_N256/'}
 path:
-  'output': './ABC/output/'
-  'visua': './ABC/plots/'
+  'output': './output/'
+  'visua': './plots/'
 ########################################################################################################################
 # Initial case parameters
 physical_case:
@@ -22,7 +22,7 @@ physical_case:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 2          # order of eddy-viscosity model
+  order': 2           # order of eddy-viscosity model
   N_params_force: 3
 ########################################################################################################################
 compare_pdf:
@@ -33,27 +33,29 @@ compare_pdf:
   domain_production:
   - -5
   - 5       # for production pdf comparison
+               # 'domain': [-5, 5],     # for production pdf comparison
+               # domain = [-0.7, 0.7]      # for pdf comparison
   distance: 'L2log'
-#  summary_statistics: 'production_pdf_log' # 'production_mean' 'both_pdf_log'
-  summary_statistics: 'production_pdf_log'
+               # 'summary_statistics': 'production_pdf_log'}  # 'sigma_pdf_log', 'production_pdf_log'; production mean
+  summary_statistics: 'both_pdf_log'
 ########################################################################################################################
 # abs algorithm
 abc:
-  algorithm: 'IMCMC'   # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
+  algorithm: 'IMCMC'    # 'acc-rej' = acceptance-rejection; 'MCMC'; 'IMCMC'; 'AGM-MH'= Gaussian mixture; 'PMC'
   num_training_points: 64
-  random: 100000  # number of random points
+  random: 100000
 ################################################################################################################
 # Define only one of the following
 ################################################################################################################
 algorithm:
   acc-rej:
       sampling: 'uniform'  # 'uniform', 'random', 'sobol'
-      eps: 50000
-      N_each: 5000
+      eps: 5000
+      N_each: 100
       N_params_in_task: 0  # only 0, 1 or 2  #only 0 and 2 for calibration
   ############################################################################################################
-  MCMC:
-      N_total_chain: 1000
+  MCMC':
+      N_total_chain: 1e7
       eps: 5000
       var_multiplier: 0.5
   ############################################################################################################
@@ -65,7 +67,7 @@ algorithm:
       x: 0.1                 # percent of accepted for calibration step
       phi: 1
       # MCMC
-      'N_total_chain': 100000
+      N_total_chain: 100000
   ############################################################################################################
   AGM-MH:
       N_gaussians: 30
@@ -90,6 +92,6 @@ C_limits:
 # Parallel regime parameters
 parallel:
   progressbar: 0    # 0 - pool.map(no bar); 1 - pool.imap_unordered(progressbar); 2 - pool.map_async(text progress)
-  N_proc: 1         # Number of processes
+  N_proc: 6         # Number of processes
 ########################################################################################################################
 
